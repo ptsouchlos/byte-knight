@@ -23,6 +23,6 @@ pub(crate) const LMR_SCALING_FACTOR: f64 = 2.0;
 // Minimum threshold depth for LMP to be considered
 pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 6;
 
-pub(crate) const FUTILITY_COEFF: ScoreType = 100;
+pub(crate) const FUTILITY_COEFF: ScoreType = 3;
 pub(crate) const FUTILITY_OFFSET: ScoreType = 200;
-pub(crate) const FUTILITY_MAX_DEPTH: ScoreType = 8;
+pub(crate) const FUTILITY_MAX_DEPTH: ScoreType = 6;
