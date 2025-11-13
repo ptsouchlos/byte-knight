@@ -197,6 +197,12 @@ impl TryFrom<&str> for Square {
     }
 }
 
+impl From<u8> for Square {
+    fn from(value: u8) -> Self {
+        Self::from_square_index(value)
+    }
+}
+
 /// Converts a file and rank tuple to a square
 ///
 /// # Arguments
