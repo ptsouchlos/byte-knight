@@ -76,7 +76,7 @@ impl MoveOrder {
             return Self::Capture(victim, attacker);
         }
 
-        let score = history_table.get(stm, mv.piece(), mv.to());
+        let score = history_table.get(stm, mv.from().into(), mv.to().into());
         Self::Quiet(score)
     }
 
@@ -132,10 +132,11 @@ mod tests {
 
         let second_mv = move_list.at(2).unwrap();
         history_table.update(
+            depth as i16,
             board.side_to_move(),
-            second_mv.piece(),
-            second_mv.to(),
-            300 * depth - 250,
+            second_mv.from().into(),
+            second_mv.to().into(),
+            crate::history_table::HistoryUpdateType::Bonus,
         );
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = tt_entry.board_move;

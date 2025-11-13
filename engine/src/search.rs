@@ -25,14 +25,14 @@ use crate::{
     aspiration_window::AspirationWindow,
     defs::MAX_DEPTH,
     evaluation::ByteKnightEvaluation,
-    history_table::{self, HistoryTable},
+    history_table::{HistoryTable, HistoryUpdateType},
     inplace_incremental_sort::InplaceIncrementalSort,
     lmr,
     log_level::LogLevel,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     principle_variation::PrincipleVariation,
-    score::{LargeScoreType, Score, ScoreType},
+    score::{Score, ScoreType},
     table::Table,
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
@@ -584,22 +584,22 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
-                        // calculate history bonus
-                        let bonus = history_table::calculate_bonus_for_depth(depth);
                         self.history_table.update(
+                            depth,
                             board.side_to_move(),
-                            mv.piece(),
-                            mv.to(),
-                            bonus as LargeScoreType,
+                            mv.from().into(),
+                            mv.to().into(),
+                            HistoryUpdateType::Bonus,
                         );
 
                         // apply a penalty to all quiets searched so far
                         for mv in move_list.iter().take(i).filter(|mv| mv.is_quiet()) {
                             self.history_table.update(
+                                depth,
                                 board.side_to_move(),
-                                mv.piece(),
-                                mv.to(),
-                                -bonus as LargeScoreType,
+                                mv.from().into(),
+                                mv.to().into(),
+                                HistoryUpdateType::Malus,
                             );
                         }
                     }
@@ -894,12 +894,10 @@ mod tests {
     use crate::{
         evaluation::ByteKnightEvaluation,
         log_level::LogDebug,
-        score::Score,
+        score::{LargeScoreType, Score},
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
     };
-
-    use super::LargeScoreType;
 
     fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchParameters) {
         let mut ttable = TranspositionTable::default();
@@ -1119,9 +1117,9 @@ mod tests {
 
             let side = board.side_to_move();
             let mut max_history = LargeScoreType::MIN;
-            for piece in ALL_PIECES {
-                for square in 0..64 {
-                    let score = history_table.get(side, piece, square);
+            for from in 0..64 {
+                for to in 0..64 {
+                    let score = history_table.get(side, from.into(), to.into());
                     if score > max_history {
                         max_history = score;
                     }
