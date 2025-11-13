@@ -12,7 +12,7 @@ use chess::{
 use crate::score::{LargeScoreType, Score};
 
 pub struct HistoryTable {
-    table: [[[LargeScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+    table: [[[LargeScoreType; NumberOf::SQUARES]; NumberOf::SQUARES]; NumberOf::SIDES],
 }
 
 /// Safe calculation of the bonus applied to quiet moves that are inserted into the history table.
@@ -25,29 +25,52 @@ pub struct HistoryTable {
 /// # Returns
 ///
 /// The calculated history score.
-pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
+fn calculate_bonus_for_depth(depth: i16) -> i16 {
     depth
         .saturating_mul(Score::HISTORY_MULT)
         .saturating_sub(Score::HISTORY_OFFSET)
 }
 
+fn gravity_update(current_value: i32, clamped_bonus: i32) -> i32 {
+    current_value + clamped_bonus - current_value * clamped_bonus.abs() / Score::MAX_HISTORY
+}
+pub(crate) enum HistoryUpdateType {
+    Bonus,
+    Malus,
+}
+
 impl HistoryTable {
     pub(crate) fn new() -> Self {
-        let table =
-            [[[Default::default(); NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES];
+        let table = [[[Default::default(); NumberOf::SQUARES]; NumberOf::SQUARES]; NumberOf::SIDES];
         Self { table }
     }
 
-    pub(crate) fn get(&self, side: Side, piece: Piece, square: u8) -> LargeScoreType {
-        self.table[side as usize][piece as usize][square as usize]
+    pub(crate) fn get(&self, side: Side, from: Square, to: Square) -> LargeScoreType {
+        self.table[side as usize][from.to_square_index() as usize][to.to_square_index() as usize]
     }
 
-    pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: LargeScoreType) {
-        let current_value = self.table[side as usize][piece as usize][square as usize];
+    fn set(&mut self, side: Side, from: Square, to: Square, value: LargeScoreType) {
+        self.table[side as usize][from.to_square_index() as usize][to.to_square_index() as usize] =
+            value;
+    }
+
+    pub(crate) fn update(
+        &mut self,
+        depth: i16,
+        side: Side,
+        from: Square,
+        to: Square,
+        update_type: HistoryUpdateType,
+    ) {
+        let bonus = match update_type {
+            HistoryUpdateType::Bonus => calculate_bonus_for_depth(depth) as LargeScoreType,
+            HistoryUpdateType::Malus => -calculate_bonus_for_depth(depth) as LargeScoreType,
+        };
+
+        let current_value = self.get(side, from, to);
         let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
-        let new_value = current_value + clamped_bonus
-            - current_value * clamped_bonus.abs() / Score::MAX_HISTORY;
-        self.table[side as usize][piece as usize][square as usize] = new_value;
+        let new_value = gravity_update(current_value, clamped_bonus);
+        self.set(side, from, to, new_value);
     }
 
     pub(crate) fn clear(&mut self) {
@@ -84,10 +107,14 @@ impl Default for HistoryTable {
 
 #[cfg(test)]
 mod tests {
-    use crate::defs::MAX_DEPTH;
+    use crate::{
+        defs::MAX_DEPTH,
+        history_table::{HistoryUpdateType, gravity_update},
+        score::LargeScoreType,
+    };
 
     use super::{HistoryTable, calculate_bonus_for_depth};
-    use chess::{definitions::Squares, pieces::Piece, side::Side};
+    use chess::{definitions::Squares, side::Side, square::Square};
 
     #[test]
     fn initialize_history_table() {
@@ -109,13 +136,25 @@ mod tests {
     fn store_and_read() {
         let mut history_table = HistoryTable::new();
         let side = Side::Black;
-        let piece = Piece::Pawn;
-        let square = Squares::A1;
-        let score = 37;
-        history_table.update(side, piece, square, score);
-        assert_eq!(history_table.get(side, piece, square), score);
-        history_table.update(side, piece, square, score);
-        assert_eq!(history_table.get(side, piece, square), score + score);
+        let from: Square = Squares::B2.into();
+        let to: Square = Squares::C3.into();
+        let depth = 5;
+        let score = calculate_bonus_for_depth(depth) as LargeScoreType;
+        history_table.update(depth, side, from, to, HistoryUpdateType::Bonus);
+
+        assert_eq!(history_table.get(side, from, to), score);
+        history_table.update(depth, side, from, to, HistoryUpdateType::Bonus);
+        assert_eq!(
+            history_table.get(side, from, to),
+            gravity_update(score, score)
+        );
+        let current_value = history_table.get(side, from, to);
+        history_table.update(depth, side, from, to, HistoryUpdateType::Malus);
+        assert!(history_table.get(side, from, to) < score + score);
+        assert_eq!(
+            history_table.get(side, from, to),
+            gravity_update(current_value, -score)
+        );
     }
 
     #[test]
