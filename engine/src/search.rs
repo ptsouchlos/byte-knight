@@ -27,6 +27,7 @@ use crate::{
     evaluation::ByteKnightEvaluation,
     history_table::{self, HistoryTable},
     inplace_incremental_sort::InplaceIncrementalSort,
+    killer_moves_table::KillerMovesTable,
     lmr,
     log_level::LogLevel,
     move_order::MoveOrder,
@@ -150,6 +151,7 @@ impl Display for SearchParameters {
 pub struct Search<'search_lifetime, Log> {
     transposition_table: &'search_lifetime mut TranspositionTable,
     history_table: &'search_lifetime mut HistoryTable,
+    killers_table: &'search_lifetime mut KillerMovesTable,
     move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
@@ -165,6 +167,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         parameters: &SearchParameters,
         ttable: &'a mut TranspositionTable,
         history_table: &'a mut HistoryTable,
+        killers_table: &'a mut KillerMovesTable,
     ) -> Self {
         // Initialize our LMR table as a 2D array of our LMR formula for depth and moves played
         let mut table = Table::<f64, 32_000>::new(MAX_DEPTH as usize, MAX_MOVE_LIST_SIZE);
@@ -173,6 +176,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         Self {
             transposition_table: ttable,
             history_table,
+            killers_table,
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
@@ -435,7 +439,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut alpha_use = alpha;
 
         if depth <= 0 {
-            return self.quiescence::<Node>(board, alpha, beta, pv);
+            return self.quiescence::<Node>(ply as u8, board, alpha, beta, pv);
         }
 
         let mut local_pv = PrincipleVariation::new();
@@ -488,10 +492,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         let classify_res = MoveOrder::classify_all(
+            ply as u8,
             board.side_to_move(),
             move_list.as_slice(),
             &tt_move,
             self.history_table,
+            self.killers_table,
             &mut order_list,
         );
 
@@ -584,6 +590,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
+                        // store the "killer" move
+                        self.killers_table.update(ply as u8, mv);
+
                         // calculate history bonus
                         let bonus = history_table::calculate_bonus_for_depth(depth);
                         self.history_table.update(
@@ -725,6 +734,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     ///
     fn quiescence<Node: NodeType>(
         &mut self,
+        ply: u8,
         board: &mut Board,
         alpha: Score,
         beta: Score,
@@ -776,10 +786,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // sort moves by MVV/LVA
         let classify_res = MoveOrder::classify_all(
+            ply,
             board.side_to_move(),
             captures.as_slice(),
             &tt_move,
             self.history_table,
+            self.killers_table,
             &mut move_order_list,
         );
         // TODO(PT): Should we log a message to the CLI or a log?
@@ -801,7 +813,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use, &mut local_pv);
+                let eval = -self.quiescence::<Node>(ply, board, -beta, -alpha_use, &mut local_pv);
                 self.nodes += 1;
                 eval
             };
@@ -904,7 +916,9 @@ mod tests {
     fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchParameters) {
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut killers_table = Default::default();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut killers_table);
 
         for (fen, expected_move) in test_pairs {
             let mut board = Board::from_fen(fen).unwrap();
@@ -927,7 +941,9 @@ mod tests {
 
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut killers_table = Default::default();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut killers_table);
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -947,7 +963,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut killers_table = Default::default();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut killers_table);
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -1000,7 +1018,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut killers_table = Default::default();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut killers_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -1018,7 +1038,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut killers_table = Default::default();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut killers_table);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -1035,7 +1057,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut killers_table = Default::default();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut killers_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -1052,7 +1076,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut killers_table = Default::default();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut killers_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -1112,7 +1138,13 @@ mod tests {
 
             let mut ttable = Default::default();
             let mut history_table = Default::default();
-            let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+            let mut killers_table = Default::default();
+            let mut search = Search::<LogDebug>::new(
+                &config,
+                &mut ttable,
+                &mut history_table,
+                &mut killers_table,
+            );
             let res = search.search(&mut board, None);
 
             assert!(res.best_move.is_some());
