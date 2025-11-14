@@ -515,7 +515,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 1f64
             };
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
-            let lmr_depth = depth.saturating_sub(lmr_reduction);
+            // TODO: Use LMR depth for futility pruning
+            let _lmr_depth = depth.saturating_sub(lmr_reduction);
             let is_in_check = board.is_in_check(&self.move_gen);
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
@@ -526,9 +527,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // If we are at a shallow depth and have already found a good score, we start skipping moves
             if !is_root && !is_pv && !is_in_check && !best_score.mated() {
                 let static_eval = self.eval.eval(board);
-                let fp_margin = lmr_depth * FUTILITY_COEFF + FUTILITY_OFFSET;
+                let fp_margin = depth * FUTILITY_COEFF + FUTILITY_OFFSET;
                 if mv.is_quiet()
-                    && lmr_depth < FUTILITY_MAX_DEPTH
+                    && depth < FUTILITY_MAX_DEPTH
                     && static_eval + fp_margin <= alpha_use
                 {
                     break;
