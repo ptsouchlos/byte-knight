@@ -312,7 +312,7 @@ impl MoveGenerator {
     /// # Returns
     ///
     /// A bitboard representing all squares currently being attacked by the given side.
-    pub(crate) fn get_attacked_squares(
+    pub fn get_attacked_squares(
         &self,
         board: &Board,
         side: Side,
