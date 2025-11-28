@@ -12,7 +12,9 @@ use chess::{
 use crate::score::{LargeScoreType, Score};
 
 pub struct HistoryTable {
-    table: [[[LargeScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+    /// The history table is a 5D array indexed by [is_from_attacked][is_to_attacked][side][piece_type][square (to)]
+    table: [[[[[LargeScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES];
+        NumberOf::SIDES]; NumberOf::SIDES],
 }
 
 /// Safe calculation of the bonus applied to quiet moves that are inserted into the history table.
@@ -33,28 +35,61 @@ pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
 
 impl HistoryTable {
     pub(crate) fn new() -> Self {
-        let table =
-            [[[Default::default(); NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES];
+        let table = [[[[[Default::default(); NumberOf::SQUARES]; NumberOf::PIECE_TYPES];
+            NumberOf::SIDES]; NumberOf::SIDES]; NumberOf::SIDES];
         Self { table }
     }
 
-    pub(crate) fn get(&self, side: Side, piece: Piece, square: u8) -> LargeScoreType {
-        self.table[side as usize][piece as usize][square as usize]
+    pub(crate) fn get(
+        &self,
+        side: Side,
+        piece: Piece,
+        square: u8,
+        is_from_attacked: bool,
+        is_to_attacked: bool,
+    ) -> LargeScoreType {
+        self.table[is_from_attacked as usize][is_to_attacked as usize][side as usize]
+            [piece as usize][square as usize]
     }
 
-    pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: LargeScoreType) {
-        let current_value = self.table[side as usize][piece as usize][square as usize];
+    fn get_mut(
+        &mut self,
+        side: Side,
+        piece: Piece,
+        square: u8,
+        is_from_attacked: bool,
+        is_to_attacked: bool,
+    ) -> &mut LargeScoreType {
+        &mut self.table[is_from_attacked as usize][is_to_attacked as usize][side as usize]
+            [piece as usize][square as usize]
+    }
+
+    pub(crate) fn update(
+        &mut self,
+        side: Side,
+        piece: Piece,
+        square: u8,
+        is_from_attacked: bool,
+        is_to_attacked: bool,
+        bonus: LargeScoreType,
+    ) {
+        let current_value = self.get(side, piece, square, is_from_attacked, is_to_attacked);
         let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
         let new_value = current_value + clamped_bonus
             - current_value * clamped_bonus.abs() / Score::MAX_HISTORY;
-        self.table[side as usize][piece as usize][square as usize] = new_value;
+        *self.get_mut(side, piece, square, is_from_attacked, is_to_attacked) = new_value;
     }
 
     pub(crate) fn clear(&mut self) {
         for side in 0..NumberOf::SIDES {
             for piece_type in 0..NumberOf::PIECE_TYPES {
                 for square in 0..NumberOf::SQUARES {
-                    self.table[side][piece_type][square] = Default::default();
+                    for is_from_attacked in 0..2 {
+                        for is_to_attacked in 0..2 {
+                            self.table[side][piece_type][square][is_from_attacked]
+                                [is_to_attacked] = Default::default();
+                        }
+                    }
                 }
             }
         }
@@ -68,7 +103,11 @@ impl HistoryTable {
                 print!("|");
                 for file in 0..NumberOf::FILES {
                     let square = file + rank * NumberOf::FILES;
-                    print!("{:5} ", self.table[side as usize][piece_type][square]);
+                    let grid = self.table[side as usize][piece_type][square];
+                    print!(
+                        "{:5} | {:5}\n------\n[{:5} | {:5} ]",
+                        grid[0][0], grid[0][1], grid[1][0], grid[1][1]
+                    );
                 }
                 println!("|");
             }
@@ -93,13 +132,23 @@ mod tests {
     fn initialize_history_table() {
         let history_table = HistoryTable::new();
         // loop through all sides, piece types, and squares
-        for side in 0..2 {
+        for side in 0..2u8 {
             for piece_type in 0..6 {
                 for square in 0..64 {
-                    assert_eq!(
-                        history_table.table[side][piece_type][square],
-                        Default::default()
-                    );
+                    for is_from_attacked in 0..2 {
+                        for is_to_attacked in 0..2 {
+                            assert_eq!(
+                                history_table.get(
+                                    Side::try_from(side).unwrap(),
+                                    Piece::try_from(piece_type).unwrap(),
+                                    square as u8,
+                                    is_from_attacked != 0,
+                                    is_to_attacked != 0,
+                                ),
+                                Default::default()
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -112,10 +161,18 @@ mod tests {
         let piece = Piece::Pawn;
         let square = Squares::A1;
         let score = 37;
-        history_table.update(side, piece, square, score);
-        assert_eq!(history_table.get(side, piece, square), score);
-        history_table.update(side, piece, square, score);
-        assert_eq!(history_table.get(side, piece, square), score + score);
+        let is_from_attacked = true;
+        let is_to_attacked = false;
+        history_table.update(side, piece, square, is_from_attacked, is_to_attacked, score);
+        assert_eq!(
+            history_table.get(side, piece, square, is_from_attacked, is_to_attacked),
+            score
+        );
+        history_table.update(side, piece, square, is_from_attacked, is_to_attacked, score);
+        assert_eq!(
+            history_table.get(side, piece, square, is_from_attacked, is_to_attacked),
+            score + score
+        );
     }
 
     #[test]

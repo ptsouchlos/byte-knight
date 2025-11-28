@@ -7,7 +7,9 @@ use std::cmp::Ordering;
 
 use anyhow::{Ok, Result};
 use arrayvec::ArrayVec;
-use chess::{definitions::MAX_MOVE_LIST_SIZE, moves::Move, pieces::Piece, side::Side};
+use chess::{
+    bitboard::Bitboard, definitions::MAX_MOVE_LIST_SIZE, moves::Move, pieces::Piece, side::Side,
+};
 
 use crate::{
     evaluation::Evaluation, hce_values::ByteKnightValues, history_table, score::LargeScoreType,
@@ -65,6 +67,7 @@ impl MoveOrder {
         mv: &Move,
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
+        attacked_by_opponent: &Bitboard,
     ) -> Self {
         if tt_move.is_some_and(|tt| *mv == tt) {
             return Self::TtMove;
@@ -76,7 +79,9 @@ impl MoveOrder {
             return Self::Capture(victim, attacker);
         }
 
-        let score = history_table.get(stm, mv.piece(), mv.to());
+        let is_from_attacked = attacked_by_opponent.is_square_occupied(mv.from());
+        let is_to_attacked = attacked_by_opponent.is_square_occupied(mv.to());
+        let score = history_table.get(stm, mv.piece(), mv.to(), is_from_attacked, is_to_attacked);
         Self::Quiet(score)
     }
 
@@ -85,12 +90,19 @@ impl MoveOrder {
         moves: &[Move],
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
+        attacked_by_opponent: &Bitboard,
         move_order: &mut ArrayVec<MoveOrder, MAX_MOVE_LIST_SIZE>,
     ) -> Result<()> {
         move_order.clear();
 
         for mv in moves.iter() {
-            move_order.try_push(Self::classify(stm, mv, tt_move, history_table))?;
+            move_order.try_push(Self::classify(
+                stm,
+                mv,
+                tt_move,
+                history_table,
+                attacked_by_opponent,
+            ))?;
         }
 
         Ok(())
@@ -99,10 +111,13 @@ impl MoveOrder {
 
 #[cfg(test)]
 mod tests {
-    use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
+    use chess::{
+        board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move, side::Side,
+    };
     use itertools::Itertools;
 
     use crate::{
+        history_table::HistoryTable,
         move_order::MoveOrder,
         score::Score,
         ttable::{EntryFlag, TranspositionTable, TranspositionTableEntry},
@@ -111,13 +126,19 @@ mod tests {
     #[test]
     fn verify_move_ordering() {
         let mut tt = TranspositionTable::from_capacity(10);
-        let mut history_table = crate::history_table::HistoryTable::new();
+        let mut history_table = HistoryTable::new();
 
         let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         let board =
             Board::from_fen("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB1R w KQkq - 0 1").unwrap();
         move_gen.generate_legal_moves(&board, &mut move_list);
+
+        let attacked_by_opponent = move_gen.get_attacked_squares(
+            &board,
+            Side::opposite(board.side_to_move()),
+            &board.all_pieces(),
+        );
 
         assert!(move_list.len() >= 6);
         let depth = 3i32;
@@ -135,15 +156,24 @@ mod tests {
             board.side_to_move(),
             second_mv.piece(),
             second_mv.to(),
+            attacked_by_opponent.is_square_occupied(second_mv.from()),
+            attacked_by_opponent.is_square_occupied(second_mv.to()),
             300 * depth - 250,
         );
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = tt_entry.board_move;
+
         // sort the moves
         let moves = move_list
             .iter()
             .sorted_by_key(|mv| {
-                MoveOrder::classify(board.side_to_move(), mv, &Some(tt_move), &history_table)
+                MoveOrder::classify(
+                    board.side_to_move(),
+                    mv,
+                    &Some(tt_move),
+                    &history_table,
+                    &attacked_by_opponent,
+                )
             })
             .collect::<Vec<&Move>>();
 

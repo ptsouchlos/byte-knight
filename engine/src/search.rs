@@ -16,8 +16,14 @@ use std::{
 use anyhow::{Result, bail};
 use arrayvec::ArrayVec;
 use chess::{
-    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
-    move_list::MoveList, moves::Move, pieces::Piece,
+    bitboard::Bitboard,
+    board::Board,
+    definitions::MAX_MOVE_LIST_SIZE,
+    move_generation::MoveGenerator,
+    move_list::MoveList,
+    moves::Move,
+    pieces::Piece,
+    side::{self, Side},
 };
 use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
@@ -477,7 +483,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut move_list = MoveList::new();
         let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
-
+        let attacked_by_opponent = self.move_gen.get_attacked_squares(
+            board,
+            side::Side::opposite(board.side_to_move()),
+            &board.all_pieces(),
+        );
         // do we have moves?
         if move_list.is_empty() {
             return if board.is_in_check(&self.move_gen) {
@@ -492,6 +502,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             move_list.as_slice(),
             &tt_move,
             self.history_table,
+            &attacked_by_opponent,
             &mut order_list,
         );
 
@@ -584,12 +595,24 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
+                        let occupancy = board.all_pieces();
+                        let us = board.side_to_move();
+                        let them = Side::opposite(us);
+                        // calculate the threats
+                        let attacked_by_opponent =
+                            self.move_gen.get_attacked_squares(board, them, &occupancy);
                         // calculate history bonus
                         let bonus = history_table::calculate_bonus_for_depth(depth);
+                        let is_from_attacked =
+                            Bitboard::from_square(mv.from()) & attacked_by_opponent != 0;
+                        let is_to_attacked =
+                            Bitboard::from_square(mv.to()) & attacked_by_opponent != 0;
                         self.history_table.update(
                             board.side_to_move(),
                             mv.piece(),
                             mv.to(),
+                            is_from_attacked,
+                            is_to_attacked,
                             bonus as LargeScoreType,
                         );
 
@@ -599,6 +622,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                                 board.side_to_move(),
                                 mv.piece(),
                                 mv.to(),
+                                is_from_attacked,
+                                is_to_attacked,
                                 -bonus as LargeScoreType,
                             );
                         }
@@ -739,6 +764,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut move_list = MoveList::new();
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
+        let attacked_by_opponent = self.move_gen.get_attacked_squares(
+            board,
+            side::Side::opposite(board.side_to_move()),
+            &board.all_pieces(),
+        );
 
         let mut local_pv = PrincipleVariation::new();
         // clear the current PV because this is a new position
@@ -780,6 +810,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             captures.as_slice(),
             &tt_move,
             self.history_table,
+            &attacked_by_opponent,
             &mut move_order_list,
         );
         // TODO(PT): Should we log a message to the CLI or a log?
@@ -889,7 +920,10 @@ fn assert_pv_is_legal(
 mod tests {
     use std::time::Duration;
 
-    use chess::{board::Board, pieces::ALL_PIECES};
+    use chess::{
+        bitboard::Bitboard, board::Board, move_generation::MoveGenerator, pieces::ALL_PIECES,
+        side::Side,
+    };
 
     use crate::{
         evaluation::ByteKnightEvaluation,
@@ -1107,9 +1141,17 @@ mod tests {
             }
         }
 
+        let move_gen = MoveGenerator::new();
+
         for fen in TEST_FENS {
             let mut board = Board::from_fen(fen).unwrap();
-
+            let attacked_by_opponent = move_gen.get_attacked_squares(
+                &board,
+                Side::opposite(board.side_to_move()),
+                &board.all_pieces(),
+            );
+            let is_from_attacked = |sq: u8| Bitboard::from_square(sq) & attacked_by_opponent != 0;
+            let is_to_attacked = |sq: u8| Bitboard::from_square(sq) & attacked_by_opponent != 0;
             let mut ttable = Default::default();
             let mut history_table = Default::default();
             let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
@@ -1121,7 +1163,13 @@ mod tests {
             let mut max_history = LargeScoreType::MIN;
             for piece in ALL_PIECES {
                 for square in 0..64 {
-                    let score = history_table.get(side, piece, square);
+                    let score = history_table.get(
+                        side,
+                        piece,
+                        square,
+                        is_from_attacked(square),
+                        is_to_attacked(square),
+                    );
                     if score > max_history {
                         max_history = score;
                     }
