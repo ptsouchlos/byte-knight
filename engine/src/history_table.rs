@@ -81,18 +81,7 @@ impl HistoryTable {
     }
 
     pub(crate) fn clear(&mut self) {
-        for side in 0..NumberOf::SIDES {
-            for piece_type in 0..NumberOf::PIECE_TYPES {
-                for square in 0..NumberOf::SQUARES {
-                    for is_from_attacked in 0..2 {
-                        for is_to_attacked in 0..2 {
-                            self.table[side][piece_type][square][is_from_attacked]
-                                [is_to_attacked] = Default::default();
-                        }
-                    }
-                }
-            }
-        }
+        *self = Self::new();
     }
 
     pub(crate) fn print_for_side(&self, side: Side) {
@@ -182,5 +171,25 @@ mod tests {
             assert!(bonus > 0);
             assert!(bonus as i32 <= i16::MAX.into());
         }
+    }
+
+    #[test]
+    fn update_and_then_clear() {
+        let mut history_table = HistoryTable::new();
+        let side = Side::White;
+        let piece = Piece::Knight;
+        let square = Squares::E4;
+        let is_from_attacked = false;
+        let is_to_attacked = true;
+        let bonus = 50;
+
+        history_table.update(side, piece, square, is_from_attacked, is_to_attacked, bonus);
+        let stored_value = history_table.get(side, piece, square, is_from_attacked, is_to_attacked);
+        assert_eq!(stored_value, bonus);
+
+        history_table.clear();
+        let cleared_value =
+            history_table.get(side, piece, square, is_from_attacked, is_to_attacked);
+        assert_eq!(cleared_value, 0);
     }
 }
