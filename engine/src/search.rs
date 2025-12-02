@@ -16,7 +16,6 @@ use std::{
 use anyhow::{Result, bail};
 use arrayvec::ArrayVec;
 use chess::{
-    bitboard::Bitboard,
     board::Board,
     definitions::MAX_MOVE_LIST_SIZE,
     move_generation::MoveGenerator,
@@ -24,6 +23,7 @@ use chess::{
     moves::Move,
     pieces::Piece,
     side::{self, Side},
+    square::Square,
 };
 use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
@@ -595,18 +595,21 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
-                        let occupancy = board.all_pieces();
                         let us = board.side_to_move();
                         let them = Side::opposite(us);
-                        // calculate the threats
-                        let attacked_by_opponent =
-                            self.move_gen.get_attacked_squares(board, them, &occupancy);
+
                         // calculate history bonus
                         let bonus = history_table::calculate_bonus_for_depth(depth);
-                        let is_from_attacked =
-                            Bitboard::from_square(mv.from()) & attacked_by_opponent != 0;
-                        let is_to_attacked =
-                            Bitboard::from_square(mv.to()) & attacked_by_opponent != 0;
+                        let is_from_attacked = self.move_gen.is_square_attacked(
+                            board,
+                            &Square::from_square_index(mv.from()),
+                            them,
+                        );
+                        let is_to_attacked = self.move_gen.is_square_attacked(
+                            board,
+                            &Square::from_square_index(mv.to()),
+                            them,
+                        );
                         self.history_table.update(
                             board.side_to_move(),
                             mv.piece(),
