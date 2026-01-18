@@ -1,3 +1,6 @@
+// Part of the byte-knight project.
+// Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
+
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 

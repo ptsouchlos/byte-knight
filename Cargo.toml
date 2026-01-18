@@ -14,7 +14,7 @@ resolver = "3"
 edition = "2024"
 authors = ["Paul Tsouchlos <developer.paul.123@gmail.com>"]
 license = "GPL-3.0"
-repository = "https://github.com/DeveloperPaul123/byte-knight"
+repository = "https://github.com/ptsouchlos/byte-knight"
 
 [workspace.dependencies]
 anyhow = "1.0.100"

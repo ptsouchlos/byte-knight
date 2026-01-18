@@ -1,3 +1,10 @@
+// Part of the byte-knight project.
+// Author: Paul Tsouchlos (ptsouchlos) (developer.paul.123@gmail.com)
+// GNU General Public License v3.0 or later
+// https://www.gnu.org/licenses/gpl-3.0-standalone.html
+
+//! This module provides functionality to retrieve the ray (line of squares) between two squares on a chessboard.
+
 use crate::{attacks, bitboard::Bitboard, definitions::NumberOf};
 
 #[allow(long_running_const_eval)]

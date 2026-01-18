@@ -1,24 +1,26 @@
 <center><h1> byte-knight </h1></center>
 
-[![codecov](https://codecov.io/gh/DeveloperPaul123/byte-knight/graph/badge.svg?token=USEPKU8K4G)](https://codecov.io/gh/DeveloperPaul123/byte-knight)
+[![codecov](https://codecov.io/gh/ptsouchlos/byte-knight/graph/badge.svg?token=USEPKU8K4G)](https://codecov.io/gh/ptsouchlos/byte-knight)
 
-`byte-knight` is a UCI compliant chess engine written in Rust. It started as a port of the chess engine I submitted for Sebatian Lague's [Chess Engine Challenge](https://github.com/DeveloperPaul123/Leonidas) where it placed in the top 32 out of 600+ entries.
+`byte-knight` is a UCI compliant chess engine written in Rust. It started as a port of the chess engine I submitted for Sebatian Lague's [Chess Engine Challenge](https://github.com/ptsouchlos/Leonidas) where it placed in the top 32 out of 600+ entries.
 
 You can challenge `byte-knight` yourself on [Lichess](https://lichess.org/@/byte-knight)!
 
+> **Note:** The GitHub account for this project was renamed from `DeveloperPaul123` to `ptsouchlos`. Repository ownership and history are unchanged.
+
 # Overview
 
-`byte-knight` is my first "real" Rust project. I'm a long time [C++ developer](https://github.com/DeveloperPaul123?tab=repositories&q=&type=source&language=c%2B%2B&sort=stargazers) and have been itching to learn Rust. I really enjoyed participating in the chess challenge a while back and thought that writing a new chess engine from scratch would be a good way to learn the language.
+`byte-knight` is my first "real" Rust project. I'm a long time [C++ developer](https://github.com/ptsouchlos?tab=repositories&q=&type=source&language=c%2B%2B&sort=stargazers) and have been itching to learn Rust. I really enjoyed participating in the chess challenge a while back and thought that writing a new chess engine from scratch would be a good way to learn the language.
 
 `byte-knight` is a command line chess engine and does not come with any sort of user interface. There are many [chess GUIs](https://www.chessprogramming.org/GUI) out there that you can use like [cutechess](https://github.com/cutechess/cutechess).
 
-New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBench) [intance](https://developerpaul123.pythonanywhere.com) using [SPRT](https://github.com/jw1912/SPRT/blob/main/SPRT.md#how-sprt-actually-works) testing.
+New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench) intance using [SPRT](https://github.com/jw1912/SPRT/blob/main/SPRT.md#how-sprt-actually-works) testing.
 
 # Strength
 
 | Version | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
 | ------- | --------------- | --------------- |
-| [3.0.0](https://github.com/DeveloperPaul123/byte-knight/releases/v3.0.0) | 2386 | 2307 |
+| [3.0.0](https://github.com/ptsouchlos/byte-knight/releases/v3.0.0) | 2386 | 2307 |
 
 # Features
 
@@ -120,8 +122,9 @@ Thanks/acknowledgement for those who have inspired and helped with this project:
 - [Danny Hammer](https://github.com/dannyhammer/toad) for providing feedback, for helping me with troubleshooting my engine and for writing the `chessie` and `uci-parser` crates. Thanks for inspiring some of the techniques and methods used in `byte-knight`.
 - [Marcel Vanthoor](https://github.com/mvanthoor/rustic) for his Rustic engine and associated [book](https://rustic-chess.org).
 - Everyone at [pyrobench](https://pyronomy.pythonanywhere.com) for donating CPU time as well as helping me when I get stuck.
+- Everyone at MattBench for donating CPU time as well as helping me when I get stuck.
 
 # Author
 
-| [<img src="https://avatars0.githubusercontent.com/u/6591180?s=460&v=4" width="100"><br><sub>@DeveloperPaul123</sub>](https://github.com/DeveloperPaul123) |
+| [<img src="https://avatars0.githubusercontent.com/u/6591180?s=460&v=4" width="100"><br><sub>@ptsouchlos</sub>](https://github.com/ptsouchlos) |
 |:----:|

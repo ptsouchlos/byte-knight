@@ -1,3 +1,6 @@
+// Part of the byte-knight project.
+// Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
+
 use crate::{offsets::PARAMETER_COUNT, parameters::Parameters, tuning_position::TuningPosition};
 
 pub(crate) struct Tuner<'a> {

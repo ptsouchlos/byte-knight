@@ -1,8 +1,7 @@
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at https://mozilla.org/MPL/2.0/.
- */
+// Part of the byte-knight project.
+// Author: Paul Tsouchlos (ptsouchlos) (developer.paul.123@gmail.com)
+// GNU General Public License v3.0 or later
+// https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use std::time::Instant;
 

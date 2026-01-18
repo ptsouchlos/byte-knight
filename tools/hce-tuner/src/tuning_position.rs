@@ -1,3 +1,6 @@
+// Part of the byte-knight project.
+// Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
+
 use chess::{definitions::NumberOf, side::Side};
 
 use crate::{math, parameters::Parameters, tuner_score::TuningScore};
