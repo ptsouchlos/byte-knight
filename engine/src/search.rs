@@ -19,7 +19,7 @@ use chess::{
     board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
     move_list::MoveList, moves::Move, pieces::Piece,
 };
-use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
+use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
 use crate::{
     aspiration_window::AspirationWindow,
@@ -207,7 +207,39 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             println!("{message}");
         }
 
-        let result = self.iterative_deepening(board);
+        let mut ml = MoveList::new();
+        self.move_gen.generate_legal_moves(board, &mut ml);
+        let result = match ml.len() {
+            0 => {
+                // Draw or something else?
+                let result = SearchResult {
+                    score: if board.is_in_check(&self.move_gen) {
+                        -Score::MATE
+                    } else {
+                        Score::DRAW
+                    },
+                    best_move: None,
+                    nodes: 0,
+                    depth: 0,
+                    pv: PrincipleVariation::new(),
+                };
+                self.nodes += 1;
+                if Log::DEBUG {
+                    self.send_message(
+                        format!(
+                            "{} has no legal moves available - scored as {}",
+                            board.to_fen(),
+                            UciScore::from(result.score)
+                        )
+                        .to_string(),
+                    );
+                }
+
+                result
+            }
+            _ => self.iterative_deepening(board),
+        };
+
         // search ended, reset our node count
         self.nodes = 0;
         result
@@ -237,6 +269,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             .nps(nps.trunc())
             .time(time)
             .pv(pv.iter().map(|m| m.to_long_algebraic()));
+        let message = UciResponse::info(info);
+        println!("{message}");
+    }
+
+    fn send_message(&self, message: String) {
+        let info = UciInfo::default().string(message);
         let message = UciResponse::info(info);
         println!("{message}");
     }
@@ -518,6 +556,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 best_score = score;
                 best_move = Some(mv);
                 if Node::PV {
+                    assert_pv_is_legal(&board, mv, &local_pv, &self.move_gen);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -755,6 +794,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 // extend PV if we're in a PV node
                 if Node::PV {
+                    assert_pv_is_legal(&board, mv, &local_pv, &self.move_gen);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -795,11 +835,42 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     }
 }
 
+#[allow(dead_code)]
+fn assert_pv_is_legal(
+    board: &Board,
+    mv: Move,
+    local_pv: &PrincipleVariation,
+    move_gen: &MoveGenerator,
+) {
+    let fen = board.to_fen();
+    let mut board_cpy = board.clone();
+
+    for local_mv in [&mv].into_iter().chain(local_pv.iter()) {
+        assert!(
+            board_cpy.is_legal(&local_mv, move_gen),
+            "Illegal PV move {local_mv} after move {local_mv} in position {fen}\nFull PV: {}\nResulting FEN: {}",
+            [local_mv]
+                .into_iter()
+                .chain(local_pv.iter())
+                .map(|m| m.to_string())
+                .collect::<Vec<_>>()
+                .join(" "),
+            board_cpy.to_fen()
+        );
+
+        let mv_ok = board_cpy.make_move(&local_mv, move_gen);
+        assert!(
+            mv_ok.is_ok(),
+            "Failed to make PV move {local_mv} in position {fen}"
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
 
-    use chess::{board::Board, pieces::ALL_PIECES};
+    use chess::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::ALL_PIECES};
 
     use crate::{
         evaluation::ByteKnightEvaluation,
@@ -1042,5 +1113,39 @@ mod tests {
             println!("min/max mvv-lva: {min_mvv_lva}, {max_mvv_lva}");
             assert!(max_history < min_mvv_lva);
         }
+    }
+
+    #[test]
+    fn pv_going_past_three_fold_repetition() {
+        let starting_fen = "rnbqr1k1/pp2bppp/2p1pn2/8/P1BP4/2N1PN2/1P3PPP/R1BQ1RK1 w - - 3 9";
+        let uci_moves = [
+            "e3e4", "b8d7", "f1e1", "b7b6", "e4e5", "f6d5", "a4a5", "b6a5", "c3e4", "c8b7", "c1g5",
+            "d7b6", "c4d5", "d8d5", "g5e7", "e8e7", "a1c1", "d5a2", "e4d6", "h7h6", "b2b3", "a5a4",
+            "f3d2", "a2b2", "e1e4", "a8b8", "c1b1", "b2c3", "b3a4", "c6c5", "b1c1", "c3d3", "d6b7",
+            "b8b7", "d4c5", "b6d5", "d1c2", "d3a3", "d2b1", "a3b2", "b1d2", "b2c2", "c1c2", "d5b4",
+            "c2c1", "e7c7", "e4d4", "b4c6", "d4e4", "b7b2", "d2c4", "b2b4", "c4d6", "b4e4", "d6e4",
+            "c6e5", "h2h3", "e5d7", "c5c6", "d7e5", "c1c5", "e5d3", "c5c4", "d3e5", "c4c5", "e5c6",
+            "e4d6", "g7g5", "d6c4", "c7c8", "c4d6", "c8c7", "d6c4", "c7c8", "c4d6",
+        ];
+
+        let mut board = Board::from_fen(starting_fen).unwrap();
+        for mv in uci_moves {
+            assert!(board.make_uci_move(&mv).is_ok());
+        }
+
+        let is_repetiton = board.is_repetition();
+        assert!(!is_repetiton, "Expected position to be a repetition");
+        let config = SearchParameters {
+            max_depth: 24,
+            ..Default::default()
+        };
+
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let res = search.search(&mut board, None);
+
+        assert!(res.best_move.is_some());
+        println!("{}", res.best_move.unwrap().to_long_algebraic());
     }
 }
