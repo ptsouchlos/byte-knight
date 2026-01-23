@@ -243,11 +243,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         // Try to ensure we have a move
-        if result.best_move.is_none() {
-            if let Some(mv) = ml.as_slice().first().copied() {
-                result.best_move = Some(mv);
-                result.score = self.eval.eval(board);
-            }
+        if result.best_move.is_none()
+            && let Some(mv) = ml.as_slice().first().copied()
+        {
+            result.best_move = Some(mv);
+            result.score = self.eval.eval(board);
         }
 
         // search ended, reset our node count
@@ -575,7 +575,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 best_score = score;
                 best_move = Some(mv);
                 if Node::PV {
-                    assert_pv_is_legal(&board, mv, &local_pv, &self.move_gen);
+                    assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -813,7 +813,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 // extend PV if we're in a PV node
                 if Node::PV {
-                    assert_pv_is_legal(&board, mv, &local_pv, &self.move_gen);
+                    assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -866,7 +866,7 @@ fn assert_pv_is_legal(
 
     for local_mv in [&mv].into_iter().chain(local_pv.iter()) {
         assert!(
-            board_cpy.is_legal(&local_mv, move_gen),
+            board_cpy.is_legal(local_mv, move_gen),
             "Illegal PV move {local_mv} after move {local_mv} in position {fen}\nFull PV: {}\nResulting FEN: {}",
             [local_mv]
                 .into_iter()
@@ -877,7 +877,7 @@ fn assert_pv_is_legal(
             board_cpy.to_fen()
         );
 
-        let mv_ok = board_cpy.make_move(&local_mv, move_gen);
+        let mv_ok = board_cpy.make_move(local_mv, move_gen);
         assert!(
             mv_ok.is_ok(),
             "Failed to make PV move {local_mv} in position {fen}"
@@ -1149,7 +1149,7 @@ mod tests {
 
         let mut board = Board::from_fen(starting_fen).unwrap();
         for mv in uci_moves {
-            assert!(board.make_uci_move(&mv).is_ok());
+            assert!(board.make_uci_move(mv).is_ok());
         }
 
         let is_repetiton = board.is_repetition();
