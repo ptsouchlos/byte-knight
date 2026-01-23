@@ -304,6 +304,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         Ok(())
     }
 
+    /// Perform [iterative deepening](https://www.chessprogramming.org/Iterative_Deepening) on the search position.
+    ///
+    /// This is a simple way for the engine to manage it's time. Each iteration we check if we still have time to continue
+    /// searching deeper based on the soft timeout. If we do, then we search at depth `d+1`. If we have exceeded the soft timeout,
+    /// we stop searching and return the best move found so far.
     fn iterative_deepening(&mut self, board: &mut Board) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::default();
@@ -408,6 +413,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         best_result
     }
 
+    /// Implements the [Negamax](https://www.chessprogramming.org/Negamax) search algorithm with alpha-beta
+    /// pruning and a [fail-soft](https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework) framework.
+    ///
+    /// This is the core of the search algorithm. It recursively searches the game tree to find the best move.
     fn negamax<Node>(
         &mut self,
         board: &mut Board,
