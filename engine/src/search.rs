@@ -202,14 +202,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         self.stop_flag = stop_flag;
 
         if Log::DEBUG {
-            let info = UciInfo::default().string(format!("searching {}", self.parameters));
-            let message = UciResponse::info(info);
-            println!("{message}");
+            self.send_message(format!("starting search for FEN {}", board.to_fen()));
+            self.send_message(format!("searching {}", self.parameters));
         }
 
         let mut ml = MoveList::new();
         self.move_gen.generate_legal_moves(board, &mut ml);
-        let result = match ml.len() {
+        let mut result = match ml.len() {
             0 => {
                 // Draw or something else?
                 let result = SearchResult {
@@ -239,6 +238,17 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             }
             _ => self.iterative_deepening(board),
         };
+        if Log::DEBUG {
+            self.send_message(format!("search ended after {} nodes", self.nodes));
+        }
+
+        // Try to ensure we have a move
+        if result.best_move.is_none() {
+            if let Some(mv) = ml.as_slice().first().copied() {
+                result.best_move = Some(mv);
+                result.score = self.eval.eval(board);
+            }
+        }
 
         // search ended, reset our node count
         self.nodes = 0;
