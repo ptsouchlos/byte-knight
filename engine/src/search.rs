@@ -889,7 +889,7 @@ fn assert_pv_is_legal(
 mod tests {
     use std::time::Duration;
 
-    use chess::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::ALL_PIECES};
+    use chess::{board::Board, pieces::ALL_PIECES};
 
     use crate::{
         evaluation::ByteKnightEvaluation,
@@ -1153,7 +1153,7 @@ mod tests {
         }
 
         let is_repetiton = board.is_repetition();
-        assert!(!is_repetiton, "Expected position to be a repetition");
+        assert!(!is_repetiton, "Expected position to not be a repetition");
         let config = SearchParameters {
             max_depth: 24,
             ..Default::default()
@@ -1165,6 +1165,7 @@ mod tests {
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
-        println!("{}", res.best_move.unwrap().to_long_algebraic());
+        let mv = res.best_move.unwrap();
+        println!("{}", mv.to_long_algebraic());
     }
 }
