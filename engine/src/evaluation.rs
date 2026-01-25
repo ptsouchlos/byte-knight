@@ -107,6 +107,28 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         let stm_idx = side_to_move as usize;
         let opposite = Side::opposite(side_to_move) as usize;
+
+        if board
+            .piece_bitboard(Piece::Bishop, side_to_move)
+            .number_of_occupied_squares()
+            >= 2
+        {
+            let bonus = self.values.bishop_pair_bonus_value();
+            mg[stm_idx] += bonus.mg() as i32;
+            eg[stm_idx] += bonus.eg() as i32;
+        }
+
+        if board
+            .piece_bitboard(Piece::Bishop, Side::opposite(side_to_move))
+            .number_of_occupied_squares()
+            >= 2
+        {
+            let bonus = self.values.bishop_pair_bonus_value();
+
+            mg[opposite] += bonus.mg() as i32;
+            eg[opposite] += bonus.eg() as i32;
+        }
+
         let mg_score = mg[stm_idx] - mg[opposite];
         let eg_score = eg[stm_idx] - eg[opposite];
         let score = PhasedScore::new(mg_score as ScoreType, eg_score as ScoreType);
