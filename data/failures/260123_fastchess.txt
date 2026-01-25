@@ -1,0 +1,1299 @@
+Indexing opening suite...
+Started game 12 of 200 (bk1 vs bk)
+Started game 18 of 200 (bk1 vs bk)
+Started game 15 of 200 (bk vs bk1)
+Started game 9 of 200 (bk vs bk1)
+Started game 10 of 200 (bk1 vs bk)
+Started game 3 of 200 (bk vs bk1)
+Started game 6 of 200 (bk1 vs bk)
+Started game 2 of 200 (bk1 vs bk)
+Started game 14 of 200 (bk1 vs bk)
+Started game 8 of 200 (bk1 vs bk)
+Started game 7 of 200 (bk vs bk1)
+Started game 13 of 200 (bk vs bk1)
+Started game 16 of 200 (bk1 vs bk)
+Started game 11 of 200 (bk vs bk1)
+Started game 4 of 200 (bk1 vs bk)
+Started game 1 of 200 (bk vs bk1)
+Started game 5 of 200 (bk vs bk1)
+Started game 17 of 200 (bk vs bk1)
+Started game 19 of 200 (bk vs bk1)
+Started game 20 of 200 (bk1 vs bk)
+Finished game 6 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 0 - 0 - 1  [0.500] 1
+Started game 21 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move c6c5 from bk1
+Info; info depth 18 time 405 nodes 1295563 score cp -81 nps 3191217 pv h2h4 b6c5 e2e7 c5b6 e7e2 b6c5 e2e7 c5b6 e7e2 c6c5
+Position; fen r1bqk2r/pp1np1b1/2pp1npp/5pB1/3P4/1B2PN2/PPPN1PPP/R2Q1RK1 w kq - 0 9
+Moves; g5f6 g7f6 e3e4 f5f4 f1e1 d8c7 c2c3 e7e5 g2g3 g6g5 g3f4 g5f4 f3h4 h6h5 d2f3 d7f8 d1d3 c8g4 h4f5 e8c8 f3h4 e5d4 c3d4 f6h4 f5h4 c7g7 g1h1 g7f6 h4f5 d6d5 b3c2 d5e4 d3e4 f8g6 f2f3 g4h3 e1g1 h8f8 g1g6 h3f5 e4f5 f6f5 c2f5 f8f5 a1e1 d8d4 e1e8 c8c7 e8e2 f5d5 h1g2 d4d1 g2h3 c7b6 g6g7 d5d7 g7d7 d1d7 h3h4 d7d3 h4h5 d3f3 h5g4 f3f1
+Finished game 5 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 1 - 0 - 1  [0.750] 2
+Started game 22 of 200 (bk1 vs bk)
+Finished game 11 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 2 - 0 - 1  [0.833] 3
+Started game 23 of 200 (bk vs bk1)
+Finished game 18 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 2 - 1 - 1  [0.625] 4
+Started game 24 of 200 (bk1 vs bk)
+Finished game 8 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 3 - 1 - 1  [0.700] 5
+Started game 25 of 200 (bk vs bk1)
+Finished game 16 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 3 - 1 - 2  [0.667] 6
+Started game 26 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move c8c5 from bk
+Info; info depth 18 time 351 nodes 823543 score cp -42 nps 2346211 pv b1a2 g8g7 a2b3 h7h5 h2h4 c8g8 d2d1 g8c8 d1d2 c8g8 d2d1 g8c8 d1d2 c8c5
+Position; fen rn1q1rk1/pbp1npbp/1p2p1p1/3pP3/3P1B2/2NQ1N2/PPP1BPPP/R3K2R w KQ - 1 9
+Moves; e1c1 b8d7 c1b1 a7a6 h1g1 c7c5 f4g5 c5d4 d3d4 e7c6 g5d8 c6d4 f3d4 a8d8 f2f4 b6b5 a2a4 b5b4 c3a2 a6a5 a2c1 d7c5 c1b3 c5b3 d4b3 d8a8 b3d4 f8c8 g1e1 g7h6 g2g3 h6f8 e2b5 f8c5 d4b3 c5b6 b3d4 b6d4 d1d4 b7c6 b5c6 c8c6 e1e2 a8c8 d4d2 c6c4
+Warning; PV continues after threefold repetition - move c8c5 from bk
+Info; info depth 15 time 100 nodes 197246 score cp 0 nps 1970432 pv d8a8 e2b5 f8c8 b3d4 h7h5 h2h4 c8c5 d4b3 c5c8 b3d4 c8c5 d4b3 c5c8 b3d4 c8c5
+Position; fen rn1q1rk1/pbp1npbp/1p2p1p1/3pP3/3P1B2/2NQ1N2/PPP1BPPP/R3K2R w KQ - 1 9
+Moves; e1c1 b8d7 c1b1 a7a6 h1g1 c7c5 f4g5 c5d4 d3d4 e7c6 g5d8 c6d4 f3d4 a8d8 f2f4 b6b5 a2a4 b5b4 c3a2 a6a5 a2c1 d7c5 c1b3 c5b3 d4b3
+Warning; PV continues after threefold repetition - move c8c5 from bk
+Info; info depth 16 time 196 nodes 375136 score cp 0 nps 1906883 pv d8a8 e2b5 f8c8 b3d4 h7h5 h2h4 c8c5 d4b3 c5c8 b3d4 c8c5 d4b3 c5c8 b3d4 c8c5
+Position; fen rn1q1rk1/pbp1npbp/1p2p1p1/3pP3/3P1B2/2NQ1N2/PPP1BPPP/R3K2R w KQ - 1 9
+Moves; e1c1 b8d7 c1b1 a7a6 h1g1 c7c5 f4g5 c5d4 d3d4 e7c6 g5d8 c6d4 f3d4 a8d8 f2f4 b6b5 a2a4 b5b4 c3a2 a6a5 a2c1 d7c5 c1b3 c5b3 d4b3
+Warning; PV continues after threefold repetition - move c8c5 from bk
+Info; info depth 17 time 365 nodes 699526 score cp 0 nps 1916086 pv d8a8 e2b5 f8c8 b3d4 h7h5 h2h4 c8c5 d4b3 c5c8 b3d4 c8c5 d4b3 c5c8 b3d4 c8c5
+Position; fen rn1q1rk1/pbp1npbp/1p2p1p1/3pP3/3P1B2/2NQ1N2/PPP1BPPP/R3K2R w KQ - 1 9
+Moves; e1c1 b8d7 c1b1 a7a6 h1g1 c7c5 f4g5 c5d4 d3d4 e7c6 g5d8 c6d4 f3d4 a8d8 f2f4 b6b5 a2a4 b5b4 c3a2 a6a5 a2c1 d7c5 c1b3 c5b3 d4b3
+Warning; PV continues after threefold repetition - move c8c5 from bk
+Info; info depth 18 time 692 nodes 1346174 score cp 0 nps 1945024 pv d8a8 e2b5 f8c8 b3d4 h7h5 h2h4 c8c5 d4b3 c5c8 b3d4 c8c5 d4b3 c5c8 b3d4 c8c5
+Position; fen rn1q1rk1/pbp1npbp/1p2p1p1/3pP3/3P1B2/2NQ1N2/PPP1BPPP/R3K2R w KQ - 1 9
+Moves; e1c1 b8d7 c1b1 a7a6 h1g1 c7c5 f4g5 c5d4 d3d4 e7c6 g5d8 c6d4 f3d4 a8d8 f2f4 b6b5 a2a4 b5b4 c3a2 a6a5 a2c1 d7c5 c1b3 c5b3 d4b3
+Finished game 20 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 3 - 2 - 2  [0.571] 7
+Started game 27 of 200 (bk vs bk1)
+Finished game 14 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 4 - 2 - 2  [0.625] 8
+Started game 28 of 200 (bk1 vs bk)
+Finished game 15 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 5 - 2 - 2  [0.667] 9
+Started game 29 of 200 (bk vs bk1)
+Finished game 1 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 5 - 2 - 3  [0.650] 10
+Elo difference: 107.54 +/- 215.77, LOS: 88.78 %, DrawRatio: 30.00 %
+SPRT: llr 0.02 (0.7%), lbound -2.94, ubound 2.94
+Started game 30 of 200 (bk1 vs bk)
+Finished game 7 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 5 - 2 - 4  [0.636] 11
+Started game 31 of 200 (bk vs bk1)
+Finished game 4 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 5 - 3 - 4  [0.583] 12
+Started game 32 of 200 (bk1 vs bk)
+Finished game 10 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 5 - 4 - 4  [0.538] 13
+Started game 33 of 200 (bk vs bk1)
+Finished game 21 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 5 - 5 - 4  [0.500] 14
+Started game 34 of 200 (bk1 vs bk)
+Finished game 25 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 6 - 5 - 4  [0.533] 15
+Started game 35 of 200 (bk vs bk1)
+Finished game 23 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 6 - 6 - 4  [0.500] 16
+Started game 36 of 200 (bk1 vs bk)
+Finished game 2 (bk1 vs bk): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 6 - 6 - 5  [0.500] 17
+Started game 37 of 200 (bk vs bk1)
+Finished game 13 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 6 - 7 - 5  [0.472] 18
+Started game 38 of 200 (bk1 vs bk)
+Finished game 28 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 6 - 7 - 6  [0.474] 19
+Started game 39 of 200 (bk vs bk1)
+Finished game 22 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 7 - 7 - 6  [0.500] 20
+Elo difference: -0.00 +/- 133.62, LOS: 50.00 %, DrawRatio: 30.00 %
+SPRT: llr -0.00 (0.0%), lbound -2.94, ubound 2.94
+Started game 40 of 200 (bk1 vs bk)
+Finished game 17 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 7 - 7 - 7  [0.500] 21
+Started game 41 of 200 (bk vs bk1)
+Finished game 29 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 8 - 7 - 7  [0.523] 22
+Started game 42 of 200 (bk1 vs bk)
+Finished game 31 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 9 - 7 - 7  [0.543] 23
+Started game 43 of 200 (bk vs bk1)
+Finished game 26 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 9 - 8 - 7  [0.521] 24
+Started game 44 of 200 (bk1 vs bk)
+Finished game 38 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 9 - 8 - 8  [0.520] 25
+Started game 45 of 200 (bk vs bk1)
+Finished game 33 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 10 - 8 - 8  [0.538] 26
+Started game 46 of 200 (bk1 vs bk)
+Finished game 27 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 10 - 9 - 8  [0.519] 27
+Started game 47 of 200 (bk vs bk1)
+Finished game 19 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 10 - 10 - 8  [0.500] 28
+Started game 48 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move e6d7 from bk
+Info; info depth 20 time 311 nodes 913241 score cp -4 nps 2935435 pv b1c2 e6e5 c2d3 b8d6 g5d8 e5e6 h3h4 d6e5 a2a4 e6d7 d8g5 d7e6 g5d8 e5d4 d8c7 d4e5 c7d8 e6d7
+Position; fen r1bqk1nr/pp1pppbp/6p1/8/2P1P3/2Nn1N1P/PP3PP1/R1BQK2R w KQkq - 0 9
+Moves; d1d3 d7d6 c1e3 d8a5 f3d4 g8f6 e1c1 e8g8 c1b1 c8d7 c3d5 f6d5 c4d5 f7f5 f2f3 f5f4 e3f2 g7e5 d4e6 f8c8 f2h4 a5b4 d3e2 b4c4 e2c4 c8c4 h4e7 a8c8 d1d2 g8f7 b2b3 c4b4 e7g5 d7e6 d5e6 f7e6 d2d5 c8c5 d5c5 d6c5 h1c1 b7b6 c1c4 b4c4 b3c4 e5b8
+Finished game 32 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 10 - 11 - 8  [0.483] 29
+Started game 49 of 200 (bk vs bk1)
+Finished game 12 (bk1 vs bk): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 10 - 11 - 9  [0.483] 30
+Elo difference: -11.59 +/- 107.35, LOS: 41.36 %, DrawRatio: 30.00 %
+SPRT: llr -0.01 (0.3%), lbound -2.94, ubound 2.94
+Started game 50 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move h7h5 from bk1
+Info; info depth 16 time 155 nodes 431461 score cp 3 nps 2771410 pv d6e6 a2a4 e6d7 d2d3 d7e6 d3d2 e6d7 d2d3 d7e6 d3d2 h7h5
+Position; fen r1bqk1nr/pp1pppbp/6p1/8/2P1P3/2Nn1N1P/PP3PP1/R1BQK2R w KQkq - 0 9
+Moves; d1d3 d7d6 c1e3 d8a5 f3d4 g8f6 e1c1 e8g8 c1b1 c8d7 c3d5 f6d5 c4d5 f7f5 f2f3 f5f4 e3f2 g7e5 d4e6 f8c8 f2h4 a5b4 d3e2 b4c4 e2c4 c8c4 h4e7 a8c8 d1d2 g8f7 b2b3 c4b4 e7g5 d7e6 d5e6 f7e6 d2d5 c8c5 d5c5 d6c5 h1c1 b7b6 c1c4 b4c4 b3c4 e5b8 b1c2 b8e5 c2d3 e6d6 d3d2
+Finished game 24 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 11 - 11 - 9  [0.500] 31
+Started game 51 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move d6d7 from bk
+Info; info depth 13 time 11 nodes 40016 score cp -93 nps 3415150 pv a4c2 f5e5 b7b5 d6b6 c2d3 b6d6 d3c2 d6b6 c2d3 b6d6 d3c2 d6d7
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6
+Warning; PV continues after threefold repetition - move d6d7 from bk
+Info; info depth 14 time 16 nodes 57961 score cp -97 nps 3602479 pv a4c2 f5e5 b7b5 d6b6 c2d3 b6d6 d3c2 d6b6 c2d3 b6d6 d3c2 d6d7
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6
+Warning; PV continues after threefold repetition - move d6d7 from bk
+Info; info depth 15 time 26 nodes 103158 score cp -93 nps 3901411 pv a4c2 f5e5 b7b5 d6b6 c2d3 b6d6 d3c2 d6b6 c2d3 b6d6 d3c2 d6d7
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6
+Warning; PV continues after threefold repetition - move d6d2 from bk
+Info; info depth 16 time 35 nodes 142733 score cp -94 nps 4007744 pv a4c2 f5e5 b7b5 d6b6 c2d3 b6d6 d3c2 d6b6 c2d3 b6d6 d3c2 d6d2
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6
+Finished game 41 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 11 - 11 - 10  [0.500] 32
+Started game 52 of 200 (bk1 vs bk)
+Finished game 39 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 11 - 11 - 11  [0.500] 33
+Started game 53 of 200 (bk vs bk1)
+Finished game 3 (bk vs bk1): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 11 - 11 - 12  [0.500] 34
+Started game 54 of 200 (bk1 vs bk)
+Finished game 30 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 12 - 11 - 12  [0.514] 35
+Started game 55 of 200 (bk vs bk1)
+Finished game 45 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 12 - 11 - 13  [0.514] 36
+Started game 56 of 200 (bk1 vs bk)
+Finished game 35 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 12 - 12 - 13  [0.500] 37
+Started game 57 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move f3e2 from bk
+Info; info depth 15 time 125 nodes 199296 score cp -364 nps 1593220 pv e7e6 f2f4 e6e7 g2f3 h7h5 f3g2 e7d7 g2f3 d7e7 f3g2 e7d7 g2f3 d7e7 f3e2
+Position; fen r1bqk2r/p2nppbp/2pp1np1/8/1p1PP3/3B1N2/PPP1QPPP/R1BNK2R w KQkq - 2 9
+Moves; e1g1 e8g8 c2c3 c6c5 c3b4 c5b4 a2a3 b4b3 d1c3 e7e5 c1e3 c8b7 a1d1 e5d4 e3d4 d7c5 f1e1 d8c8 f3d2 c5d3 e2d3 c8e6 c3b5 a8d8 d4a7 g7h6 a7b6 h6d2 d3d2 d8d7 d2b4 d6d5 b5d4 e6e5 d4f3 e5h5 e4e5 f6e4 b4b3 b7c6 f3d4 c6a8 b3b5 d7b7 d4c6 h5h4 e1f1 h4h6 d1d5 e4d2 f1e1 d2c4 b5c4 b7b6 c6e7 g8h8 d5d7 h6g5 g2g3 b6e6 h2h4 g5h5 e7d5 h5f3 c4d4 a8c6 d7d6 h8g7 d4d1 c6d5 d1d5 f3d5 d6d5 f8a8 e1e3 e6e7 b2b4 e7a7 d5d3 a7b7 g1g2 a8a4 d3d5 g7f8 b4b5 f8e7 d5c5 a4a5 e3b3
+Finished game 51 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 12 - 13 - 13  [0.487] 38
+Started game 58 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move f2f3 from bk
+Info; info depth 12 time 39 nodes 62559 score cp -28 nps 1575380 pv h7h5 e3d2 f6d4 d2e3 d4f6 e3d2 f6d4 d2e3 d4f6 f2f3
+Position; fen rnbq1rk1/ppp1p1bp/3p2p1/5p2/1P1P4/3Q1NP1/P1PnPPBP/R1B2RK1 w - - 0 9
+Moves; c1d2 d6d5 a1d1 b8d7 d2f4 f8e8 f1e1 d7f6 f3e5 c7c6 h2h3 a7a5 a2a3 d8b6 d1b1 a5b4 c2c4 b6a6 a3b4 d5c4 e5c4 c8e6 b4b5 c6b5 c4e5 e6c4 e5c4 b5c4 d3e3 a8a7 b1b4 e7e6 e1b1 c4c3 b1c1 a6a2 e3c3 f6d5 g2d5 a2d5 c3c5 d5c5 d4c5 e8e7 g1g2 a7a1 c1a1 g7a1 g2f3 a1f6 f4e3 g6g5 h3h4 g5g4 f3f4 g8g7 b4b6
+Warning; PV continues after threefold repetition - move f2f3 from bk
+Info; info depth 13 time 57 nodes 106309 score cp -28 nps 1841093 pv h7h5 e3d2 f6d4 d2e3 d4f6 e3d2 f6d4 d2e3 d4f6 f2f3
+Position; fen rnbq1rk1/ppp1p1bp/3p2p1/5p2/1P1P4/3Q1NP1/P1PnPPBP/R1B2RK1 w - - 0 9
+Moves; c1d2 d6d5 a1d1 b8d7 d2f4 f8e8 f1e1 d7f6 f3e5 c7c6 h2h3 a7a5 a2a3 d8b6 d1b1 a5b4 c2c4 b6a6 a3b4 d5c4 e5c4 c8e6 b4b5 c6b5 c4e5 e6c4 e5c4 b5c4 d3e3 a8a7 b1b4 e7e6 e1b1 c4c3 b1c1 a6a2 e3c3 f6d5 g2d5 a2d5 c3c5 d5c5 d4c5 e8e7 g1g2 a7a1 c1a1 g7a1 g2f3 a1f6 f4e3 g6g5 h3h4 g5g4 f3f4 g8g7 b4b6
+Finished game 37 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 13 - 13 - 13  [0.500] 39
+Started game 59 of 200 (bk vs bk1)
+Finished game 9 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 13 - 13 - 14  [0.500] 40
+Elo difference: -0.00 +/- 88.68, LOS: 50.00 %, DrawRatio: 35.00 %
+SPRT: llr -0.00 (0.0%), lbound -2.94, ubound 2.94
+Started game 60 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move f4e5 from bk
+Info; info depth 10 time 6 nodes 8566 score cp -69 nps 1357226 pv b7b5 e7e8 g2h3 e8e7 h3g2 e7e8 g2h3 e8e7 h3g2 f4e5
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6 a4c2 f5f4 c2a4 f4e5 a4c6 d6d8 g7g6 e5f4 g6f6 d8d6 f6g7 d6d8 c6b5 d8d1 b5c6 d1d4 c6e8 f4f5 g7f7 d4d6 f7g7 d6d4 e8c6 d4g4 g7f7 g4d4 f7g7 d4d3 c6a4 d3d2 a4c6 d2d1 c6b5 d1d5 b5c6 d5d2 c6b5 f5f4 b5e8 d2d8 e8c6 f4g4 c6a4 d8b8 a4c6 g4f5 c6d7 f5e5 d7c6 e5f5 c6d7 f5f4 d7c6 b8d8 g7f6 d8d6 f6g7 f4g4 c6a4 d6d8 a4c6 d8b8 g7g6 g4f4 g6h5 b8g8 h5h4 g8c8 h6h5 c8g8 h4h3 g8g3 h3h4 g3g5 c6f3 g5g7 f3c6 g7g1 h4h3 g1b1 c6g2 b1b5 h3h4 b5b2 h4h3 b2b3 h3h4 b3b5 g2c6 b5c5 c6g2 c5b5 g2c6 b5e5 c6g2 e5e7
+Warning; PV continues after threefold repetition - move e7e8 from bk
+Info; info depth 12 time 8 nodes 17620 score cp -69 nps 2145666 pv b7b5 e7e8 g2h3 e8e7 h3g2 e7e5 g2c6 e5e7 c6g2 e7e8
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6 a4c2 f5f4 c2a4 f4e5 a4c6 d6d8 g7g6 e5f4 g6f6 d8d6 f6g7 d6d8 c6b5 d8d1 b5c6 d1d4 c6e8 f4f5 g7f7 d4d6 f7g7 d6d4 e8c6 d4g4 g7f7 g4d4 f7g7 d4d3 c6a4 d3d2 a4c6 d2d1 c6b5 d1d5 b5c6 d5d2 c6b5 f5f4 b5e8 d2d8 e8c6 f4g4 c6a4 d8b8 a4c6 g4f5 c6d7 f5e5 d7c6 e5f5 c6d7 f5f4 d7c6 b8d8 g7f6 d8d6 f6g7 f4g4 c6a4 d6d8 a4c6 d8b8 g7g6 g4f4 g6h5 b8g8 h5h4 g8c8 h6h5 c8g8 h4h3 g8g3 h3h4 g3g5 c6f3 g5g7 f3c6 g7g1 h4h3 g1b1 c6g2 b1b5 h3h4 b5b2 h4h3 b2b3 h3h4 b3b5 g2c6 b5c5 c6g2 c5b5 g2c6 b5e5 c6g2 e5e7
+Warning; PV continues after threefold repetition - move e7e8 from bk
+Info; info depth 13 time 9 nodes 22902 score cp -69 nps 2407113 pv b7b5 e7e8 g2h3 e8e7 h3g2 e7e5 g2c6 e5e7 c6g2 e7e8
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6 a4c2 f5f4 c2a4 f4e5 a4c6 d6d8 g7g6 e5f4 g6f6 d8d6 f6g7 d6d8 c6b5 d8d1 b5c6 d1d4 c6e8 f4f5 g7f7 d4d6 f7g7 d6d4 e8c6 d4g4 g7f7 g4d4 f7g7 d4d3 c6a4 d3d2 a4c6 d2d1 c6b5 d1d5 b5c6 d5d2 c6b5 f5f4 b5e8 d2d8 e8c6 f4g4 c6a4 d8b8 a4c6 g4f5 c6d7 f5e5 d7c6 e5f5 c6d7 f5f4 d7c6 b8d8 g7f6 d8d6 f6g7 f4g4 c6a4 d6d8 a4c6 d8b8 g7g6 g4f4 g6h5 b8g8 h5h4 g8c8 h6h5 c8g8 h4h3 g8g3 h3h4 g3g5 c6f3 g5g7 f3c6 g7g1 h4h3 g1b1 c6g2 b1b5 h3h4 b5b2 h4h3 b2b3 h3h4 b3b5 g2c6 b5c5 c6g2 c5b5 g2c6 b5e5 c6g2 e5e7
+Warning; PV continues after threefold repetition - move e7e2 from bk
+Info; info depth 14 time 16 nodes 49593 score cp -69 nps 3078666 pv b7b5 e7e8 g2h3 e8e7 h3g2 e7e5 g2c6 e5e7 c6g2 e7e2
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6 a4c2 f5f4 c2a4 f4e5 a4c6 d6d8 g7g6 e5f4 g6f6 d8d6 f6g7 d6d8 c6b5 d8d1 b5c6 d1d4 c6e8 f4f5 g7f7 d4d6 f7g7 d6d4 e8c6 d4g4 g7f7 g4d4 f7g7 d4d3 c6a4 d3d2 a4c6 d2d1 c6b5 d1d5 b5c6 d5d2 c6b5 f5f4 b5e8 d2d8 e8c6 f4g4 c6a4 d8b8 a4c6 g4f5 c6d7 f5e5 d7c6 e5f5 c6d7 f5f4 d7c6 b8d8 g7f6 d8d6 f6g7 f4g4 c6a4 d6d8 a4c6 d8b8 g7g6 g4f4 g6h5 b8g8 h5h4 g8c8 h6h5 c8g8 h4h3 g8g3 h3h4 g3g5 c6f3 g5g7 f3c6 g7g1 h4h3 g1b1 c6g2 b1b5 h3h4 b5b2 h4h3 b2b3 h3h4 b3b5 g2c6 b5c5 c6g2 c5b5 g2c6 b5e5 c6g2 e5e7
+Warning; PV continues after threefold repetition - move e7e8 from bk
+Info; info depth 16 time 21 nodes 74047 score cp -69 nps 3421702 pv b7b5 e7e8 g2h3 e8e7 h3g2 e7e5 g2c6 e5e7 c6g2 e7e8
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6 a4c2 f5f4 c2a4 f4e5 a4c6 d6d8 g7g6 e5f4 g6f6 d8d6 f6g7 d6d8 c6b5 d8d1 b5c6 d1d4 c6e8 f4f5 g7f7 d4d6 f7g7 d6d4 e8c6 d4g4 g7f7 g4d4 f7g7 d4d3 c6a4 d3d2 a4c6 d2d1 c6b5 d1d5 b5c6 d5d2 c6b5 f5f4 b5e8 d2d8 e8c6 f4g4 c6a4 d8b8 a4c6 g4f5 c6d7 f5e5 d7c6 e5f5 c6d7 f5f4 d7c6 b8d8 g7f6 d8d6 f6g7 f4g4 c6a4 d6d8 a4c6 d8b8 g7g6 g4f4 g6h5 b8g8 h5h4 g8c8 h6h5 c8g8 h4h3 g8g3 h3h4 g3g5 c6f3 g5g7 f3c6 g7g1 h4h3 g1b1 c6g2 b1b5 h3h4 b5b2 h4h3 b2b3 h3h4 b3b5 g2c6 b5c5 c6g2 c5b5 g2c6 b5e5 c6g2 e5e7
+Warning; PV continues after threefold repetition - move e7e5 from bk
+Info; info depth 17 time 25 nodes 91572 score cp -69 nps 3611880 pv b7b5 e7e8 g2h3 e8e7 h3g2 e7e5 g2c6 e5e7 c6g2 e7e5 g2c6 e5e3
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6 a4c2 f5f4 c2a4 f4e5 a4c6 d6d8 g7g6 e5f4 g6f6 d8d6 f6g7 d6d8 c6b5 d8d1 b5c6 d1d4 c6e8 f4f5 g7f7 d4d6 f7g7 d6d4 e8c6 d4g4 g7f7 g4d4 f7g7 d4d3 c6a4 d3d2 a4c6 d2d1 c6b5 d1d5 b5c6 d5d2 c6b5 f5f4 b5e8 d2d8 e8c6 f4g4 c6a4 d8b8 a4c6 g4f5 c6d7 f5e5 d7c6 e5f5 c6d7 f5f4 d7c6 b8d8 g7f6 d8d6 f6g7 f4g4 c6a4 d6d8 a4c6 d8b8 g7g6 g4f4 g6h5 b8g8 h5h4 g8c8 h6h5 c8g8 h4h3 g8g3 h3h4 g3g5 c6f3 g5g7 f3c6 g7g1 h4h3 g1b1 c6g2 b1b5 h3h4 b5b2 h4h3 b2b3 h3h4 b3b5 g2c6 b5c5 c6g2 c5b5 g2c6 b5e5 c6g2 e5e7
+Warning; PV continues after threefold repetition - move e7e5 from bk
+Info; info depth 18 time 30 nodes 112811 score cp -69 nps 3739661 pv b7b5 e7e8 g2h3 e8e7 h3g2 e7e5 g2c6 e5e7 c6g2 e7e5 g2c6 e5e1
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6 a4c2 f5f4 c2a4 f4e5 a4c6 d6d8 g7g6 e5f4 g6f6 d8d6 f6g7 d6d8 c6b5 d8d1 b5c6 d1d4 c6e8 f4f5 g7f7 d4d6 f7g7 d6d4 e8c6 d4g4 g7f7 g4d4 f7g7 d4d3 c6a4 d3d2 a4c6 d2d1 c6b5 d1d5 b5c6 d5d2 c6b5 f5f4 b5e8 d2d8 e8c6 f4g4 c6a4 d8b8 a4c6 g4f5 c6d7 f5e5 d7c6 e5f5 c6d7 f5f4 d7c6 b8d8 g7f6 d8d6 f6g7 f4g4 c6a4 d6d8 a4c6 d8b8 g7g6 g4f4 g6h5 b8g8 h5h4 g8c8 h6h5 c8g8 h4h3 g8g3 h3h4 g3g5 c6f3 g5g7 f3c6 g7g1 h4h3 g1b1 c6g2 b1b5 h3h4 b5b2 h4h3 b2b3 h3h4 b3b5 g2c6 b5c5 c6g2 c5b5 g2c6 b5e5 c6g2 e5e7
+Warning; PV continues after threefold repetition - move e7e5 from bk
+Info; info depth 19 time 38 nodes 147850 score cp -69 nps 3890267 pv b7b5 e7e8 g2h3 e8e7 h3g2 e7e5 g2c6 e5e7 c6g2 e7e5 g2c6 e5e1
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6 a4c2 f5f4 c2a4 f4e5 a4c6 d6d8 g7g6 e5f4 g6f6 d8d6 f6g7 d6d8 c6b5 d8d1 b5c6 d1d4 c6e8 f4f5 g7f7 d4d6 f7g7 d6d4 e8c6 d4g4 g7f7 g4d4 f7g7 d4d3 c6a4 d3d2 a4c6 d2d1 c6b5 d1d5 b5c6 d5d2 c6b5 f5f4 b5e8 d2d8 e8c6 f4g4 c6a4 d8b8 a4c6 g4f5 c6d7 f5e5 d7c6 e5f5 c6d7 f5f4 d7c6 b8d8 g7f6 d8d6 f6g7 f4g4 c6a4 d6d8 a4c6 d8b8 g7g6 g4f4 g6h5 b8g8 h5h4 g8c8 h6h5 c8g8 h4h3 g8g3 h3h4 g3g5 c6f3 g5g7 f3c6 g7g1 h4h3 g1b1 c6g2 b1b5 h3h4 b5b2 h4h3 b2b3 h3h4 b3b5 g2c6 b5c5 c6g2 c5b5 g2c6 b5e5 c6g2 e5e7
+Warning; PV continues after threefold repetition - move e7e8 from bk
+Info; info depth 20 time 61 nodes 245341 score cp -69 nps 4018169 pv b7b5 e7e8 g2h3 e8e7 h3g2 e7e5 g2f1 e5e8 f1h3 e8e7 h3g2 e7e8
+Position; fen r1b1k2r/pp1pqppp/2n2n2/1N6/1b2P3/8/PP1B1PPP/RN1QKB1R w KQkq - 5 9
+Moves; b5c7 e8d8 c7a8 e7e4 f1e2 e4g2 h1f1 b4d2 d1d2 g2h2 b1c3 h2b8 c3d5 f6d5 d2d5 d8e8 e2c4 b8f4 a8c7 f4c7 d5f7 e8d8 f7g7 h8e8 e1d1 c7f4 g7c3 d7d6 c4d5 c6b4 d5f3 d6d5 f1e1 e8f8 a2a3 f4f3 c3f3 f8f3 a3b4 f3f2 a1a5 f2b2 a5d5 c8d7 e1e4 b2f2 d1e1 f2f7 e4c4 d8e8 c4c7 d7e6 d5c5 e8d8 c7f7 e6f7 c5f5 f7g6 f5d5 d8e7 d5a5 a7a6 b4b5 a6b5 a5b5 e7f6 e1f2 g6e4 f2e3 e4c6 b5h5 f6g6 h5e5 g6f7 e3f4 h7h6 e5a5 f7g6 a5a8 c6d7 a8g8 g6f7 g8h8 f7g6 h8d8 d7a4 d8d6 g6g7 f4e5 a4c6 e5f5 c6e8 d6d8 e8a4 d8d2 a4c6 d2d8 c6a4 d8d6 a4c2 f5f4 c2a4 f4e5 a4c6 d6d8 g7g6 e5f4 g6f6 d8d6 f6g7 d6d8 c6b5 d8d1 b5c6 d1d4 c6e8 f4f5 g7f7 d4d6 f7g7 d6d4 e8c6 d4g4 g7f7 g4d4 f7g7 d4d3 c6a4 d3d2 a4c6 d2d1 c6b5 d1d5 b5c6 d5d2 c6b5 f5f4 b5e8 d2d8 e8c6 f4g4 c6a4 d8b8 a4c6 g4f5 c6d7 f5e5 d7c6 e5f5 c6d7 f5f4 d7c6 b8d8 g7f6 d8d6 f6g7 f4g4 c6a4 d6d8 a4c6 d8b8 g7g6 g4f4 g6h5 b8g8 h5h4 g8c8 h6h5 c8g8 h4h3 g8g3 h3h4 g3g5 c6f3 g5g7 f3c6 g7g1 h4h3 g1b1 c6g2 b1b5 h3h4 b5b2 h4h3 b2b3 h3h4 b3b5 g2c6 b5c5 c6g2 c5b5 g2c6 b5e5 c6g2 e5e7
+Finished game 52 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 13 - 13 - 15  [0.500] 41
+Started game 61 of 200 (bk vs bk1)
+Finished game 47 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 14 - 13 - 15  [0.512] 42
+Started game 62 of 200 (bk1 vs bk)
+Finished game 40 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 14 - 14 - 15  [0.500] 43
+Started game 63 of 200 (bk vs bk1)
+Finished game 43 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 15 - 14 - 15  [0.511] 44
+Started game 64 of 200 (bk1 vs bk)
+Finished game 48 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 15 - 15 - 15  [0.500] 45
+Started game 65 of 200 (bk vs bk1)
+Finished game 49 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 16 - 15 - 15  [0.511] 46
+Started game 66 of 200 (bk1 vs bk)
+Finished game 54 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 16 - 15 - 16  [0.511] 47
+Started game 67 of 200 (bk vs bk1)
+Finished game 44 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 16 - 16 - 16  [0.500] 48
+Started game 68 of 200 (bk1 vs bk)
+Finished game 46 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 16 - 17 - 16  [0.490] 49
+Started game 69 of 200 (bk vs bk1)
+Finished game 34 (bk1 vs bk): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 16 - 17 - 17  [0.490] 50
+Elo difference: -6.95 +/- 79.61, LOS: 43.09 %, DrawRatio: 34.00 %
+SPRT: llr -0.01 (0.3%), lbound -2.94, ubound 2.94
+Started game 70 of 200 (bk1 vs bk)
+Finished game 56 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 16 - 18 - 17  [0.480] 51
+Started game 71 of 200 (bk vs bk1)
+Finished game 36 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 17 - 18 - 17  [0.490] 52
+Started game 72 of 200 (bk1 vs bk)
+Finished game 53 (bk vs bk1): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 17 - 18 - 18  [0.491] 53
+Started game 73 of 200 (bk vs bk1)
+Finished game 42 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 17 - 18 - 19  [0.491] 54
+Started game 74 of 200 (bk1 vs bk)
+Finished game 62 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 17 - 19 - 19  [0.482] 55
+Started game 75 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move e4d6 from bk1
+Info; info depth 12 time 144 nodes 219032 score cp 95 nps 1515525 pv d1d6 f8e8 d6d1 e8f8 d1d6 f8e8 d6d1 e8f8 e4d6
+Position; fen r1b1kb1r/pp1n1ppp/2p2n2/4p3/1qBP4/2N3B1/PPP1NPPP/R2QK2R w KQkq - 2 9
+Moves; c4b3 f8d6 d1d2 e8g8 e1c1 e5d4 a2a3 d4c3 e2c3 f6e4 c3e4 b4d2 d1d2 d6b8 h1e1 a7a6 a3a4 a6a5 g3d6 b8d6 d2d6 f8e8 d6d1 e8f8 h2h4 h7h5
+Warning; PV continues after threefold repetition - move e4d6 from bk1
+Info; info depth 13 time 185 nodes 295642 score cp 95 nps 1596474 pv d1d6 f8e8 d6d1 e8f8 d1d6 f8e8 d6d1 e8f8 e4d6
+Position; fen r1b1kb1r/pp1n1ppp/2p2n2/4p3/1qBP4/2N3B1/PPP1NPPP/R2QK2R w KQkq - 2 9
+Moves; c4b3 f8d6 d1d2 e8g8 e1c1 e5d4 a2a3 d4c3 e2c3 f6e4 c3e4 b4d2 d1d2 d6b8 h1e1 a7a6 a3a4 a6a5 g3d6 b8d6 d2d6 f8e8 d6d1 e8f8 h2h4 h7h5
+Warning; PV continues after threefold repetition - move e4d6 from bk1
+Info; info depth 14 time 255 nodes 426841 score cp 95 nps 1673801 pv d1d6 f8e8 d6d1 e8f8 d1d6 f8e8 d6d1 e8f8 e4d6
+Position; fen r1b1kb1r/pp1n1ppp/2p2n2/4p3/1qBP4/2N3B1/PPP1NPPP/R2QK2R w KQkq - 2 9
+Moves; c4b3 f8d6 d1d2 e8g8 e1c1 e5d4 a2a3 d4c3 e2c3 f6e4 c3e4 b4d2 d1d2 d6b8 h1e1 a7a6 a3a4 a6a5 g3d6 b8d6 d2d6 f8e8 d6d1 e8f8 h2h4 h7h5
+Warning; PV continues after threefold repetition - move f2f4 from bk1
+Info; info depth 15 time 403 nodes 714665 score cp 96 nps 1771961 pv d1d6 f8e8 d6d1 e8f8 d1d6 f8e8 d6d1 e8f8 f2f4
+Position; fen r1b1kb1r/pp1n1ppp/2p2n2/4p3/1qBP4/2N3B1/PPP1NPPP/R2QK2R w KQkq - 2 9
+Moves; c4b3 f8d6 d1d2 e8g8 e1c1 e5d4 a2a3 d4c3 e2c3 f6e4 c3e4 b4d2 d1d2 d6b8 h1e1 a7a6 a3a4 a6a5 g3d6 b8d6 d2d6 f8e8 d6d1 e8f8 h2h4 h7h5
+Finished game 55 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 17 - 19 - 20  [0.482] 56
+Started game 76 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move f5f7 from bk
+Info; info depth 20 time 108 nodes 357932 score cp -151 nps 3313004 pv b8c8 f1e2 c8d8 e2d3 h8h5 d3d4 h5f5 f2f4 f5f8 d4d3 f8f5 d3d4 f5f7 d4d3 f7f5 d3d4 f5f7 d4c4
+Position; fen rn2kb1r/pbp3p1/1p1ppq1p/5p2/3P4/5NP1/PPPNPPBP/R2Q1RK1 w kq - 0 9
+Moves; c2c3 b8c6 e2e4 e8c8 e4f5 e6f5 f1e1 h8g8 d4d5 c6e7 e1e6 f6f7 c3c4 c8b8 f3d4 b7c8 e6e1 f7f6 d2b3 c8d7 d1d2 d8e8 d4c6 e7c6 d5c6 e8e1 a1e1 d7c8 g2d5 g8h8 b3d4 f8e7 b2b4 h8e8 b4b5 f6g6 d2d3 g6f6 d3e3 g7g5 e3d2 h6h5 d4e6 e7d8 e6d8 e8d8 d2e2 h5h4 g3h4 g5h4 e2e7 f6g6 g1h1 d8h8 e1g1 g6e8 g1g7 e8e7 g7e7 h4h3 h1g1 a7a6 a2a4 f5f4 e7f7 h8e8 g1f1 f4f3 d5f3 a6b5 a4b5 c8e6 f7f4 e8h8 f3d5 e6d5 c4d5 b8c8 f4a4 c8b8 a4f4 b8c8 f4a4 c8b8 a4e4
+Warning; PV continues after threefold repetition - move f5f7 from bk
+Info; info depth 21 time 151 nodes 502964 score cp -151 nps 3327375 pv b8c8 f1e2 c8d8 e2d3 h8h5 d3d4 h5f5 f2f4 f5f8 d4d3 f8f5 d3d4 f5f7 d4d3 f7f5 d3d4 f5f7 d4c4
+Position; fen rn2kb1r/pbp3p1/1p1ppq1p/5p2/3P4/5NP1/PPPNPPBP/R2Q1RK1 w kq - 0 9
+Moves; c2c3 b8c6 e2e4 e8c8 e4f5 e6f5 f1e1 h8g8 d4d5 c6e7 e1e6 f6f7 c3c4 c8b8 f3d4 b7c8 e6e1 f7f6 d2b3 c8d7 d1d2 d8e8 d4c6 e7c6 d5c6 e8e1 a1e1 d7c8 g2d5 g8h8 b3d4 f8e7 b2b4 h8e8 b4b5 f6g6 d2d3 g6f6 d3e3 g7g5 e3d2 h6h5 d4e6 e7d8 e6d8 e8d8 d2e2 h5h4 g3h4 g5h4 e2e7 f6g6 g1h1 d8h8 e1g1 g6e8 g1g7 e8e7 g7e7 h4h3 h1g1 a7a6 a2a4 f5f4 e7f7 h8e8 g1f1 f4f3 d5f3 a6b5 a4b5 c8e6 f7f4 e8h8 f3d5 e6d5 c4d5 b8c8 f4a4 c8b8 a4f4 b8c8 f4a4 c8b8 a4e4
+Finished game 50 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 17 - 20 - 20  [0.474] 57
+Started game 77 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move f3g2 from bk1
+Info; info depth 23 time 667 nodes 2366274 score cp 0 nps 3545092 pv g3g2 g5g2 h2h1 g2g5 h7h5 f3g2 h1e1 g2f3 e1h1 f3g2 h1e1 g2f3 e1h1 f3g2
+Position; fen r2qkbnr/ppp2p1p/4b3/4n1N1/2Pp2pP/P7/1P1NPPP1/R1BQKB1R w KQkq - 0 9
+Moves; g5e6 f7e6 d2e4 f8g7 c1g5 d8d7 e4c5 d7c6 c5b3 e5c4 b3d4 c4b2 d4c6 b2d1 a1d1 g7c3 g5d2 c3d2 e1d2 b7c6 e2e3 g8f6 f1d3 a8b8 d2c2 c6c5 h4h5 h8g8 h5h6 g4g3 f2f3 e8e7 h1h4 g8g5 d1e1 a7a5 h4h3 b8d8 d3e2 c7c6 f3f4 g5g8 e2d3 a5a4 e1e2 g8g4 e2e1 e7d7 d3e2 g4g8 e2c4 f6d5 h3h5 g8g4 c2c1 d8h8 c4e2 g4g8 e2d3 d7d6 h5e5 g8g4 e1h1 d5c3 h1h3 c3d5 d3c2 c5c4 c2a4 h8a8 a4d1 g4g8 a3a4 d5b4 e5e4 b4d3 c1d2 d3f2 e4d4 d6e7 h3h5 f2d1 d2d1 a8a4 d1e2 a4a2 d4d2 a2a1 d2c2 a1g1 e2f3 g1f1 f3e4 f1f2 c2c4 f2g2 c4c6 g2h2 c6c7 e7f6 c7g7 g8g7 h6g7 f6g7 h5g5 g7f7 e4f3
+Finished game 59 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 18 - 20 - 20  [0.483] 58
+Started game 78 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move f3e4 from bk1
+Info; info depth 28 time 1157 nodes 4701000 score cp 0 nps 4062933 pv h2g2 f3g2 f7f6 g2f3 h7h5 f3g3 f6f5 g3f3 f5f6 f3e4 f6f7 e4f3 f7f6 f3e4 f6f7 e4f3 f7f6
+Position; fen r2qkbnr/ppp2p1p/4b3/4n1N1/2Pp2pP/P7/1P1NPPP1/R1BQKB1R w KQkq - 0 9
+Moves; g5e6 f7e6 d2e4 f8g7 c1g5 d8d7 e4c5 d7c6 c5b3 e5c4 b3d4 c4b2 d4c6 b2d1 a1d1 g7c3 g5d2 c3d2 e1d2 b7c6 e2e3 g8f6 f1d3 a8b8 d2c2 c6c5 h4h5 h8g8 h5h6 g4g3 f2f3 e8e7 h1h4 g8g5 d1e1 a7a5 h4h3 b8d8 d3e2 c7c6 f3f4 g5g8 e2d3 a5a4 e1e2 g8g4 e2e1 e7d7 d3e2 g4g8 e2c4 f6d5 h3h5 g8g4 c2c1 d8h8 c4e2 g4g8 e2d3 d7d6 h5e5 g8g4 e1h1 d5c3 h1h3 c3d5 d3c2 c5c4 c2a4 h8a8 a4d1 g4g8 a3a4 d5b4 e5e4 b4d3 c1d2 d3f2 e4d4 d6e7 h3h5 f2d1 d2d1 a8a4 d1e2 a4a2 d4d2 a2a1 d2c2 a1g1 e2f3 g1f1 f3e4 f1f2 c2c4 f2g2 c4c6 g2h2 c6c7 e7f6 c7g7 g8g7 h6g7 f6g7 h5g5 g7f7 e4f3 g3g2 g5g2
+Warning; PV continues after threefold repetition - move f3e4 from bk1
+Info; info depth 29 time 1157 nodes 4701000 score cp 0 nps 4062833 pv h2g2 f3g2 f7f6 g2f3 h7h5 f3g3 f6f5 g3f3 f5f6 f3e4 f6f7 e4f3 f7f6 f3e4 f6f7 e4f3 f7f6
+Position; fen r2qkbnr/ppp2p1p/4b3/4n1N1/2Pp2pP/P7/1P1NPPP1/R1BQKB1R w KQkq - 0 9
+Moves; g5e6 f7e6 d2e4 f8g7 c1g5 d8d7 e4c5 d7c6 c5b3 e5c4 b3d4 c4b2 d4c6 b2d1 a1d1 g7c3 g5d2 c3d2 e1d2 b7c6 e2e3 g8f6 f1d3 a8b8 d2c2 c6c5 h4h5 h8g8 h5h6 g4g3 f2f3 e8e7 h1h4 g8g5 d1e1 a7a5 h4h3 b8d8 d3e2 c7c6 f3f4 g5g8 e2d3 a5a4 e1e2 g8g4 e2e1 e7d7 d3e2 g4g8 e2c4 f6d5 h3h5 g8g4 c2c1 d8h8 c4e2 g4g8 e2d3 d7d6 h5e5 g8g4 e1h1 d5c3 h1h3 c3d5 d3c2 c5c4 c2a4 h8a8 a4d1 g4g8 a3a4 d5b4 e5e4 b4d3 c1d2 d3f2 e4d4 d6e7 h3h5 f2d1 d2d1 a8a4 d1e2 a4a2 d4d2 a2a1 d2c2 a1g1 e2f3 g1f1 f3e4 f1f2 c2c4 f2g2 c4c6 g2h2 c6c7 e7f6 c7g7 g8g7 h6g7 f6g7 h5g5 g7f7 e4f3 g3g2 g5g2
+Finished game 61 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 18 - 20 - 21  [0.483] 59
+Started game 79 of 200 (bk vs bk1)
+Finished game 63 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 18 - 20 - 22  [0.483] 60
+Elo difference: -11.59 +/- 70.95, LOS: 37.27 %, DrawRatio: 36.67 %
+SPRT: llr -0.02 (0.5%), lbound -2.94, ubound 2.94
+Started game 80 of 200 (bk1 vs bk)
+Finished game 75 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 18 - 20 - 23  [0.484] 61
+Started game 81 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move f8g8 from bk
+Info; info depth 19 time 639 nodes 1586865 score cp -118 nps 2481600 pv h3h4 d5d1 f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 f8g8
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6
+Warning; PV continues after threefold repetition - move f8a8 from bk
+Info; info depth 20 time 965 nodes 2380700 score cp -116 nps 2465632 pv h3h4 d5d1 f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 f8a8
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6
+Warning; PV continues after threefold repetition - move f8a8 from bk
+Info; info depth 21 time 965 nodes 2380700 score cp -116 nps 2465572 pv h3h4 d5d1 f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 f8a8
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6
+Warning; PV continues after threefold repetition - move g6f6 from bk1
+Info; info depth 14 time 46 nodes 102896 score cp 133 nps 2203387 pv d5d1 f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 g6f6
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4
+Warning; PV continues after threefold repetition - move d1d2 from bk
+Info; info depth 13 time 31 nodes 65776 score cp -125 nps 2107536 pv f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 d1d2
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1
+Warning; PV continues after threefold repetition - move d1d2 from bk
+Info; info depth 15 time 58 nodes 136899 score cp -122 nps 2347883 pv f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 d1d2
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1
+Warning; PV continues after threefold repetition - move d1d2 from bk
+Info; info depth 16 time 78 nodes 198117 score cp -119 nps 2523580 pv f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 d1d2
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1
+Warning; PV continues after threefold repetition - move f8g8 from bk
+Info; info depth 17 time 108 nodes 287288 score cp -116 nps 2648841 pv f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 f8g8
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1
+Warning; PV continues after threefold repetition - move f8g8 from bk
+Info; info depth 18 time 177 nodes 497245 score cp -115 nps 2807485 pv f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 f8g8
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1
+Warning; PV continues after threefold repetition - move f8a8 from bk
+Info; info depth 19 time 364 nodes 1030354 score cp -111 nps 2826407 pv f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 f8a8
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1
+Warning; PV continues after threefold repetition - move f8g8 from bk
+Info; info depth 20 time 594 nodes 1722040 score cp -116 nps 2897834 pv f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 f8g8
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1
+Warning; PV continues after threefold repetition - move f8g8 from bk
+Info; info depth 21 time 899 nodes 2642125 score cp -97 nps 2938915 pv f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 f8g8
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1
+Warning; PV continues after threefold repetition - move f8g8 from bk
+Info; info depth 22 time 899 nodes 2642125 score cp -97 nps 2938827 pv f2f4 d1h1 h4g3 h1d1 g3h4 d1h1 h4g3 h1d1 g3h4 f8g8
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1
+Finished game 67 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 18 - 20 - 24  [0.484] 62
+Started game 82 of 200 (bk1 vs bk)
+Finished game 58 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 19 - 20 - 24  [0.492] 63
+Started game 83 of 200 (bk vs bk1)
+Finished game 64 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 20 - 20 - 24  [0.500] 64
+Started game 84 of 200 (bk1 vs bk)
+Finished game 60 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 20 - 21 - 24  [0.492] 65
+Started game 85 of 200 (bk vs bk1)
+Finished game 70 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 20 - 22 - 24  [0.485] 66
+Started game 86 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move e8g8 from bk1
+Info; info depth 23 time 418 nodes 1945629 score cp 132 nps 4652338 pv f6e5 f8e8 e5f6 e8g8 g1d1 f3e4 d1c1 g8f8 f6e6 f8g8 c1g1 e4f3 e6f6 g8c8 f6e5 c8e8 e5f6 e8g8 f6f5
+Position; fen r2qkbnr/1b3ppp/p1n1p3/2ppP3/3P4/3B1N2/PP3PPP/RNBQ1RK1 w kq - 2 9
+Moves; d4c5 f8c5 c1f4 g8e7 d1c2 d8b6 c2d2 e7g6 f4g3 c6d4 b1c3 d4f3 g2f3 c5e7 a1c1 d5d4 c3e4 e8g8 a2a4 e7b4 d2e2 b7c6 h2h4 g6e7 e4d6 f7f5 d6c4 b6c7 h4h5 f5f4 g3h2 a8d8 d3e4 c6a4 c4d6 c7d7 e2c4 b4d6 e5d6 e7f5 e4f5 f8f5 c4d4 a4b5 h2f4 d7f7 d4b6 f7f6 f4g3 b5f1 c1f1 f5h5 f1e1 d8f8 f3f4 h5d5 b6a6 h7h5 a6e2 f8b8 e2e6 f6e6 e1e6 b8b2 f4f5 b2b4 g1g2 b4g4 g2h3 g4g5 f5f6 g5g6 e6e7 g6f6 d6d7 f6f7 e7e8 f7f8 e8e7 f8f3 e7e8 f3f8 e8e7 g8h7 g3c7 h7g6 h3h4 d5d1 f2f4 f8g8 e7e8 d1d7 e8g8 d7c7 f4f5 g6f5 h4h5 c7c1 g8f8 f5e4 f8e8 e4f5 e8f8 f5e4 f8e8 e4f4 e8f8 f4e5 f8e8 e5f6 h5g4 c1g1 g4f3 g7g5 e8f8
+Finished game 66 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 20 - 23 - 24  [0.478] 67
+Started game 87 of 200 (bk vs bk1)
+Finished game 68 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 21 - 23 - 24  [0.485] 68
+Started game 88 of 200 (bk1 vs bk)
+Finished game 69 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 22 - 23 - 24  [0.493] 69
+Started game 89 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move f7f5 from bk1
+Info; info depth 16 time 508 nodes 1033740 score cp -216 nps 2034892 pv d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 f7f5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 18 time 1269 nodes 2640343 score cp -213 nps 2080539 pv d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 19 time 1269 nodes 2640343 score cp -213 nps 2080497 pv d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4
+Warning; PV continues after threefold repetition - move h7h5 from bk1
+Info; info depth 14 time 275 nodes 520000 score cp -226 nps 1890404 pv a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 h7h5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 15 time 662 nodes 1326571 score cp 211 nps 2003549 pv e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4
+Warning; PV continues after threefold repetition - move h7h5 from bk1
+Info; info depth 8 time 6 nodes 6140 score cp -208 nps 912156 pv d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 h7h5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6
+Warning; PV continues after threefold repetition - move c7a6 from bk1
+Info; info depth 11 time 13 nodes 21431 score cp -220 nps 1618020 pv d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 c7a6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6
+Warning; PV continues after threefold repetition - move c7a6 from bk1
+Info; info depth 12 time 18 nodes 34311 score cp -220 nps 1884929 pv d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 c7a6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 17 time 315 nodes 644009 score cp -220 nps 2041719 pv d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 18 time 536 nodes 1140300 score cp -220 nps 2123566 pv d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 19 time 1093 nodes 2345870 score cp -208 nps 2144417 pv d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 20 time 1093 nodes 2345870 score cp -208 nps 2144373 pv d7d3 f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6
+Warning; PV continues after threefold repetition - move b6b5 from bk
+Info; info depth 9 time 9 nodes 12460 score cp 218 nps 1325461 pv f6e4 d3d7 e4f6 d7d6 f6e4 d6d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3
+Warning; PV continues after threefold repetition - move b6b5 from bk
+Info; info depth 11 time 16 nodes 28238 score cp 218 nps 1723752 pv f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 12 time 25 nodes 48717 score cp 211 nps 1892488 pv f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3
+Warning; PV continues after threefold repetition - move f7f5 from bk
+Info; info depth 13 time 60 nodes 117854 score cp 211 nps 1963362 pv f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 f7f5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 14 time 83 nodes 170936 score cp 211 nps 2043012 pv f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3
+Warning; PV continues after threefold repetition - move b6b5 from bk
+Info; info depth 17 time 473 nodes 958698 score cp 218 nps 2024704 pv f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3
+Warning; PV continues after threefold repetition - move b6b5 from bk
+Info; info depth 18 time 643 nodes 1335297 score cp 218 nps 2075706 pv f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 19 time 1156 nodes 2312749 score cp 222 nps 1999204 pv f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 20 time 1156 nodes 2312749 score cp 222 nps 1999161 pv f6e4 d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3
+Warning; PV continues after threefold repetition - move c7a6 from bk1
+Info; info depth 10 time 14 nodes 22303 score cp -212 nps 1542350 pv d3d7 e4f6 d7d3 f6e4 d3d7 c7a6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 11 time 18 nodes 31913 score cp -209 nps 1681747 pv d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 12 time 28 nodes 52758 score cp -208 nps 1825226 pv d3d7 e4f6 d7d3 f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 13 time 36 nodes 69314 score cp -208 nps 1918631 pv d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 14 time 59 nodes 118217 score cp -212 nps 1993232 pv d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 15 time 99 nodes 177665 score cp -208 nps 1780101 pv d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 16 time 202 nodes 367107 score cp -221 nps 1816711 pv d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 17 time 317 nodes 608707 score cp -213 nps 1918451 pv d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 18 time 594 nodes 1194823 score cp -223 nps 2009533 pv d3d7 e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move h2h3 from bk
+Info; info depth 12 time 191 nodes 360373 score cp 55 nps 1885007 pv a6c5 a8b8 c5a6 b8b7 a6c5 b7b8 h2h3
+Position; fen r2qk1nr/p2nbpp1/1pp1p2p/3pPb2/3P4/1N3N2/PPP1BPPP/R1BQ1RK1 w kq - 0 9
+Moves; e2a6 d8c7 f1e1 d7b8 a6e2 b8d7 e2a6 d7b8 a6d3 f5d3 d1d3 b8d7 d3a6 b6b5 c1d2 c7b6 a6a5 e8c8 a2a4 b5b4 c2c3 b4c3 a5c3 c8b8 a4a5 b6a6 a1c1 a6b7 a5a6 b7a6 c3c6 a6c6 c1c6 d7b6 d2a5 d8c8 c6c8 b8c8 e1a1 c8b8 a5c3 e7f8 b3c5 g8e7 c5a6 b8c8 a6c5 c8b8 b2b3 g7g5 c5a6 b8a8
+Warning; PV continues after threefold repetition - move h2h3 from bk
+Info; info depth 13 time 246 nodes 466687 score cp 55 nps 1893950 pv a6c5 a8b8 c5a6 b8b7 a6c5 b7b8 h2h3
+Position; fen r2qk1nr/p2nbpp1/1pp1p2p/3pPb2/3P4/1N3N2/PPP1BPPP/R1BQ1RK1 w kq - 0 9
+Moves; e2a6 d8c7 f1e1 d7b8 a6e2 b8d7 e2a6 d7b8 a6d3 f5d3 d1d3 b8d7 d3a6 b6b5 c1d2 c7b6 a6a5 e8c8 a2a4 b5b4 c2c3 b4c3 a5c3 c8b8 a4a5 b6a6 a1c1 a6b7 a5a6 b7a6 c3c6 a6c6 c1c6 d7b6 d2a5 d8c8 c6c8 b8c8 e1a1 c8b8 a5c3 e7f8 b3c5 g8e7 c5a6 b8c8 a6c5 c8b8 b2b3 g7g5 c5a6 b8a8
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 12 time 57 nodes 97355 score cp 206 nps 1705298 pv e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 13 time 67 nodes 122623 score cp 222 nps 1816429 pv e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 14 time 81 nodes 159373 score cp 222 nps 1948746 pv e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 15 time 148 nodes 299518 score cp 221 nps 2021484 pv e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 16 time 204 nodes 424194 score cp 221 nps 2069715 pv e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 17 time 350 nodes 726805 score cp 220 nps 2075135 pv e4f6 d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7
+Warning; PV continues after threefold repetition - move b6b5 from bk
+Info; info depth 18 time 658 nodes 1399766 score cp 218 nps 2126421 pv e4f6 d7d3 f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7
+Warning; PV continues after threefold repetition - move g8g7 from bk1
+Info; info depth 4 time 3 nodes 953 score cp -210 nps 297552 pv d7d3 f6e4 d3d7 g8g7
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 5 time 3 nodes 1674 score cp -218 nps 488160 pv d7d3 f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 6 time 3 nodes 2771 score cp -218 nps 728750 pv d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move h7h6 from bk1
+Info; info depth 7 time 4 nodes 4667 score cp -218 nps 1068403 pv d7d3 f6e4 d3d7 h7h6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 10 time 14 nodes 25859 score cp -204 nps 1806742 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 e2f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 11 time 18 nodes 36495 score cp -218 nps 1949196 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7a6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 12 time 27 nodes 55844 score cp -222 nps 2044803 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7e6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 13 time 59 nodes 128354 score cp -199 nps 2159137 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7e6 c3b4 e2b2 b4a3 b2f2 f3e5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move h7h5 from bk1
+Info; info depth 14 time 97 nodes 215356 score cp -206 nps 2199265 pv d7d3 f6e4 d3d7 h7h5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 15 time 144 nodes 319157 score cp -206 nps 2206172 pv d7d3 f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 16 time 194 nodes 441701 score cp -218 nps 2275135 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7a6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 17 time 278 nodes 638987 score cp -218 nps 2294215 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7a6 c3b3 e2f2 d7d2 a6c5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 18 time 405 nodes 940264 score cp -218 nps 2319811 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7a6 c3b3 e2f2 d7d2 a6c5 b3b4
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 19 time 725 nodes 1662964 score cp -214 nps 2290759 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7a6 c3b3 e2f2 d7d2 a6c5 b3b4 f2d2 d1d2 g8g7
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 20 time 1082 nodes 2487101 score cp -214 nps 2297351 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7a6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 21 time 1082 nodes 2487101 score cp -214 nps 2297307 pv d7d3 f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7a6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6
+Warning; PV continues after threefold repetition - move g8g7 from bk
+Info; info depth 3 time 3 nodes 414 score cp 210 nps 128272 pv f6e4 d3d7 g8g7
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move h7h6 from bk
+Info; info depth 4 time 3 nodes 853 score cp 204 nps 245340 pv f6e4 d3d7 h7h6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move h7h6 from bk
+Info; info depth 5 time 4 nodes 2115 score cp 196 nps 508743 pv f6e4 d3d7 h7h6 f3d4
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move h7h6 from bk
+Info; info depth 6 time 5 nodes 4071 score cp 222 nps 791746 pv f6e4 d3d7 h7h6 d1e1
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move b6b5 from bk
+Info; info depth 7 time 7 nodes 8119 score cp 219 nps 1143489 pv f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 8 time 9 nodes 12999 score cp 219 nps 1399864 pv f6e4 d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 9 time 10 nodes 16725 score cp 219 nps 1542156 pv f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7e6 c3b4 e2f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 10 time 13 nodes 23211 score cp 222 nps 1731582 pv f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7e6 c3b4 e2b2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 11 time 16 nodes 31271 score cp 222 nps 1870991 pv f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7e6 c3b4 e2b2 b4a3 b2f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move e4f2 from bk
+Info; info depth 12 time 21 nodes 44559 score cp 220 nps 2077730 pv f6e4 d3d7 e4f2 e3f2 e8e2 c2c3 c7e6 c3d3
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move b6b5 from bk
+Info; info depth 13 time 54 nodes 118410 score cp 213 nps 2175302 pv f6e4 d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move b6b5 from bk
+Info; info depth 14 time 130 nodes 288855 score cp 214 nps 2218495 pv f6e4 d3d7 b6b5 d1b1
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move b6b5 from bk
+Info; info depth 15 time 275 nodes 593352 score cp 209 nps 2153222 pv f6e4 d3d7 b6b5 d1b1 e4f6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move f7f5 from bk
+Info; info depth 16 time 546 nodes 1164837 score cp 225 nps 2131372 pv f6e4 d3d7 f7f5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move f7f5 from bk
+Info; info depth 17 time 864 nodes 1798695 score cp 214 nps 2080039 pv f6e4 d3d7 f7f5 f3g5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move f7f5 from bk
+Info; info depth 18 time 864 nodes 1798695 score cp 214 nps 2079987 pv f6e4 d3d7 f7f5 f3g5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3
+Warning; PV continues after threefold repetition - move g8g7 from bk1
+Info; info depth 2 time 3 nodes 177 score cp -210 nps 50844 pv d3d7 g8g7
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move h7h6 from bk1
+Info; info depth 3 time 3 nodes 436 score cp -211 nps 119938 pv d3d7 h7h6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 4 time 4 nodes 1302 score cp -214 nps 313349 pv d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 5 time 5 nodes 3330 score cp -214 nps 631974 pv d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move h7h6 from bk1
+Info; info depth 6 time 6 nodes 5546 score cp -221 nps 861554 pv d3d7 h7h6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move h7h6 from bk1
+Info; info depth 7 time 7 nodes 7818 score cp -215 nps 1029741 pv d3d7 h7h6 e3h6 e4f2 d1f1
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 8 time 9 nodes 11837 score cp -214 nps 1247746 pv d3d7 e4f2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 9 time 11 nodes 16141 score cp -201 nps 1409312 pv d3d7 e4f2 e3f2 e8e2 c2c3 c7e6
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 10 time 13 nodes 20247 score cp -214 nps 1544417 pv d3d7 e4f2 e3f2 e8e2 c2c3 c7e6 c3b3
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move e4f2 from bk1
+Info; info depth 11 time 15 nodes 25863 score cp -214 nps 1682956 pv d3d7 e4f2 e3f2 e8e2 c2c3 c7e6 c3b3 e2f2 d7d2 e6c5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 12 time 78 nodes 137536 score cp -210 nps 1746706 pv d3d7 b6b5
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 13 time 91 nodes 164066 score cp -214 nps 1802115 pv d3d7 b6b5 a4b5 c7b5 d1f1 e4f6 d7b7 c8b8 b7b8 e8b8 f1a1
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 14 time 135 nodes 250185 score cp -212 nps 1844593 pv d3d7 b6b5 a4b5 c7b5 d1e1
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 15 time 246 nodes 472568 score cp -205 nps 1914740 pv d3d7 b6b5 a4b5 c7b5 d1e1 a7a5 d7d5 b5a3 c2d3 a3c4 e3d4 f7f5 d4c3 e4f2 d3c2
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 16 time 687 nodes 1349892 score cp -224 nps 1962629 pv d3d7 b6b5 a4b5 c7b5 d1f1
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 17 time 1144 nodes 2305571 score cp -228 nps 2014278 pv d3d7 b6b5 d1b1
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Warning; PV continues after threefold repetition - move b6b5 from bk1
+Info; info depth 18 time 1144 nodes 2305571 score cp -228 nps 2014222 pv d3d7 b6b5 d1b1
+Position; fen r1bq1rk1/pp3pbp/n2ppnp1/2pP2B1/2P1P3/2N5/PP1QBPPP/R3K1NR w KQ - 0 9
+Moves; d5e6 c8e6 e1c1 d8a5 d2f4 f6d7 g5h6 g7c3 b2c3 a5c3 c1b1 e6c4 e2c4 c3c4 g1f3 f8e8 f4d6 c4b4 b1c2 b4e4 c2b2 e4b4 b2c2 b4c4 c2b1 e8e6 d6d3 c4d3 d1d3 d7f6 h1d1 c5c4 d3d4 a8c8 h6e3 c4c3 b1c2 e6e8 f3e1 b7b6 e1f3 a6c7 h2h3 c7b5 d4b4 b5c7 b4d4 g8g7 d4d3 f6e4 d3d7 g7g8 a2a4 e4f6 d7d3 f6e4 d3d7 e4f6 d7d3 f6e4
+Finished game 80 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 22 - 23 - 25  [0.493] 70
+Elo difference: -4.96 +/- 66.05, LOS: 44.07 %, DrawRatio: 35.71 %
+SPRT: llr -0.01 (0.3%), lbound -2.94, ubound 2.94
+Started game 90 of 200 (bk1 vs bk)
+Finished game 74 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 22 - 24 - 25  [0.486] 71
+Started game 91 of 200 (bk vs bk1)
+Finished game 57 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 23 - 24 - 25  [0.493] 72
+Started game 92 of 200 (bk1 vs bk)
+Finished game 65 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 24 - 24 - 25  [0.500] 73
+Started game 93 of 200 (bk vs bk1)
+Finished game 72 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 25 - 24 - 25  [0.507] 74
+Started game 94 of 200 (bk1 vs bk)
+Finished game 85 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 25 - 24 - 26  [0.507] 75
+Started game 95 of 200 (bk vs bk1)
+Finished game 71 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 25 - 24 - 27  [0.507] 76
+Started game 96 of 200 (bk1 vs bk)
+Finished game 89 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 25 - 24 - 28  [0.506] 77
+Started game 97 of 200 (bk vs bk1)
+Finished game 78 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 25 - 24 - 29  [0.506] 78
+Started game 98 of 200 (bk1 vs bk)
+Finished game 83 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 25 - 24 - 30  [0.506] 79
+Started game 99 of 200 (bk vs bk1)
+Finished game 86 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 25 - 24 - 31  [0.506] 80
+Elo difference: 4.34 +/- 60.18, LOS: 55.68 %, DrawRatio: 38.75 %
+SPRT: llr 0.01 (0.2%), lbound -2.94, ubound 2.94
+Started game 100 of 200 (bk1 vs bk)
+Finished game 79 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 25 - 24 - 32  [0.506] 81
+Started game 101 of 200 (bk vs bk1)
+Finished game 73 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 25 - 24 - 33  [0.506] 82
+Started game 102 of 200 (bk1 vs bk)
+Finished game 91 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 25 - 24 - 34  [0.506] 83
+Started game 103 of 200 (bk vs bk1)
+Finished game 77 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 25 - 25 - 34  [0.500] 84
+Started game 104 of 200 (bk1 vs bk)
+Finished game 90 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 25 - 25 - 35  [0.500] 85
+Started game 105 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move a7a8 from bk1
+Info; info depth 18 time 363 nodes 866405 score cp 211 nps 2384351 pv b3b7 g8h7 b7a7 f7f5 a7a8 c7d6 a8a7 d6c7 a7b7 h7g8 b7a7 g8h7 a7a8
+Position; fen rn1qkb1r/p1p2ppp/4pn2/3b4/2p5/N4NP1/P2PPPBP/R1BQ1RK1 w kq - 2 9
+Moves; a3c4 b8d7 d2d3 h7h6 d1c2 f8d6 c1b2 e8g8 e2e4 d5c4 d3c4 e6e5 c4c5 d6c5 f3e5 d7e5 b2e5 c5d6 e5b2 f6d7 e4e5 d7e5 a1e1 e5d7 g2a8 d8a8 c2e4 a8e4 e1e4 d7c5 e4c4 c5e6 b2c3 g8h7 f1d1 f8b8 g1g2 b8b7 a2a4 b7b3 d1d5 b3b1 c3d2 b1b6 a4a5 b6a6 h2h4 c7c5 h4h5 a6c6 d2e3 a7a6 d5d3 d6c7 e3d2 c7d6 d3b3 d6c7 d2c3 h7g8
+Finished game 76 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 26 - 25 - 35  [0.506] 86
+Started game 106 of 200 (bk1 vs bk)
+Finished game 99 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 26 - 25 - 36  [0.506] 87
+Started game 107 of 200 (bk vs bk1)
+Finished game 82 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 26 - 26 - 36  [0.500] 88
+Started game 108 of 200 (bk1 vs bk)
+Finished game 98 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 26 - 27 - 36  [0.494] 89
+Started game 109 of 200 (bk vs bk1)
+Finished game 92 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 26 - 28 - 36  [0.489] 90
+Elo difference: -7.72 +/- 56.09, LOS: 39.27 %, DrawRatio: 40.00 %
+SPRT: llr -0.02 (0.6%), lbound -2.94, ubound 2.94
+Started game 110 of 200 (bk1 vs bk)
+Finished game 81 (bk vs bk1): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 26 - 28 - 37  [0.489] 91
+Started game 111 of 200 (bk vs bk1)
+Finished game 94 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 26 - 28 - 38  [0.489] 92
+Started game 112 of 200 (bk1 vs bk)
+Finished game 97 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 27 - 28 - 38  [0.495] 93
+Started game 113 of 200 (bk vs bk1)
+Finished game 93 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 27 - 29 - 38  [0.489] 94
+Started game 114 of 200 (bk1 vs bk)
+Finished game 88 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 27 - 30 - 38  [0.484] 95
+Started game 115 of 200 (bk vs bk1)
+Finished game 103 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 28 - 30 - 38  [0.490] 96
+Started game 116 of 200 (bk1 vs bk)
+Finished game 84 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 29 - 30 - 38  [0.495] 97
+Started game 117 of 200 (bk vs bk1)
+Finished game 104 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 29 - 30 - 39  [0.495] 98
+Started game 118 of 200 (bk1 vs bk)
+Finished game 95 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 29 - 30 - 40  [0.495] 99
+Started game 119 of 200 (bk vs bk1)
+Finished game 101 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 29 - 30 - 41  [0.495] 100
+Elo difference: -3.47 +/- 52.71, LOS: 44.82 %, DrawRatio: 41.00 %
+SPRT: llr -0.01 (0.3%), lbound -2.94, ubound 2.94
+Started game 120 of 200 (bk1 vs bk)
+Finished game 105 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 29 - 30 - 42  [0.495] 101
+Started game 121 of 200 (bk vs bk1)
+Finished game 109 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 29 - 30 - 43  [0.495] 102
+Started game 122 of 200 (bk1 vs bk)
+Finished game 113 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 29 - 30 - 44  [0.495] 103
+Started game 123 of 200 (bk vs bk1)
+Finished game 100 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 29 - 31 - 44  [0.490] 104
+Started game 124 of 200 (bk1 vs bk)
+Finished game 107 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 29 - 31 - 45  [0.490] 105
+Started game 125 of 200 (bk vs bk1)
+Finished game 110 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 29 - 31 - 46  [0.491] 106
+Started game 126 of 200 (bk1 vs bk)
+Finished game 102 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 29 - 32 - 46  [0.486] 107
+Started game 127 of 200 (bk vs bk1)
+Finished game 122 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 29 - 32 - 47  [0.486] 108
+Started game 128 of 200 (bk1 vs bk)
+Finished game 114 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 29 - 33 - 47  [0.482] 109
+Started game 129 of 200 (bk vs bk1)
+Finished game 106 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 29 - 34 - 47  [0.477] 110
+Elo difference: -15.80 +/- 49.48, LOS: 26.40 %, DrawRatio: 42.73 %
+SPRT: llr -0.04 (1.4%), lbound -2.94, ubound 2.94
+Started game 130 of 200 (bk1 vs bk)
+Finished game 96 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 30 - 34 - 47  [0.482] 111
+Started game 131 of 200 (bk vs bk1)
+Finished game 115 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 30 - 34 - 48  [0.482] 112
+Started game 132 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move e1e2 from bk
+Info; info depth 16 time 574 nodes 1124909 score cp -52 nps 1959714 pv d1c1 g5g4 f1e1 h7h5 e1e2 d4d2 e2e1 d2d4 c3b1 f7g7 b1c3 g7f7 e1e2
+Position; fen r1bqkb1r/pp1pp2p/2n2pp1/8/3NP3/2N3n1/PPP2PPP/R2QKB1R w KQkq - 0 9
+Moves; h2g3 f8g7 f1c4 d8a5 d4e2 e7e6 e1g1 e8g8 c4d3 c6e5 a1b1 d7d6 e2f4 e5d3 d1d3 f8d8 b1e1 a5c5 d3b5 g6g5 b5c5 d6c5 f4h5 c8d7 e4e5 f6f5 h5g7 g8g7 e1d1 d7c6 a2a4 g7f7 a4a5 d8d4 b2b3 a8d8
+Finished game 111 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 31 - 34 - 48  [0.487] 113
+Started game 133 of 200 (bk vs bk1)
+Finished game 129 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 31 - 34 - 49  [0.487] 114
+Started game 134 of 200 (bk1 vs bk)
+Finished game 116 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 32 - 34 - 49  [0.491] 115
+Started game 135 of 200 (bk vs bk1)
+Finished game 108 (bk1 vs bk): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 32 - 34 - 50  [0.491] 116
+Started game 136 of 200 (bk1 vs bk)
+Finished game 130 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 32 - 34 - 51  [0.491] 117
+Started game 137 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move c4e6 from bk
+Info; info depth 16 time 348 nodes 683134 score cp 137 nps 1960340 pv c4e5 h8d8 f1c4 a7a5 c4b3 c5b6 b3c4 b6c5 c4b3 c5b6 b3c4 b6c5 c4e6
+Position; fen rnbq1k1r/pp2nppp/3Np3/3pP3/3p4/8/PPPQ1PPP/R3KBNR w KQ - 2 9
+Moves; e1c1 e7g6 f2f4 f8g8 h2h4 b8c6 h4h5 g6h4 g1e2 h4f5 d6f5 e6f5 e2d4 c8e6 h5h6 g7g6 c1b1 d8b6 d4b5 a8f8 b5d6 f7f6 e5f6 f8f6 d2e1 g8f8 a2a3 d5d4 h1g1 f8e7 d6c4 b6c5
+Warning; PV continues after threefold repetition - move c4d3 from bk
+Info; info depth 13 time 207 nodes 411833 score cp 145 nps 1985787 pv c4b3 c5b5 b3c4 b5c5 c4b3 c5b5 b3c4 b5c5 c4d3
+Position; fen rnbq1k1r/pp2nppp/3Np3/3pP3/3p4/8/PPPQ1PPP/R3KBNR w KQ - 2 9
+Moves; e1c1 e7g6 f2f4 f8g8 h2h4 b8c6 h4h5 g6h4 g1e2 h4f5 d6f5 e6f5 e2d4 c8e6 h5h6 g7g6 c1b1 d8b6 d4b5 a8f8 b5d6 f7f6 e5f6 f8f6 d2e1 g8f8 a2a3 d5d4 h1g1 f8e7 d6c4 b6c5 c4e5 h8d8 f1c4 a7a5
+Finished game 117 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 32 - 34 - 52  [0.492] 118
+Started game 138 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move c4e6 from bk1
+Info; info depth 8 time 12 nodes 17512 score cp -135 nps 1452073 pv c5b5 b3c4 b5c5 c4b3 c5b5 b3c4 b5c5 c4e6
+Position; fen rnbq1k1r/pp2nppp/3Np3/3pP3/3p4/8/PPPQ1PPP/R3KBNR w KQ - 2 9
+Moves; e1c1 e7g6 f2f4 f8g8 h2h4 b8c6 h4h5 g6h4 g1e2 h4f5 d6f5 e6f5 e2d4 c8e6 h5h6 g7g6 c1b1 d8b6 d4b5 a8f8 b5d6 f7f6 e5f6 f8f6 d2e1 g8f8 a2a3 d5d4 h1g1 f8e7 d6c4 b6c5 c4e5 h8d8 f1c4 a7a5 c4b3
+Finished game 121 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 33 - 34 - 52  [0.496] 119
+Started game 139 of 200 (bk vs bk1)
+Finished game 119 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 34 - 34 - 52  [0.500] 120
+Elo difference: -0.00 +/- 47.08, LOS: 50.00 %, DrawRatio: 43.33 %
+SPRT: llr -0.00 (0.1%), lbound -2.94, ubound 2.94
+Started game 140 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move f3e5 from bk1
+Info; info depth 14 time 339 nodes 665629 score cp 151 nps 1959307 pv b7b5 d6g6 b5b7 g6d6 b7b5 d6g6 b5b7 g6d6 f3e5
+Position; fen 2kr1b1r/pppq1ppp/2n2n2/3p4/3P1Bb1/2PB1N2/PP3PPP/RN1Q1RK1 w - - 7 9
+Moves; b1d2 f8d6 f4d6 d7d6 b2b4 a7a6 h2h3 g4h5 a2a4 h8f8 b4b5 c6e7 b5a6 b7a6 d1b3 h5g6 a1b1 g6d3 b3b7 c8d7 f3e5 d7e8 e5d3 f8g8 d3c5 f6h5 b7a6 h5f4 b1b7 e7c6 d2f3 e8f8 f1e1 g7g5
+Finished game 128 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 34 - 34 - 53  [0.500] 121
+Started game 141 of 200 (bk vs bk1)
+Finished game 118 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 34 - 35 - 53  [0.496] 122
+Started game 142 of 200 (bk1 vs bk)
+Finished game 120 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 35 - 35 - 53  [0.500] 123
+Started game 143 of 200 (bk vs bk1)
+Finished game 112 (bk1 vs bk): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 35 - 35 - 54  [0.500] 124
+Started game 144 of 200 (bk1 vs bk)
+Finished game 87 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 35 - 35 - 55  [0.500] 125
+Started game 145 of 200 (bk vs bk1)
+Finished game 123 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 35 - 36 - 55  [0.496] 126
+Started game 146 of 200 (bk1 vs bk)
+Finished game 131 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 36 - 36 - 55  [0.500] 127
+Started game 147 of 200 (bk vs bk1)
+Finished game 124 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 36 - 36 - 56  [0.500] 128
+Started game 148 of 200 (bk1 vs bk)
+Finished game 125 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 37 - 36 - 56  [0.504] 129
+Started game 149 of 200 (bk vs bk1)
+Finished game 127 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 37 - 36 - 57  [0.504] 130
+Elo difference: 2.67 +/- 45.01, LOS: 54.66 %, DrawRatio: 43.85 %
+SPRT: llr 0.01 (0.2%), lbound -2.94, ubound 2.94
+Started game 150 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move b1c1 from bk
+Info; info depth 15 time 172 nodes 367597 score cp -239 nps 2135623 pv h4f4 g6g2 g7g5 d1d2 f4h4 d2d1 h4f4 d1d2 f4h4 d2d1 h4f4 b1c1
+Position; fen rn2kbnr/ppq2ppp/2p1p1b1/8/2BP2P1/2N4N/PPPB1P1P/R2QK2R w KQkq - 3 9
+Moves; h3f4 f8d6 d1f3 b8d7 e1c1 d7b6 c4b3 b6d5 f4g6 h7g6 c3e4 d6h2 c2c4 d5f6 e4g3 h8h4 d2f4 c7b6 f4g5 h4g4 g5f6 g8f6 h1h2 e8c8 g3e2 d8g8 h2g2 g4h4 c4c5 b6d8 e2f4 d8d7 f3e3 f6d5 f4d5 c6d5 c1b1 d7c7 g2g6 c7f4 e3f4
+Warning; PV continues after threefold repetition - move b1c2 from bk
+Info; info depth 16 time 429 nodes 909785 score cp -240 nps 2119593 pv h4f4 g6g2 g7g5 d1d2 f4h4 d2d1 h4f4 d1d2 f4h4 d2d1 h4f4 b1c2
+Position; fen rn2kbnr/ppq2ppp/2p1p1b1/8/2BP2P1/2N4N/PPPB1P1P/R2QK2R w KQkq - 3 9
+Moves; h3f4 f8d6 d1f3 b8d7 e1c1 d7b6 c4b3 b6d5 f4g6 h7g6 c3e4 d6h2 c2c4 d5f6 e4g3 h8h4 d2f4 c7b6 f4g5 h4g4 g5f6 g8f6 h1h2 e8c8 g3e2 d8g8 h2g2 g4h4 c4c5 b6d8 e2f4 d8d7 f3e3 f6d5 f4d5 c6d5 c1b1 d7c7 g2g6 c7f4 e3f4
+Finished game 140 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 37 - 36 - 58  [0.504] 131
+Started game 151 of 200 (bk vs bk1)
+Finished game 142 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 37 - 37 - 58  [0.500] 132
+Started game 152 of 200 (bk1 vs bk)
+Finished game 136 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 37 - 37 - 59  [0.500] 133
+Started game 153 of 200 (bk vs bk1)
+Finished game 138 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 37 - 38 - 59  [0.496] 134
+Started game 154 of 200 (bk1 vs bk)
+Finished game 135 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 38 - 38 - 59  [0.500] 135
+Started game 155 of 200 (bk vs bk1)
+Finished game 133 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 38 - 38 - 60  [0.500] 136
+Started game 156 of 200 (bk1 vs bk)
+Finished game 132 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 38 - 39 - 60  [0.496] 137
+Started game 157 of 200 (bk vs bk1)
+Finished game 145 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 38 - 39 - 61  [0.496] 138
+Started game 158 of 200 (bk1 vs bk)
+Finished game 139 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 38 - 39 - 62  [0.496] 139
+Started game 159 of 200 (bk vs bk1)
+Finished game 126 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 38 - 40 - 62  [0.493] 140
+Elo difference: -4.96 +/- 43.18, LOS: 41.04 %, DrawRatio: 44.29 %
+SPRT: llr -0.02 (0.6%), lbound -2.94, ubound 2.94
+Started game 160 of 200 (bk1 vs bk)
+Finished game 147 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 38 - 41 - 62  [0.489] 141
+Started game 161 of 200 (bk vs bk1)
+Finished game 144 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 38 - 41 - 63  [0.489] 142
+Started game 162 of 200 (bk1 vs bk)
+Finished game 146 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 38 - 42 - 63  [0.486] 143
+Started game 163 of 200 (bk vs bk1)
+Finished game 137 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 38 - 43 - 63  [0.483] 144
+Started game 164 of 200 (bk1 vs bk)
+Finished game 134 (bk1 vs bk): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 38 - 43 - 64  [0.483] 145
+Started game 165 of 200 (bk vs bk1)
+Finished game 143 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 39 - 43 - 64  [0.486] 146
+Started game 166 of 200 (bk1 vs bk)
+Finished game 155 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 40 - 43 - 64  [0.490] 147
+Started game 167 of 200 (bk vs bk1)
+Finished game 148 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 40 - 44 - 64  [0.486] 148
+Started game 168 of 200 (bk1 vs bk)
+Finished game 158 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 40 - 45 - 64  [0.483] 149
+Started game 169 of 200 (bk vs bk1)
+Warning; PV continues after threefold repetition - move h2h4 from bk
+Info; info depth 18 time 97 nodes 391728 score cp 70 nps 4013236 pv g4f4 f7e6 f4f3 b7b5 f3e3 h6h7 e3f3 h7h6 f3e3 h6h7 e3f3 h7h6 h2h4
+Position; fen rnbq1rk1/pppn1pbp/3p2p1/8/2PNP3/2N5/PP2BPPP/R1BQ1RK1 w - - 1 9
+Moves; c1e3 f8e8 d1c2 b8c6 a1d1 c6d4 e3d4 g7d4 d1d4 d7c5 f2f4 d8h4 g2g3 h4f6 f1d1 c8h3 c3d5 f6d8 f4f5 g6g5 b2b4 c5d7 c4c5 a8c8 c2d2 h7h6 c5d6 c7d6 g1h1 d7f6 d5f6 d8f6 g3g4 h6h5 g4h5 g5g4 d1g1 c8c2 d2c2 f6d4 e2g4 h3g4 g1g4 g8h7 h1g2 d4b4 f5f6 e8g8 e4e5 h7h8 g4g8 h8g8 c2c8 g8h7 c8f5 h7h6 e5e6 b4d2 g2f3 d2d1 f3f2 d1d4 f2f3 d4c3 f3g4 c3c4 f5f4 c4f4
+Warning; PV continues after threefold repetition - move f3g4 from bk
+Info; info depth 19 time 148 nodes 610114 score cp 79 nps 4100181 pv g4f4 f7e6 f4f3 b7b5 f3e3 h6h7 e3f3 h7h6 f3e3 h6h7 e3f3 h7h6 f3g4
+Position; fen rnbq1rk1/pppn1pbp/3p2p1/8/2PNP3/2N5/PP2BPPP/R1BQ1RK1 w - - 1 9
+Moves; c1e3 f8e8 d1c2 b8c6 a1d1 c6d4 e3d4 g7d4 d1d4 d7c5 f2f4 d8h4 g2g3 h4f6 f1d1 c8h3 c3d5 f6d8 f4f5 g6g5 b2b4 c5d7 c4c5 a8c8 c2d2 h7h6 c5d6 c7d6 g1h1 d7f6 d5f6 d8f6 g3g4 h6h5 g4h5 g5g4 d1g1 c8c2 d2c2 f6d4 e2g4 h3g4 g1g4 g8h7 h1g2 d4b4 f5f6 e8g8 e4e5 h7h8 g4g8 h8g8 c2c8 g8h7 c8f5 h7h6 e5e6 b4d2 g2f3 d2d1 f3f2 d1d4 f2f3 d4c3 f3g4 c3c4 f5f4 c4f4
+Finished game 150 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 40 - 46 - 64  [0.480] 150
+Elo difference: -13.90 +/- 42.32, LOS: 25.85 %, DrawRatio: 42.67 %
+SPRT: llr -0.05 (1.6%), lbound -2.94, ubound 2.94
+Started game 170 of 200 (bk1 vs bk)
+Finished game 156 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 40 - 47 - 64  [0.477] 151
+Started game 171 of 200 (bk vs bk1)
+Finished game 151 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 41 - 47 - 64  [0.480] 152
+Started game 172 of 200 (bk1 vs bk)
+Finished game 149 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 41 - 47 - 65  [0.480] 153
+Started game 173 of 200 (bk vs bk1)
+Finished game 153 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 41 - 48 - 65  [0.477] 154
+Started game 174 of 200 (bk1 vs bk)
+Finished game 164 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 41 - 48 - 66  [0.477] 155
+Started game 175 of 200 (bk vs bk1)
+Finished game 154 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 41 - 48 - 67  [0.478] 156
+Started game 176 of 200 (bk1 vs bk)
+Finished game 165 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 41 - 48 - 68  [0.478] 157
+Started game 177 of 200 (bk vs bk1)
+Finished game 160 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 41 - 48 - 69  [0.478] 158
+Started game 178 of 200 (bk1 vs bk)
+Finished game 161 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 41 - 48 - 70  [0.478] 159
+Started game 179 of 200 (bk vs bk1)
+Finished game 166 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 41 - 49 - 70  [0.475] 160
+Elo difference: -17.39 +/- 40.57, LOS: 19.90 %, DrawRatio: 43.75 %
+SPRT: llr -0.06 (2.2%), lbound -2.94, ubound 2.94
+Started game 180 of 200 (bk1 vs bk)
+Finished game 157 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 41 - 49 - 71  [0.475] 161
+Started game 181 of 200 (bk vs bk1)
+Finished game 162 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 41 - 50 - 71  [0.472] 162
+Started game 182 of 200 (bk1 vs bk)
+Finished game 174 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 41 - 50 - 72  [0.472] 163
+Started game 183 of 200 (bk vs bk1)
+Finished game 141 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 41 - 51 - 72  [0.470] 164
+Started game 184 of 200 (bk1 vs bk)
+Finished game 170 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 41 - 52 - 72  [0.467] 165
+Started game 185 of 200 (bk vs bk1)
+Finished game 167 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 42 - 52 - 72  [0.470] 166
+Started game 186 of 200 (bk1 vs bk)
+Finished game 159 (bk vs bk1): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 42 - 52 - 73  [0.470] 167
+Started game 187 of 200 (bk vs bk1)
+Finished game 168 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 42 - 53 - 73  [0.467] 168
+Started game 188 of 200 (bk1 vs bk)
+Finished game 172 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 42 - 54 - 73  [0.464] 169
+Started game 189 of 200 (bk vs bk1)
+Finished game 163 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 43 - 54 - 73  [0.468] 170
+Elo difference: -22.51 +/- 39.64, LOS: 13.11 %, DrawRatio: 42.94 %
+SPRT: llr -0.09 (2.9%), lbound -2.94, ubound 2.94
+Started game 190 of 200 (bk1 vs bk)
+Finished game 178 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 43 - 55 - 73  [0.465] 171
+Started game 191 of 200 (bk vs bk1)
+Finished game 152 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 43 - 55 - 74  [0.465] 172
+Started game 192 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move g5h5 from bk1
+Info; info depth 11 time 70 nodes 120778 score cp -79 nps 1714242 pv g5h5 b5a6 h5g5 a6b5 g5h5 b5b7
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5
+Warning; PV continues after threefold repetition - move g5h5 from bk1
+Info; info depth 12 time 95 nodes 169463 score cp -79 nps 1775357 pv g5h5 b5a6 h5g5 a6b5 g5h5 b5b7
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5
+Warning; PV continues after threefold repetition - move g5h5 from bk1
+Info; info depth 13 time 162 nodes 292692 score cp -83 nps 1806297 pv g5h5 b5a6 h5g5 a6b5 g5h5 e5c6
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5
+Warning; PV continues after threefold repetition - move g5h5 from bk1
+Info; info depth 14 time 295 nodes 540579 score cp -79 nps 1827714 pv g5h5 b5a6 h5g5 a6b5 g5h5 b5b7
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5
+Warning; PV continues after threefold repetition - move g5h5 from bk1
+Info; info depth 15 time 492 nodes 896786 score cp -80 nps 1820115 pv g5h5 b5a6 h5g5 a6b5 g5h5 h3h4
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5
+Warning; PV continues after threefold repetition - move g5h5 from bk1
+Info; info depth 16 time 1378 nodes 2536983 score cp -80 nps 1840778 pv g5h5 b5a6 h5g5 a6b5 g5h5 h3h4
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5
+Warning; PV continues after threefold repetition - move g5f6 from bk
+Info; info depth 6 time 10 nodes 9637 score cp 85 nps 956678 pv a6b5 g5f6 e5c6
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Warning; PV continues after threefold repetition - move g5f6 from bk
+Info; info depth 7 time 14 nodes 17210 score cp 85 nps 1198634 pv a6b5 g5f6 h3h4
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Warning; PV continues after threefold repetition - move g5h5 from bk
+Info; info depth 8 time 25 nodes 36844 score cp 85 nps 1455243 pv a6b5 g5h5
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Warning; PV continues after threefold repetition - move g5h5 from bk
+Info; info depth 9 time 30 nodes 46023 score cp 85 nps 1522700 pv a6b5 g5h5 e5c6
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Warning; PV continues after threefold repetition - move g5h5 from bk
+Info; info depth 10 time 53 nodes 86725 score cp 83 nps 1623012 pv a6b5 g5h5 e5c6 c7g3 f2g3 h5g5 g3g4 h6h5
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Warning; PV continues after threefold repetition - move g5h5 from bk
+Info; info depth 11 time 106 nodes 180978 score cp 85 nps 1699485 pv a6b5 g5h5 h3h4
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Warning; PV continues after threefold repetition - move g5h5 from bk
+Info; info depth 12 time 237 nodes 419654 score cp 84 nps 1766262 pv a6b5 g5h5 g1h1
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Warning; PV continues after threefold repetition - move g5f5 from bk
+Info; info depth 13 time 640 nodes 1188868 score cp 79 nps 1856922 pv a6b5 g5f5
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Warning; PV continues after threefold repetition - move g5f5 from bk
+Info; info depth 14 time 751 nodes 1392632 score cp 79 nps 1854321 pv a6b5 g5f5 h3h4 g8h7 b5a6 h7g8
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Warning; PV continues after threefold repetition - move g5f5 from bk
+Info; info depth 15 time 751 nodes 1392632 score cp 79 nps 1854265 pv a6b5 g5f5 h3h4 g8h7 b5a6 h7g8
+Position; fen r1bqk2r/ppp2ppp/1b3n2/3pp3/4P3/1BPP4/PP3PPP/RNBQ1RK1 w kq - 1 9
+Moves; e4d5 f6d5 f1e1 e8g8 e1e5 c7c6 d3d4 h7h6 b3d5 c6d5 b1d2 c8e6 d2f3 a8c8 e5e1 b6c7 c1e3 f8e8 f3e5 d8h4 h2h3 a7a5 d1f3 b7b5 e3f4 b5b4 a1c1 c7b6 f4g3 h4g5 f3d3 b4c3 b2c3 b6c7 d3b5 g5h5 b5a6 h5f5 a6b5 f5g5 a2a4 g5f5 b5a6 f5g5 a6b5 g5h5 b5a6 h5g5
+Finished game 183 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 43 - 55 - 75  [0.465] 173
+Started game 193 of 200 (bk vs bk1)
+Finished game 177 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 43 - 55 - 76  [0.466] 174
+Started game 194 of 200 (bk1 vs bk)
+Warning; PV continues after threefold repetition - move e2d2 from bk1
+Info; info depth 17 time 210 nodes 522024 score cp -39 nps 2484091 pv d1c1 c8a8 c4a4 g7g5 f4f5 g8g7 c2c4 g7f6 a4a3 f6g7 a3a4 g7f6 a4a3 f6g7 a3a4 e2d2
+Position; fen r2qkbnr/1p1b1ppp/p2p4/2p1n3/3NP3/1BN4P/PPP2PP1/R1BQK2R w KQkq - 0 9
+Moves; d4f3 g8f6 e1g1 a8c8 b3d5 f6d5 c3d5 d7e6 b2b3 e5f3 d1f3 e6d5 e4d5 f8e7 c1b2 e8g8 f1e1 e7g5 a1d1 b7b5 a2a3 a6a5 f3f5 b5b4 g2g3 b4a3 b2a3 g5f6 f5f4 d8d7 g1h2 f6e5 f4g4 d7g4 h3g4 e5c3 e1e4 f8e8 e4c4 c3e1 f2f3 e8e2 h2h3 e1d2 f3f4 h7h6 a3c1 d2c1
+Warning; PV continues after threefold repetition - move e2d2 from bk1
+Info; info depth 19 time 865 nodes 2037906 score cp -38 nps 2355480 pv d1c1 c8a8 c4a4 g7g5 f4f5 g8g7 c2c4 g7f6 a4a3 f6g7 a3a4 g7f6 a4a3 f6g7 a3a4 e2d2
+Position; fen r2qkbnr/1p1b1ppp/p2p4/2p1n3/3NP3/1BN4P/PPP2PP1/R1BQK2R w KQkq - 0 9
+Moves; d4f3 g8f6 e1g1 a8c8 b3d5 f6d5 c3d5 d7e6 b2b3 e5f3 d1f3 e6d5 e4d5 f8e7 c1b2 e8g8 f1e1 e7g5 a1d1 b7b5 a2a3 a6a5 f3f5 b5b4 g2g3 b4a3 b2a3 g5f6 f5f4 d8d7 g1h2 f6e5 f4g4 d7g4 h3g4 e5c3 e1e4 f8e8 e4c4 c3e1 f2f3 e8e2 h2h3 e1d2 f3f4 h7h6 a3c1 d2c1
+Warning; PV continues after threefold repetition - move e2d2 from bk1
+Info; info depth 20 time 865 nodes 2037906 score cp -38 nps 2355398 pv d1c1 c8a8 c4a4 g7g5 f4f5 g8g7 c2c4 g7f6 a4a3 f6g7 a3a4 g7f6 a4a3 f6g7 a3a4 e2d2
+Position; fen r2qkbnr/1p1b1ppp/p2p4/2p1n3/3NP3/1BN4P/PPP2PP1/R1BQK2R w KQkq - 0 9
+Moves; d4f3 g8f6 e1g1 a8c8 b3d5 f6d5 c3d5 d7e6 b2b3 e5f3 d1f3 e6d5 e4d5 f8e7 c1b2 e8g8 f1e1 e7g5 a1d1 b7b5 a2a3 a6a5 f3f5 b5b4 g2g3 b4a3 b2a3 g5f6 f5f4 d8d7 g1h2 f6e5 f4g4 d7g4 h3g4 e5c3 e1e4 f8e8 e4c4 c3e1 f2f3 e8e2 h2h3 e1d2 f3f4 h7h6 a3c1 d2c1
+Finished game 176 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 43 - 56 - 76  [0.463] 175
+Started game 195 of 200 (bk vs bk1)
+Finished game 173 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 43 - 56 - 77  [0.463] 176
+Started game 196 of 200 (bk1 vs bk)
+Finished game 191 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 43 - 56 - 78  [0.463] 177
+Started game 197 of 200 (bk vs bk1)
+Finished game 175 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 44 - 56 - 78  [0.466] 178
+Started game 198 of 200 (bk1 vs bk)
+Finished game 194 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 45 - 56 - 78  [0.469] 179
+Started game 199 of 200 (bk vs bk1)
+Finished game 179 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 45 - 56 - 79  [0.469] 180
+Elo difference: -21.26 +/- 38.19, LOS: 13.61 %, DrawRatio: 43.89 %
+SPRT: llr -0.09 (3.0%), lbound -2.94, ubound 2.94
+Started game 200 of 200 (bk1 vs bk)
+Finished game 193 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 45 - 57 - 79  [0.467] 181
+Finished game 187 (bk vs bk1): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 45 - 57 - 80  [0.467] 182
+Finished game 181 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 46 - 57 - 80  [0.470] 183
+Finished game 185 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 46 - 58 - 80  [0.467] 184
+Finished game 189 (bk vs bk1): 1-0 {White mates}
+Score of bk vs bk1: 47 - 58 - 80  [0.470] 185
+Finished game 192 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 47 - 58 - 81  [0.470] 186
+Finished game 169 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 47 - 58 - 82  [0.471] 187
+Finished game 186 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 47 - 58 - 83  [0.471] 188
+Finished game 182 (bk1 vs bk): 1-0 {White mates}
+Score of bk vs bk1: 47 - 59 - 83  [0.468] 189
+Finished game 171 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 47 - 59 - 84  [0.468] 190
+Elo difference: -21.97 +/- 37.06, LOS: 12.11 %, DrawRatio: 44.21 %
+SPRT: llr -0.10 (3.2%), lbound -2.94, ubound 2.94
+Finished game 188 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 48 - 59 - 84  [0.471] 191
+Finished game 196 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 49 - 59 - 84  [0.474] 192
+Finished game 180 (bk1 vs bk): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 49 - 59 - 85  [0.474] 193
+Finished game 184 (bk1 vs bk): 1/2-1/2 {Draw by fifty moves rule}
+Score of bk vs bk1: 49 - 59 - 86  [0.474] 194
+Finished game 195 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 49 - 60 - 86  [0.472] 195
+Finished game 200 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 49 - 60 - 87  [0.472] 196
+Finished game 197 (bk vs bk1): 0-1 {Black mates}
+Score of bk vs bk1: 49 - 61 - 87  [0.470] 197
+Finished game 199 (bk vs bk1): 1/2-1/2 {Draw by insufficient mating material}
+Score of bk vs bk1: 49 - 61 - 88  [0.470] 198
+Finished game 190 (bk1 vs bk): 0-1 {Black mates}
+Score of bk vs bk1: 50 - 61 - 88  [0.472] 199
+Finished game 198 (bk1 vs bk): 1/2-1/2 {Draw by 3-fold repetition}
+Score of bk vs bk1: 50 - 61 - 89  [0.473] 200
+Elo difference: -19.13 +/- 36.01, LOS: 14.76 %, DrawRatio: 44.50 %
+SPRT: llr -0.09 (3.0%), lbound -2.94, ubound 2.94
+Finished match
+Total Time: 00:28:52 (hours:minutes:seconds)
