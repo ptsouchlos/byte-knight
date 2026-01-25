@@ -9,7 +9,9 @@ use chess::{
     side::Side,
     square,
 };
-use engine::hce_values::{DOUBLED_PAWN_VALUES, ISOLATED_PAWN_VALUES, PASSED_PAWN_BONUS, PSQTS};
+use engine::hce_values::{
+    BISHOP_PAIR_BONUS, DOUBLED_PAWN_VALUES, ISOLATED_PAWN_VALUES, PASSED_PAWN_BONUS, PSQTS,
+};
 
 use crate::{
     math,
@@ -67,6 +69,8 @@ impl Parameters {
         for (idx, val) in ISOLATED_PAWN_VALUES.iter().enumerate() {
             params[Offsets::ISOLATED_PAWN as usize + idx] = (*val).into();
         }
+
+        params[Offsets::BISHOP_PAIR as usize] = BISHOP_PAIR_BONUS.into();
 
         params
     }

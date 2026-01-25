@@ -106,7 +106,8 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         }
 
         let stm_idx = side_to_move as usize;
-        let opposite = Side::opposite(side_to_move) as usize;
+        let opposite = Side::opposite(side_to_move);
+        let opp_idx = opposite as usize;
 
         if board
             .piece_bitboard(Piece::Bishop, side_to_move)
@@ -119,18 +120,17 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         }
 
         if board
-            .piece_bitboard(Piece::Bishop, Side::opposite(side_to_move))
+            .piece_bitboard(Piece::Bishop, opposite)
             .number_of_occupied_squares()
             >= 2
         {
             let bonus = self.values.bishop_pair_bonus_value();
-
-            mg[opposite] += bonus.mg() as i32;
-            eg[opposite] += bonus.eg() as i32;
+            mg[opp_idx] += bonus.mg() as i32;
+            eg[opp_idx] += bonus.eg() as i32;
         }
 
-        let mg_score = mg[stm_idx] - mg[opposite];
-        let eg_score = eg[stm_idx] - eg[opposite];
+        let mg_score = mg[stm_idx] - mg[opp_idx];
+        let eg_score = eg[stm_idx] - eg[opp_idx];
         let score = PhasedScore::new(mg_score as ScoreType, eg_score as ScoreType);
         // taper the score based on the game phase
         let val = score.taper(game_phase.min(GAME_PHASE_MAX) as PhaseType, GAME_PHASE_MAX);
@@ -314,13 +314,13 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, 19, 649, 657, -649, -657, 1255, -1255, 568, 594, -568, -594, 0, 8, 17, 15, -8, -17,
-            -15, -649, -657, 649, 657, -1255, 1255, -568, -594, 568, 594, 0, -8, -17, -15, 8, 17,
-            15, 2, -2, 0, -431, 523, -2, 2, 7, 431, -523, -23, -42, 793, -825, 30, 42, -793, 825,
-            0, -7, 0, 7, -1206, -1315, -46, 1180, -1315, 46, 207, 236, -207, -236, -12, -207, -236,
-            207, 236, 12, -4, -4, 0, 0, 0, 20, -20, -8, 0, 0, 0, -20, 20, 8, -11, 7, 2, 1, -2, -1,
-            -291, 2, 11, -7, -2, -1, 2, 1, 291, -2, -6, -4, 6, 4, -2, 2, 0, 6, 4, -6, -4, 2, -2, 0,
-            -12, 12, 40, 65, 12, -12, -40, -65, 2, 27,
+            0, 17, 642, 651, -642, -651, 1243, -1243, 562, 589, -562, -589, 0, 7, 16, 15, -7, -16,
+            -15, -642, -651, 642, 651, -1243, 1243, -562, -589, 562, 589, 0, -7, -16, -15, 7, 16,
+            15, 1, -2, 0, -429, 515, -1, 2, 6, 429, -515, -22, -40, 828, -859, 28, 40, -828, 859,
+            0, -5, 0, 5, -1188, -1293, -47, 1162, -1293, 47, 203, 231, -203, -231, -11, -203, -231,
+            203, 231, 11, -1, -1, 0, 0, 0, 21, -21, -8, 0, 0, 0, -21, 21, 8, -10, 8, 3, 2, -3, -2,
+            -291, 2, 10, -8, -3, -2, 3, 2, 291, -2, -5, -3, 5, 3, 0, 0, 0, 5, 3, -5, -3, 0, 0, 0,
+            -11, 10, 41, 62, 11, -10, -41, -62, 4, 25,
         ];
 
         let eval = ByteKnightEvaluation::default();

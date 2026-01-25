@@ -101,5 +101,8 @@ mod tests {
             Offsets::ISOLATED_PAWN as usize + file as usize,
             isolated_offset_2
         );
+
+        let bishop_pair_offset = Offsets::offset_for_bishop_pair();
+        assert_eq!(Offsets::BISHOP_PAIR as usize, bishop_pair_offset);
     }
 }
