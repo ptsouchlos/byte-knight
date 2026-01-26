@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
-use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
+use chess::{attacks, bitboard_helpers, board::Board, pieces::Piece, side::Side};
 use engine::{hce_values::GAME_PHASE_INC, hce_values::GAME_PHASE_MAX};
 
 use crate::{offsets::Offsets, tuning_position::TuningPosition};
@@ -156,6 +156,35 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         >= 2
     {
         b_indexes.push(Offsets::offset_for_bishop_pair());
+    }
+
+    // King safety
+    for side in [Side::White, Side::Black] {
+        let king_sq = board.king_square(side);
+        let king_ring = attacks::king(king_sq);
+        let opposite = Side::opposite(side);
+        // loop through all pieces except king
+        for piece in Piece::iter().filter(|&p| p != Piece::King) {
+            // Get enemy piece bb
+            let mut piece_bb = *board.piece_bitboard(piece, opposite);
+            while piece_bb.as_number() > 0 {
+                let sq = bitboard_helpers::next_bit(&mut piece_bb);
+                let piece_attacks =
+                    attacks::for_piece(piece, sq as u8, board.all_pieces(), opposite);
+
+                let overlap = piece_attacks & king_ring;
+                if overlap.number_of_occupied_squares() > 0 {
+                    let index_ref = match side {
+                        Side::White => &mut w_indexes,
+                        Side::Black => &mut b_indexes,
+                    };
+
+                    for _ in 0..overlap.number_of_occupied_squares() {
+                        index_ref.push(Offsets::offset_for_king_safety(piece));
+                    }
+                }
+            }
+        }
     }
 
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
