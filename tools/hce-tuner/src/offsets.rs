@@ -10,13 +10,15 @@ const PSQT_SIZE: u16 = 384; // 64 * 6 (pieces)
 const PASSED_PAWN_SIZE: u16 = NumberOf::PASSED_PAWN_RANKS as u16;
 const DOUBLED_PAWN_SIZE: u16 = NumberOf::FILES as u16;
 const ISOLATED_PAWN_SIZE: u16 = NumberOf::FILES as u16;
+const BISHOP_PAIR_SIZE: u16 = 1;
 
 impl Offsets {
     pub const PSQT: u16 = 0;
     pub const PASSED_PAWN: u16 = Offsets::PSQT + PSQT_SIZE;
     pub const DOUBLED_PAWN: u16 = Offsets::PASSED_PAWN + PASSED_PAWN_SIZE;
     pub const ISOLATED_PAWN: u16 = Offsets::DOUBLED_PAWN + DOUBLED_PAWN_SIZE;
-    pub const END: u16 = Offsets::ISOLATED_PAWN + ISOLATED_PAWN_SIZE;
+    pub const BISHOP_PAIR: u16 = Offsets::ISOLATED_PAWN + ISOLATED_PAWN_SIZE;
+    pub const END: u16 = Offsets::BISHOP_PAIR + BISHOP_PAIR_SIZE;
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
         Offsets::PSQT as usize
@@ -38,6 +40,10 @@ impl Offsets {
     pub(crate) fn offset_for_isolated_pawn(square: usize, side: Side) -> usize {
         let (file, _rank) = square::from_square(square::flip_if(side == Side::White, square as u8));
         Offsets::ISOLATED_PAWN as usize + file as usize
+    }
+
+    pub(crate) fn offset_for_bishop_pair() -> usize {
+        Offsets::BISHOP_PAIR as usize
     }
 }
 
@@ -95,5 +101,8 @@ mod tests {
             Offsets::ISOLATED_PAWN as usize + file as usize,
             isolated_offset_2
         );
+
+        let bishop_pair_offset = Offsets::offset_for_bishop_pair();
+        assert_eq!(Offsets::BISHOP_PAIR as usize, bishop_pair_offset);
     }
 }

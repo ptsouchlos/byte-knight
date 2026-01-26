@@ -17,4 +17,5 @@ pub trait EvalValues {
     fn passed_pawn_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn doubled_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn isolated_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;
+    fn bishop_pair_bonus_value(&self) -> Self::ReturnScore;
 }

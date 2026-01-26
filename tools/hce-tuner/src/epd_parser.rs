@@ -141,6 +141,23 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         b_indexes.push(index);
     }
 
+    // Bishop pair bonus
+    if board
+        .piece_bitboard(Piece::Bishop, Side::White)
+        .number_of_occupied_squares()
+        >= 2
+    {
+        w_indexes.push(Offsets::offset_for_bishop_pair());
+    }
+
+    if board
+        .piece_bitboard(Piece::Bishop, Side::Black)
+        .number_of_occupied_squares()
+        >= 2
+    {
+        b_indexes.push(Offsets::offset_for_bishop_pair());
+    }
+
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
     let tuning_pos = TuningPosition::new(w_indexes, b_indexes, scaled_phase, result);
 

@@ -131,6 +131,11 @@ fn print_params(params: &Parameters) {
     }
 
     println!("];");
+    println!();
+    println!(
+        "pub const BISHOP_PAIR_BONUS: PhasedScore = {:?};",
+        params.as_slice()[Offsets::BISHOP_PAIR as usize]
+    )
 }
 
 fn plot_k(tuner: &Tuner) {
