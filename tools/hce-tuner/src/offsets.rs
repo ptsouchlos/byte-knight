@@ -11,6 +11,7 @@ const PASSED_PAWN_SIZE: u16 = NumberOf::PASSED_PAWN_RANKS as u16;
 const DOUBLED_PAWN_SIZE: u16 = NumberOf::FILES as u16;
 const ISOLATED_PAWN_SIZE: u16 = NumberOf::FILES as u16;
 const BISHOP_PAIR_SIZE: u16 = 1;
+const KING_SAFETY_SIZE: u16 = (NumberOf::PIECE_TYPES - 1) as u16;
 
 impl Offsets {
     pub const PSQT: u16 = 0;
@@ -18,7 +19,8 @@ impl Offsets {
     pub const DOUBLED_PAWN: u16 = Offsets::PASSED_PAWN + PASSED_PAWN_SIZE;
     pub const ISOLATED_PAWN: u16 = Offsets::DOUBLED_PAWN + DOUBLED_PAWN_SIZE;
     pub const BISHOP_PAIR: u16 = Offsets::ISOLATED_PAWN + ISOLATED_PAWN_SIZE;
-    pub const END: u16 = Offsets::BISHOP_PAIR + BISHOP_PAIR_SIZE;
+    pub const KING_SAFETY: u16 = Offsets::BISHOP_PAIR + BISHOP_PAIR_SIZE;
+    pub const END: u16 = Offsets::KING_SAFETY + KING_SAFETY_SIZE;
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
         Offsets::PSQT as usize
@@ -44,6 +46,15 @@ impl Offsets {
 
     pub(crate) fn offset_for_bishop_pair() -> usize {
         Offsets::BISHOP_PAIR as usize
+    }
+
+    pub(crate) fn offset_for_king_safety(piece: Piece) -> usize {
+        assert_ne!(
+            piece,
+            Piece::King,
+            "Cannot check safety if attacker if King"
+        );
+        Offsets::KING_SAFETY as usize + piece as usize - 1
     }
 }
 
@@ -104,5 +115,11 @@ mod tests {
 
         let bishop_pair_offset = Offsets::offset_for_bishop_pair();
         assert_eq!(Offsets::BISHOP_PAIR as usize, bishop_pair_offset);
+
+        for piece in Piece::iter().filter(|&p| p != Piece::King) {
+            let king_offset = Offsets::offset_for_king_safety(piece);
+            assert!(king_offset >= Offsets::KING_SAFETY as usize);
+            assert!(king_offset < Offsets::END as usize);
+        }
     }
 }
