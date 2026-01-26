@@ -15,6 +15,8 @@ pub enum Side {
 }
 
 impl Side {
+    const ALL_SIDES: [Side; 2] = [Side::White, Side::Black];
+
     /// Returns the opposite side.
     pub fn opposite(side: Side) -> Side {
         match side {
@@ -37,6 +39,10 @@ impl Side {
     #[must_use]
     pub fn is_black(&self) -> bool {
         matches!(self, Self::Black)
+    }
+
+    pub fn iter() -> impl Iterator<Item = Side> {
+        Side::ALL_SIDES.iter().copied()
     }
 }
 
