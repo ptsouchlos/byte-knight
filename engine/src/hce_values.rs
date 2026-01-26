@@ -128,6 +128,9 @@ pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
 
 pub const BISHOP_PAIR_BONUS: PhasedScore = S(22, 67);
 
+pub const KING_SAFETY: [PhasedScore; NumberOf::PIECE_TYPES - 1] =
+    [S(-100, -50), S(-20, -20), S(-10, -10), S(-5, -5), S(-1, -1)];
+
 const RANK_1: u8 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -157,5 +160,10 @@ impl EvalValues for ByteKnightValues {
 
     fn bishop_pair_bonus_value(&self) -> Self::ReturnScore {
         BISHOP_PAIR_BONUS
+    }
+
+    fn king_safety_value(&self, piece: Piece) -> Self::ReturnScore {
+        assert!(piece != Piece::King);
+        KING_SAFETY[piece as usize - 1]
     }
 }
