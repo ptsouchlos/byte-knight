@@ -138,7 +138,6 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             let them = Side::opposite(us);
             // Get our king ring
             let king_ring = attacks::king(board.king_square(us));
-
             // Loop through enemy pieces (except king) and check overlap with king ring
             for piece in Piece::iter().filter(|&p| p != Piece::King) {
                 // Get opponent piece bb
@@ -152,8 +151,9 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
                     let overlap = piece_attacks & king_ring;
                     let overlap_cnt = overlap.number_of_occupied_squares();
-                    mg[stm_idx] += val.mg() as i32 * overlap_cnt as i32;
-                    eg[stm_idx] += val.eg() as i32 * overlap_cnt as i32;
+
+                    mg[side as usize] += val.mg() as i32 * overlap_cnt as i32;
+                    eg[side as usize] += val.eg() as i32 * overlap_cnt as i32;
                 }
             }
         }
@@ -343,13 +343,13 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, 0, 634, 643, -634, -643, 1228, -1228, 476, 502, -636, -662, 0, 7, 16, 15, -7, -16,
-            -15, -634, -643, 634, 643, -1228, 1228, -636, -662, 476, 502, 0, -7, -16, -15, 7, 16,
-            15, -8, -12, -40, -439, 494, -11, -7, -28, 409, -524, -102, -40, 799, -869, -31, 40,
-            -839, 829, -80, -5, -80, 5, -1232, -1335, -47, 1030, -1335, 47, 201, 228, -201, -228,
-            -13, -201, -228, 201, 228, 7, -4, -4, -2, -2, -4, 20, -20, -8, -2, -2, -4, -20, 20, 8,
-            -10, 8, 3, 3, -3, -3, -287, 2, 10, -8, -3, -3, 3, 3, 287, -2, -5, -3, 5, 3, 0, 0, 0, 5,
-            3, -5, -3, 0, 0, 0, -12, 7, 35, 57, 8, -11, -43, -65, -17, 26,
+            0, 20, 634, 643, -634, -643, 1228, -1228, 636, 662, -636, -662, 0, 7, 16, 15, -7, -16,
+            -15, -634, -643, 634, 643, -1228, 1228, -636, -662, 636, 662, 0, -7, -16, -15, 7, 16,
+            15, -8, -12, 0, -439, 524, 8, 12, 11, 439, -524, -22, -40, 839, -869, 49, 40, -839,
+            869, 0, -5, 0, 5, -1232, -1335, -47, 1264, -1335, 47, 201, 228, -201, -228, -9, -201,
+            -228, 201, 228, 9, 0, 0, 0, 0, 0, 20, -20, -8, 0, 0, 0, -20, 20, 8, -10, 8, 3, 3, -3,
+            -3, -287, 2, 10, -8, -3, -3, 3, 3, 287, -2, -5, -3, 5, 3, 0, 0, 0, 5, 3, -5, -3, 0, 0,
+            0, -10, 9, 39, 61, 10, -9, -39, -61, -15, 26,
         ];
 
         let eval = ByteKnightEvaluation::default();
