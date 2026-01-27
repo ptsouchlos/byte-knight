@@ -3,7 +3,7 @@
 
 use chess::{
     definitions::NumberOf,
-    pieces::{ALL_PIECES, PIECE_NAMES},
+    pieces::{ALL_PIECES, PIECE_NAMES, Piece},
 };
 use clap::{Parser, Subcommand, ValueEnum};
 use indicatif::ParallelProgressIterator;
@@ -135,7 +135,17 @@ fn print_params(params: &Parameters) {
     println!(
         "pub const BISHOP_PAIR_BONUS: PhasedScore = {:?};",
         params.as_slice()[Offsets::BISHOP_PAIR as usize]
-    )
+    );
+
+    println!();
+    println!("pub const KING_SAFETY: [PhasedScore; NumberOf::PIECE_TYPES - 1] =");
+    print!("    [");
+    for piece_idx in Piece::iter().filter(|&p| p != Piece::King) {
+        let idx = Offsets::KING_SAFETY as usize + piece_idx as usize - 1;
+        let val = params.as_slice()[idx];
+        print!("{val:?}, ");
+    }
+    print!("];");
 }
 
 fn plot_k(tuner: &Tuner) {
