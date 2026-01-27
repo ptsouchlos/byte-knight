@@ -3,7 +3,7 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
+use chess::{attacks, bitboard_helpers, board::Board, pieces::Piece, side::Side};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_INC, GAME_PHASE_MAX},
@@ -109,6 +109,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let opposite = Side::opposite(side_to_move);
         let opp_idx = opposite as usize;
 
+        // Evaluate bishop pair bonus
         if board
             .piece_bitboard(Piece::Bishop, side_to_move)
             .number_of_occupied_squares()
@@ -127,6 +128,34 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             let bonus = self.values.bishop_pair_bonus_value();
             mg[opp_idx] += bonus.mg() as i32;
             eg[opp_idx] += bonus.eg() as i32;
+        }
+
+        let occ = board.all_pieces();
+
+        // Score both sides for king safety
+        for side in Side::iter() {
+            let us = side;
+            let them = Side::opposite(us);
+            // Get our king ring
+            let king_ring = attacks::king(board.king_square(us));
+            // Loop through enemy pieces (except king) and check overlap with king ring
+            for piece in Piece::iter().filter(|&p| p != Piece::King) {
+                // Get opponent piece bb
+                let mut piece_bb = *board.piece_bitboard(piece, them);
+                let val = self.values.king_safety_value(piece);
+
+                // Loop through each sq in the pieace bb and see if that pieace is attacking the king ring
+                while piece_bb.as_number() > 0 {
+                    let sq = bitboard_helpers::next_bit(&mut piece_bb);
+                    let piece_attacks = attacks::for_piece(piece, sq as u8, occ, them);
+
+                    let overlap = piece_attacks & king_ring;
+                    let overlap_cnt = overlap.number_of_occupied_squares();
+
+                    mg[side as usize] += val.mg() as i32 * overlap_cnt as i32;
+                    eg[side as usize] += val.eg() as i32 * overlap_cnt as i32;
+                }
+            }
         }
 
         let mg_score = mg[stm_idx] - mg[opp_idx];
@@ -314,13 +343,13 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, 20, 634, 643, -634, -643, 1228, -1228, 556, 582, -556, -582, 0, 7, 16, 15, -7, -16,
-            -15, -634, -643, 634, 643, -1228, 1228, -556, -582, 556, 582, 0, -7, -16, -15, 7, 16,
-            15, 1, -2, 0, -424, 509, -1, 2, 6, 424, -509, -22, -40, 819, -849, 29, 40, -819, 849,
-            0, -5, 0, 5, -1174, -1276, -47, 1147, -1276, 47, 201, 228, -201, -228, -10, -201, -228,
-            201, 228, 10, -2, -2, 0, 0, 0, 20, -20, -8, 0, 0, 0, -20, 20, 8, -10, 8, 3, 3, -3, -3,
-            -287, 2, 10, -8, -3, -3, 3, 3, 287, -2, -5, -3, 5, 3, 0, 0, 0, 5, 3, -5, -3, 0, 0, 0,
-            -10, 9, 39, 61, 10, -9, -39, -61, 4, 26,
+            0, 23, 753, 763, -753, -763, 1457, -1457, 654, 683, -654, -683, 0, 6, 16, 13, -6, -16,
+            -13, -753, -763, 753, 763, -1457, 1457, -654, -683, 654, 683, 0, -6, -16, -13, 6, 16,
+            13, 10, 16, 0, -485, 587, -10, -16, 3, 485, -587, -32, -40, 968, -1002, 39, 40, -968,
+            1002, 0, -2, 0, 2, -1390, -1486, -39, 1373, -1486, 39, 231, 259, -231, -259, -29, -231,
+            -259, 231, 259, 29, -8, -8, 0, 0, 0, 10, -10, -6, 0, 0, 0, -10, 10, 6, -12, 6, 5, 3,
+            -5, -3, -351, 5, 12, -6, -5, -3, 5, 3, 351, -5, -4, -3, 4, 3, -1, 1, 0, 4, 3, -4, -3,
+            1, -1, 0, -17, 7, 28, 64, 17, -7, -28, -64, 7, 32,
         ];
 
         let eval = ByteKnightEvaluation::default();

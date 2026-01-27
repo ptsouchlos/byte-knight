@@ -10,7 +10,8 @@ use chess::{
     square,
 };
 use engine::hce_values::{
-    BISHOP_PAIR_BONUS, DOUBLED_PAWN_VALUES, ISOLATED_PAWN_VALUES, PASSED_PAWN_BONUS, PSQTS,
+    BISHOP_PAIR_BONUS, DOUBLED_PAWN_VALUES, ISOLATED_PAWN_VALUES, KING_SAFETY, PASSED_PAWN_BONUS,
+    PSQTS,
 };
 
 use crate::{
@@ -70,7 +71,13 @@ impl Parameters {
             params[Offsets::ISOLATED_PAWN as usize + idx] = (*val).into();
         }
 
+        // Bishop pair
         params[Offsets::BISHOP_PAIR as usize] = BISHOP_PAIR_BONUS.into();
+
+        // King safety
+        for (idx, val) in KING_SAFETY.iter().enumerate() {
+            params[Offsets::KING_SAFETY as usize + idx] = (*val).into();
+        }
 
         params
     }
