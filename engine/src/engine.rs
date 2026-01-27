@@ -15,6 +15,7 @@ use crate::{
     defs::About,
     history_table::HistoryTable,
     input_handler::{CommandProxy, EngineCommand, InputHandler},
+    killer_moves_table::KillerMovesTable,
     log_level::{LogDebug, LogInfo, LogLevel},
     search::SearchParameters,
     search_thread::SearchThread,
@@ -26,6 +27,7 @@ pub struct ByteKnight {
     search_thread: SearchThread,
     transposition_table: Arc<Mutex<TranspositionTable>>,
     history_table: Arc<Mutex<HistoryTable>>,
+    killers_table: Arc<Mutex<KillerMovesTable>>,
     debug: bool,
 }
 
@@ -36,17 +38,25 @@ impl ByteKnight {
             search_thread: SearchThread::new(),
             transposition_table: Default::default(),
             history_table: Default::default(),
+            killers_table: Default::default(),
             debug: false,
         }
     }
 
     fn clear_hash_tables(&mut self) {
+        // Clear transposition table
         if let Ok(tt) = self.transposition_table.lock().as_mut() {
             tt.clear();
         }
 
+        // Clear history table
         if let Ok(ht) = self.history_table.lock().as_mut() {
             ht.clear();
+        }
+
+        // Clear killers table
+        if let Ok(kt) = self.killers_table.lock().as_mut() {
+            kt.clear();
         }
     }
 
@@ -203,6 +213,7 @@ impl ByteKnight {
             params,
             Arc::clone(&self.transposition_table),
             Arc::clone(&self.history_table),
+            Arc::clone(&self.killers_table),
         );
     }
 }

@@ -10,7 +10,8 @@ use arrayvec::ArrayVec;
 use chess::{definitions::MAX_MOVE_LIST_SIZE, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
-    evaluation::Evaluation, hce_values::ByteKnightValues, history_table, score::LargeScoreType,
+    evaluation::Evaluation, hce_values::ByteKnightValues, history_table, killer_moves_table,
+    score::LargeScoreType,
 };
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Default)]
@@ -18,6 +19,7 @@ pub enum MoveOrder {
     #[default]
     TtMove,
     Capture(Piece, Piece),
+    Killer(LargeScoreType),
     Quiet(LargeScoreType),
 }
 
@@ -49,6 +51,12 @@ impl Ord for MoveOrder {
             (MoveOrder::Capture(_, _), _) => Ordering::Less,
             (_, MoveOrder::Capture(_, _)) => Ordering::Greater,
 
+            // killer moves come next, according to their score
+            (MoveOrder::Killer(left_score), MoveOrder::Killer(right_score)) => {
+                right_score.cmp(left_score)
+            }
+            (MoveOrder::Killer(_), _) => Ordering::Less,
+            (_, MoveOrder::Killer(_)) => Ordering::Greater,
             // quiet moves come last, according to their score
             (MoveOrder::Quiet(left_score), MoveOrder::Quiet(right_score)) => {
                 right_score.cmp(left_score)
@@ -61,10 +69,12 @@ impl MoveOrder {
     /// Classify moves for move ordering  purposes.
     #[allow(clippy::expect_used)]
     pub fn classify(
+        ply: u8,
         stm: Side,
         mv: &Move,
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
+        killers_table: &killer_moves_table::KillerMovesTable,
     ) -> Self {
         if tt_move.is_some_and(|tt| *mv == tt) {
             return Self::TtMove;
@@ -77,20 +87,37 @@ impl MoveOrder {
         }
 
         let score = history_table.get(stm, mv.piece(), mv.to());
+        if killers_table
+            .get(ply)
+            .iter()
+            .any(|killer_mv| killer_mv.is_some_and(|k| k == *mv))
+        {
+            return Self::Killer(score);
+        }
+
         Self::Quiet(score)
     }
 
     pub fn classify_all(
+        ply: u8,
         stm: Side,
         moves: &[Move],
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
+        killers_table: &killer_moves_table::KillerMovesTable,
         move_order: &mut ArrayVec<MoveOrder, MAX_MOVE_LIST_SIZE>,
     ) -> Result<()> {
         move_order.clear();
 
         for mv in moves.iter() {
-            move_order.try_push(Self::classify(stm, mv, tt_move, history_table))?;
+            move_order.try_push(Self::classify(
+                ply,
+                stm,
+                mv,
+                tt_move,
+                history_table,
+                killers_table,
+            ))?;
         }
 
         Ok(())
@@ -112,6 +139,7 @@ mod tests {
     fn verify_move_ordering() {
         let mut tt = TranspositionTable::from_capacity(10);
         let mut history_table = crate::history_table::HistoryTable::new();
+        let killers_table = crate::killer_moves_table::KillerMovesTable::new();
 
         let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
@@ -121,6 +149,7 @@ mod tests {
 
         assert!(move_list.len() >= 6);
         let depth = 3i32;
+        let ply = 3i32;
         let first_mv = move_list.at(4).unwrap();
         tt.store_entry(TranspositionTableEntry::new(
             board.zobrist_hash(),
@@ -137,13 +166,22 @@ mod tests {
             second_mv.to(),
             300 * depth - 250,
         );
+        // TODO
+        // killers_table.update(ply, mv);
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = tt_entry.board_move;
         // sort the moves
         let moves = move_list
             .iter()
             .sorted_by_key(|mv| {
-                MoveOrder::classify(board.side_to_move(), mv, &Some(tt_move), &history_table)
+                MoveOrder::classify(
+                    ply as u8,
+                    board.side_to_move(),
+                    mv,
+                    &Some(tt_move),
+                    &history_table,
+                    &killers_table,
+                )
             })
             .collect::<Vec<&Move>>();
 
