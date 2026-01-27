@@ -37,8 +37,8 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, MAX_RFP_DEPTH,
-        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
+        FUTILITY_COEFF, FUTILITY_MAX_DEPTH, FUTILITY_OFFSET, IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH,
+        LMP_MIN_THRESHOLD_DEPTH, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
@@ -515,12 +515,26 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 1f64
             };
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
+            // TODO: Use LMR depth for futility pruning
             let _lmr_depth = depth.saturating_sub(lmr_reduction);
             let is_in_check = board.is_in_check(&self.move_gen);
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
 
             // Move-loop pruning techniques
+
+            // Futility pruning
+            // If we are at a shallow depth and have already found a good score, we start skipping moves
+            if !is_root && !is_pv && !is_in_check && !best_score.mated() {
+                let static_eval = self.eval.eval(board);
+                let fp_margin = depth * FUTILITY_COEFF + FUTILITY_OFFSET;
+                if mv.is_quiet()
+                    && depth < FUTILITY_MAX_DEPTH
+                    && static_eval + fp_margin <= alpha_use
+                {
+                    break;
+                }
+            }
 
             // LMP - Late Move Pruning
             // We assume our move ordering is just too good, so if we're under a certain depth
