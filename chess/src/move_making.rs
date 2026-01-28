@@ -545,6 +545,8 @@ fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
 
 #[cfg(test)]
 mod tests {
+    use std::iter::zip;
+
     use crate::{
         bitboard::Bitboard, board::Board, definitions::Squares, move_generation::MoveGenerator,
         move_list::MoveList, moves::MoveType, pieces::Piece, side::Side,
@@ -773,6 +775,32 @@ mod tests {
             assert_eq!(board.en_passant_square(), Some(Squares::E3));
             // check side to move
             assert_eq!(board.side_to_move(), Side::Black);
+        }
+    }
+
+    #[test]
+    fn no_en_passant_when_not_legal() {
+        const FEN: [&str; 3] = [
+            "r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38",
+            "8/p2r1pK1/6p1/1kp1P1P1/2p5/2P5/8/4R3 b - - 0 43",
+            "`4k3/4p3/2b3b1/3P1P2/4K3/8/8/8 b - -",
+        ];
+
+        const TEST_MOVES: [&str; 3] = ["f7f5", "f7f5", "e7e5"];
+
+        for (fen, mv) in zip(FEN, TEST_MOVES) {
+            let maybe_board = Board::from_fen(fen);
+            assert!(maybe_board.is_ok());
+
+            let mut board = maybe_board.unwrap();
+            println!("before move:\n{}", board);
+
+            let result = board.make_uci_move(&mv);
+            assert!(result.is_ok());
+            println!("after move:\n{}", board);
+
+            // en-passant capture is not possible due to being pinned
+            assert!(board.en_passant_square().is_none());
         }
     }
 }
