@@ -19,6 +19,7 @@ use uci_parser::{UciMove, UciResponse};
 
 use crate::{
     history_table::HistoryTable,
+    killer_moves_table::KillerMovesTable,
     log_level::{LogDebug, LogInfo, LogLevel},
     search::{Search, SearchParameters},
     ttable::TranspositionTable,
@@ -52,6 +53,7 @@ pub(crate) enum SearchThreadValue {
         SearchParameters,
         Arc<Mutex<TranspositionTable>>,
         Arc<Mutex<HistoryTable>>,
+        Arc<Mutex<KillerMovesTable>>,
         bool,
     ),
     Exit,
@@ -85,17 +87,35 @@ impl SearchThread {
                 'search_loop: loop {
                     let value = receiver.recv().unwrap();
                     match value {
-                        SearchThreadValue::Params(mut board, params, ttable, history, is_debug) => {
+                        SearchThreadValue::Params(
+                            mut board,
+                            params,
+                            ttable,
+                            history,
+                            killer_moves,
+                            is_debug,
+                        ) => {
                             let mut tt = ttable.lock().unwrap();
                             let mut hist_table = history.lock().unwrap();
+                            let mut killer_moves_table = killer_moves.lock().unwrap();
                             let flag = stop_flag.clone();
                             is_searching.store(true, Ordering::Relaxed);
                             let result = if is_debug {
-                                Search::<LogDebug>::new(&params, &mut tt, &mut hist_table)
-                                    .search(&mut board, Some(flag))
+                                Search::<LogDebug>::new(
+                                    &params,
+                                    &mut tt,
+                                    &mut hist_table,
+                                    &mut killer_moves_table,
+                                )
+                                .search(&mut board, Some(flag))
                             } else {
-                                Search::<LogInfo>::new(&params, &mut tt, &mut hist_table)
-                                    .search(&mut board, Some(flag))
+                                Search::<LogInfo>::new(
+                                    &params,
+                                    &mut tt,
+                                    &mut hist_table,
+                                    &mut killer_moves_table,
+                                )
+                                .search(&mut board, Some(flag))
                             };
                             is_searching.store(false, Ordering::Relaxed);
                             let best_move = result.best_move;
@@ -147,6 +167,7 @@ impl SearchThread {
         params: SearchParameters,
         ttable: Arc<Mutex<TranspositionTable>>,
         history_table: Arc<Mutex<HistoryTable>>,
+        killers_table: Arc<Mutex<KillerMovesTable>>,
     ) {
         self.stop_search_flag.store(false, Ordering::Relaxed);
         self.sender
@@ -155,6 +176,7 @@ impl SearchThread {
                 params,
                 ttable,
                 history_table,
+                killers_table,
                 Log::DEBUG,
             ))
             .unwrap();
