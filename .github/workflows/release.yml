@@ -6,6 +6,11 @@ on:
       - "v*"
       - "*.*.*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build'
+        required: false
+        default: "9.99.99"
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,15 +22,15 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: byte-knight
+            artifact_name: byte-knight-${{ github.ref_name }}
             extension: ""
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: byte-knight
+            artifact_name: byte-knight-${{ github.ref_name }}
             extension: ""
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: byte-knight.exe
+            artifact_name: byte-knight-${{ github.ref_name }}
             extension: ".exe"
     permissions:
       contents: write
