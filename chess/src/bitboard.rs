@@ -12,7 +12,7 @@ use std::{
     },
 };
 
-use crate::square::Square;
+use crate::{bitboard_helpers, square::Square};
 
 /// Bitboard representation of a chess board.
 /// LSB (bit 0) is a1, MSB (bit 63) is h8.
@@ -106,6 +106,22 @@ impl Bitboard {
     /// ```
     pub const fn intersects(&self, other: Bitboard) -> bool {
         Bitboard::new(self.as_number() & other.as_number()).number_of_occupied_squares() > 0
+    }
+
+    /// Iterate over the occupied squares in the bitboard.
+    ///
+    /// Returns an iterator over the square indices (0-63) of the occupied squares.
+    /// Implemented using `bitboard_helpers::next_bit` to efficiently find the next set
+    /// using the Carry Rippler method.
+    pub fn iter(&self) -> impl Iterator<Item = u8> {
+        let mut bitboard = *self;
+        std::iter::from_fn(move || {
+            if bitboard.data == 0 {
+                None
+            } else {
+                Some(bitboard_helpers::next_bit(&mut bitboard) as u8)
+            }
+        })
     }
 }
 
@@ -444,5 +460,24 @@ mod tests {
     fn filled() {
         let bb = Bitboard::filled();
         assert_eq!(bb.data, u64::MAX);
+    }
+
+    #[test]
+    fn iter() {
+        let bb = Bitboard::new(0b10110);
+        let squares: Vec<u8> = bb.iter().collect();
+        assert_eq!(squares, vec![1, 2, 4]);
+
+        // Now check the default position
+        let bb = Bitboard::new(0xFFFF00000000FFFF);
+        println!("{}", bb);
+        let squares: Vec<u8> = bb.iter().collect();
+        assert_eq!(
+            squares,
+            vec![
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 48, 49, 50, 51, 52, 53, 54,
+                55, 56, 57, 58, 59, 60, 61, 62, 63
+            ]
+        );
     }
 }
