@@ -4,6 +4,8 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use crate::{
+    attacks,
+    bitboard::Bitboard,
     board::Board,
     definitions::{CastlingAvailability, Squares},
     move_generation::MoveGenerator,
@@ -257,7 +259,19 @@ impl Board {
                 } else {
                     to + 8u8
                 };
-                self.set_en_passant_square(Some(en_passant_square));
+                // TODO: Check to see if the en passant square is a legal move for the opponent
+                // 1. Check if there are any enemy pawns attacking the EP square
+                let enemy_pawn_attacks_overlap_ep = (attacks::for_piece(Piece::Pawn, self, them)
+                    & Bitboard::from_square(en_passant_square))
+                .number_of_occupied_squares()
+                    > 0;
+
+                // 2. Are there checkers other than the to be captured pawn? If so EP is not legal
+
+                // TODO: Check the other conditions
+                if enemy_pawn_attacks_overlap_ep {
+                    self.set_en_passant_square(Some(en_passant_square));
+                }
             } else {
                 self.set_en_passant_square(None);
             }

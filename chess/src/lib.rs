@@ -21,7 +21,6 @@ pub mod magics;
 pub mod move_generation;
 pub mod move_history;
 pub mod move_list;
-pub mod move_making;
 pub mod moves;
 pub mod non_slider_piece;
 pub mod perft;
