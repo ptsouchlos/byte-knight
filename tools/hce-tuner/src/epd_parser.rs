@@ -170,7 +170,7 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
             while piece_bb.as_number() > 0 {
                 let sq = bitboard_helpers::next_bit(&mut piece_bb);
                 let piece_attacks =
-                    attacks::for_piece(piece, sq as u8, board.all_pieces(), opposite);
+                    attacks::for_piece_on_square(piece, sq as u8, board.all_pieces(), opposite);
 
                 let overlap = piece_attacks & king_ring;
                 if overlap.number_of_occupied_squares() > 0 {
