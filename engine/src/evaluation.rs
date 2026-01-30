@@ -147,7 +147,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                 // Loop through each sq in the pieace bb and see if that pieace is attacking the king ring
                 while piece_bb.as_number() > 0 {
                     let sq = bitboard_helpers::next_bit(&mut piece_bb);
-                    let piece_attacks = attacks::for_piece(piece, sq as u8, occ, them);
+                    let piece_attacks = attacks::for_piece_on_square(piece, sq as u8, occ, them);
 
                     let overlap = piece_attacks & king_ring;
                     let overlap_cnt = overlap.number_of_occupied_squares();
