@@ -11,12 +11,12 @@ default:
 [doc('Build binary target in debug for native CPU')]
 [group('dev')]
 build-native target:
-    cargo rustc --bin {{ target }} -- -C target-cpu=native
+    cargo rustc -p {{ target }} --bin {{ target }} -- -C target-cpu=native
 
 [doc('Build binary target in debug for native CPU')]
 [group('dev')]
 build-native-release target:
-    cargo rustc --release --bin {{ target }} -- -C target-cpu=native
+    cargo rustc --release -p {{ target }} --bin {{ target }} -- -C target-cpu=native
 
 [doc('Build the project (default is debug)')]
 [group('dev')]
