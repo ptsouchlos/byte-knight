@@ -123,6 +123,14 @@ impl Bitboard {
             }
         })
     }
+
+    /// Check if more than one bit is set in the bitboard.
+    ///
+    /// # Returns
+    /// - `bool` - True if more than one bit is set, false otherwise.
+    pub fn more_than_one(&self) -> bool {
+        self.data & (self.data.saturating_sub(1)) != 0
+    }
 }
 
 impl PartialOrd<u64> for Bitboard {
@@ -479,5 +487,17 @@ mod tests {
                 55, 56, 57, 58, 59, 60, 61, 62, 63
             ]
         );
+    }
+
+    #[test]
+    fn more_than_one() {
+        let bb = Bitboard::new(0b10110);
+        assert!(bb.more_than_one());
+
+        let bb2 = Bitboard::new(0b000001);
+        assert!(!bb2.more_than_one());
+
+        let bb3 = Bitboard::new(0b000000);
+        assert!(!bb3.more_than_one());
     }
 }
