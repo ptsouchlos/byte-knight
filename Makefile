@@ -24,6 +24,10 @@ else
 	EXE := $(EXE)$(EXT)
 endif
 
+# Force clang to be our CC compiler when not on Windows
+ifneq ($(OS),Windows_NT)
+	export HOST_CC=clang
+endif
 
 
 # Compile an executable for use with OpenBench
