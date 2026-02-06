@@ -78,15 +78,15 @@ search-bench: (build-native-release "byte-knight")
 
 [doc('Run perft at a specified depth')]
 [group('chess')]
-perft depth:
+perft depth: (build-native-release "byte-knight")
     echo "Running perft..."
-    cargo run --release --bin perft -- -d {{ depth }}
+    ./target/release/byte-knight perft -d {{ depth }}
 
 [doc('Run perft over the EPD test suite')]
 [group('chess')]
-perft-epd:
+perft-epd: (build-native-release "byte-knight")
     echo "Running EPD perft test suite..."
-    cargo run --release --bin perft -- --epd-file data/standard.epd
+    ./target/release/byte-knight perft --epd-file data/standard.epd
 
 [doc('Run perft benchmark over the EPD test suite')]
 [group('chess')]
@@ -99,19 +99,13 @@ perft-bench: (build-native-release "perft-bench")
 [group('chess')]
 magics:
     echo "Generating magics..."
-    cargo run --release --bin generate_magics
+    cargo run --release --bin generate-magics
 
 [doc('Verify that generated Zobrist hashes are unique')]
 [group('chess')]
 verify-zobrist:
     echo "Verifying Zobrist hash..."
-    cargo run --release --bin verify_zobrist
-
-[doc('Generate release binaries for given target.')]
-[group('dev')]
-release target:
-    echo "Building release binaries..."
-    cargo rustc --release --bin byte-knight --target={{ target }}
+    cargo run --release --bin verify-zobrist
 
 [doc('Caches the release binary to bk-main for testing.')]
 [group('dev')]
