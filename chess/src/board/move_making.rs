@@ -6,8 +6,10 @@
 use crate::{
     attacks,
     bitboard::Bitboard,
+    bitboard_helpers,
     board::Board,
     definitions::{CastlingAvailability, Squares},
+    file::File,
     move_generation::MoveGenerator,
     moves::{self, Move},
     pieces::{Piece, SQUARE_NAME},
@@ -259,19 +261,50 @@ impl Board {
                 } else {
                     to + 8u8
                 };
-                // TODO: Check to see if the en passant square is a legal move for the opponent
+
+                // Check to see if the en passant square is a legal move for the opponent
+                // These checks are based on this patch from Stockfish.
+                // https://github.com/official-stockfish/Stockfish/commit/94175524b1c06f1a4ce80a5640272a15120dcbbd
                 // 1. Check if there are any enemy pawns attacking the EP square
-                let enemy_pawn_attacks_overlap_ep = (attacks::for_piece(Piece::Pawn, self, them)
-                    & Bitboard::from_square(en_passant_square))
-                .number_of_occupied_squares()
-                    > 0;
+                let pawns = attacks::for_piece(
+                    Piece::Pawn,
+                    self,
+                    them,
+                    self.piece_kind_bitboard(Piece::Pawn),
+                ) & Bitboard::from_square(en_passant_square);
 
                 // 2. Are there checkers other than the to be captured pawn? If so EP is not legal
+                let checkers_other_than_ep_pawn =
+                    attacks::checkers(self, us) & !Bitboard::from_square(en_passant_square);
 
-                // TODO: Check the other conditions
-                if enemy_pawn_attacks_overlap_ep {
-                    self.set_en_passant_square(Some(en_passant_square));
+                // Is there more than one pawn that can capture en passant?
+                if pawns.more_than_one() {
+                    // If there's more than one pawn that could capture en passant, and at least
+                    // one are not pinned, EP is legal.
+                    if !(attacks::blockers_for_king(self, them) & pawns).more_than_one() {}
+
+                    // If there's no pawn on the kings file, and both pawns are pinned by bishops then EP is not legal
+                    // as the kings square must be infront of the to square.
+                    let king_sq = self.king_square(them);
+                    let (king_file, _) = square::from_square(king_sq);
+
+                    let king_file_bb = File::of(king_file).to_bitboard();
+                    let pawns_on_king_file = pawns & king_file_bb;
+
+                    if pawns_on_king_file.empty() {
+                        self.set_en_passant_square(None);
+                    } else {
+                        // Remove the pawns on the king file from the pawns bitboard
+                        // as an EP capture from it can never be legal
+                        pawns &= !king_file_bb;
+                    }
                 }
+
+                // Now we do a quick simulation of the en passant capture to see if it leaves us in check
+                let king_sq = self.king_square(them);
+                let cap_sq = to;
+                let occ = (self.all_pieces() ^ bitboard_helpers::next_bit(&pawns) ^ cap_sq.into())
+                    | (to - attacks::pawn_push(us));
             } else {
                 self.set_en_passant_square(None);
             }
@@ -797,19 +830,22 @@ mod tests {
         const FEN: [&str; 3] = [
             "r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38",
             "8/p2r1pK1/6p1/1kp1P1P1/2p5/2P5/8/4R3 b - - 0 43",
-            "`4k3/4p3/2b3b1/3P1P2/4K3/8/8/8 b - -",
+            "4k3/4p3/2b3b1/3P1P2/4K3/8/8/8 b - -",
         ];
 
         const TEST_MOVES: [&str; 3] = ["f7f5", "f7f5", "e7e5"];
 
         for (fen, mv) in zip(FEN, TEST_MOVES) {
             let maybe_board = Board::from_fen(fen);
-            assert!(maybe_board.is_ok());
+            assert!(
+                maybe_board.is_ok(),
+                "Failed to create board from FEN: {fen}"
+            );
 
             let mut board = maybe_board.unwrap();
             println!("before move:\n{}", board);
 
-            let result = board.make_uci_move(&mv);
+            let result = board.make_uci_move(mv);
             assert!(result.is_ok());
             println!("after move:\n{}", board);
 

@@ -17,6 +17,7 @@ use crate::{
     file::File,
     magics::{BISHOP_MAGICS, ROOK_MAGICS},
     pieces::Piece,
+    rays,
     side::Side,
 };
 
@@ -499,12 +500,11 @@ pub fn for_piece_on_square(piece: Piece, square: u8, occupancy: Bitboard, side: 
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the possible attacks of all pieces of the given type for the given side.
-pub fn for_piece(piece: Piece, board: &Board, side: Side) -> Bitboard {
+pub fn for_piece(piece: Piece, board: &Board, side: Side, occupancy: Bitboard) -> Bitboard {
     let mut attacks_bb = Bitboard::default();
-    let occ = board.all_pieces();
     let piece_bb = board.piece_bitboard(piece, side);
     for square in piece_bb.iter() {
-        attacks_bb |= for_piece_on_square(piece, square, occ, side);
+        attacks_bb |= for_piece_on_square(piece, square, occupancy, side);
     }
 
     attacks_bb
@@ -520,13 +520,64 @@ pub fn for_piece(piece: Piece, board: &Board, side: Side) -> Bitboard {
 /// - A [`Bitboard`] representing all the pieces that are blocking the king from being in check.
 pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
     let king_square = board.king_square(side);
-    let occupancy = board.all_pieces();
+    let mut blockers = Bitboard::default();
 
     // Get attacks from king square as if it were a queen (to cover all directions)
     let attacks_from_king = attacks::queen(king_square, Bitboard::default());
-    let potential_attackers = attacks_from_king & board.pieces(Side::opposite(side));
+    // Get attacks for opponent's rooks, bishops and queens
+    let them = Side::opposite(side);
 
-    Default::default()
+    let enemy_rooks = *board.piece_bitboard(Piece::Rook, them);
+    let enemy_bishops = *board.piece_bitboard(Piece::Bishop, them);
+    let enemy_queens = *board.piece_bitboard(Piece::Queen, them);
+
+    let snipers = attacks_from_king & (enemy_rooks | enemy_bishops | enemy_queens);
+
+    // Our pieces excluding the king
+    let our_pieces = board.pieces(side) ^ Bitboard::from_square(king_square);
+    for square in snipers.iter() {
+        let between_ray = rays::between(king_square, square);
+        let blkrs_bb = between_ray & our_pieces;
+        if blkrs_bb.number_of_occupied_squares() == 1 {
+            blockers |= blkrs_bb;
+        }
+    }
+
+    blockers
+}
+
+pub fn checkers(board: &Board, side: Side) -> Bitboard {
+    let us = side;
+    let them = Side::opposite(us);
+    let king_bb = board.piece_bitboard(Piece::King, us);
+    let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
+    let occupancy = board.all_pieces();
+
+    // ensure we definitely don't have the king in the occupancy
+    let kingless_occupancy = occupancy & !(*king_bb);
+    // an enemy king cannot check our king, so we ignore it
+    let knight_attacks =
+        attacks::for_piece_on_square(Piece::Knight, king_square, kingless_occupancy, us);
+    let rook_attacks =
+        attacks::for_piece_on_square(Piece::Rook, king_square, kingless_occupancy, us);
+    let bishop_attacks =
+        attacks::for_piece_on_square(Piece::Bishop, king_square, kingless_occupancy, us);
+    let queen_attacks = rook_attacks | bishop_attacks;
+    // note we use the opposite side for the pawn attacks
+    let pawn_attacks = attacks::pawn(king_square, Side::opposite(them));
+
+    let enemy_pawns = board.piece_bitboard(Piece::Pawn, them);
+    let enemy_knights = board.piece_bitboard(Piece::Knight, them);
+    let enemy_bishops = board.piece_bitboard(Piece::Bishop, them);
+    let enemy_rooks = board.piece_bitboard(Piece::Rook, them);
+    let enemy_queens = board.piece_bitboard(Piece::Queen, them);
+
+    // calculate our checkers bb
+    knight_attacks & *enemy_knights
+        | rook_attacks & *enemy_rooks
+        | bishop_attacks & *enemy_bishops
+        | queen_attacks & *enemy_queens
+        | pawn_attacks & *enemy_pawns
 }
 
 #[cfg(test)]
@@ -535,10 +586,12 @@ mod tests {
         attacks::{self, BISHOP_ATTACKS, ROOK_ATTACKS},
         bitboard::Bitboard,
         board::Board,
-        definitions::NumberOf,
+        definitions::{NumberOf, Squares},
+        file::File,
         magics::{BISHOP_MAGICS, ROOK_MAGICS},
         move_generation::MoveGenerator,
         pieces::Piece,
+        rank::Rank,
         side::Side,
     };
 
@@ -1124,6 +1177,11 @@ mod tests {
                     "Mismatch for piece {:?} on square {}",
                     piece, sq
                 );
+            }
+        }
+    }
+
+    #[test]
     fn check_rook_attacks() {
         for square in 0..NumberOf::SQUARES {
             let rook_bb = MoveGenerator::relevant_rook_bits(square as u8);
@@ -1149,7 +1207,7 @@ mod tests {
 
         for piece in Piece::iter() {
             for side in Side::iter() {
-                let attacks = attacks::for_piece(piece, &board, side);
+                let attacks = attacks::for_piece(piece, &board, side, board.all_pieces());
                 let mut expected_attacks = Bitboard::default();
                 let piece_bb = board.piece_bitboard(piece, side);
                 let occ = board.all_pieces();
@@ -1167,6 +1225,8 @@ mod tests {
             }
         }
     }
+
+    #[test]
     fn check_bishop_attacks() {
         for square in 0..1 {
             let bishop_bb = MoveGenerator::relevant_bishop_bits(square as u8);
@@ -1202,5 +1262,16 @@ mod tests {
 
         println!("attacks without edges: \n{attacks_without_edges}");
         assert_eq!(attacks_without_edges, queen_bb);
+    }
+
+    #[test]
+    fn test_blockers_for_king() {
+        const FEN: &str = "r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38";
+        let mut board = Board::from_fen(FEN).unwrap();
+        board.make_uci_move("f7f5").unwrap();
+        println!("{}\n{}", board.to_fen(), board);
+        let blockers = attacks::blockers_for_king(&board, Side::White);
+        let expected_blockers = Bitboard::from_square(Squares::E5);
+        assert_eq!(blockers, expected_blockers);
     }
 }
