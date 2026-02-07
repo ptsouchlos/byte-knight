@@ -131,6 +131,14 @@ impl Bitboard {
     pub fn more_than_one(&self) -> bool {
         self.data & (self.data.saturating_sub(1)) != 0
     }
+
+    /// Check if the bitboard is empty.
+    ///
+    /// # Returns
+    /// - `bool` - True if the bitboard is empty. False otherwise.
+    pub fn empty(&self) -> bool {
+        self.data == 0
+    }
 }
 
 impl PartialOrd<u64> for Bitboard {
@@ -499,5 +507,14 @@ mod tests {
 
         let bb3 = Bitboard::new(0b000000);
         assert!(!bb3.more_than_one());
+    }
+
+    #[test]
+    fn test_empty() {
+        let bb = Bitboard::new(0b101010);
+        let result = bb ^ bb;
+        println!("{}", result);
+        assert!(result.number_of_occupied_squares() == 0);
+        assert!(result.empty());
     }
 }
