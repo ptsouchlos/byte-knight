@@ -266,7 +266,7 @@ impl Board {
                 // These checks are based on this patch from Stockfish.
                 // https://github.com/official-stockfish/Stockfish/commit/94175524b1c06f1a4ce80a5640272a15120dcbbd
                 // 1. Check if there are any enemy pawns attacking the EP square
-                let pawns = attacks::for_piece(
+                let mut pawns = attacks::for_piece(
                     Piece::Pawn,
                     self,
                     them,
@@ -301,10 +301,12 @@ impl Board {
                 }
 
                 // Now we do a quick simulation of the en passant capture to see if it leaves us in check
-                let king_sq = self.king_square(them);
+                let _king_sq = self.king_square(them);
                 let cap_sq = to;
-                let occ = (self.all_pieces() ^ bitboard_helpers::next_bit(&pawns) ^ cap_sq.into())
-                    | (to - attacks::pawn_push(us));
+                // TODO: Do we really need this line?
+                let pwn = Bitboard::from_square(bitboard_helpers::next_bit(&mut pawns) as u8);
+                let _occ = (self.all_pieces() ^ pwn ^ Bitboard::from_square(cap_sq))
+                    | Bitboard::from_square(en_passant_square);
             } else {
                 self.set_en_passant_square(None);
             }
