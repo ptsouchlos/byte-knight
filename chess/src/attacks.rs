@@ -522,24 +522,25 @@ pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
     let king_square = board.king_square(side);
     let mut blockers = Bitboard::default();
 
-    // Get attacks from king square as if it were a queen (to cover all directions)
-    let attacks_from_king = attacks::queen(king_square, Bitboard::default());
-    // Get attacks for opponent's rooks, bishops and queens
+    let rook_attacks = attacks::rook(king_square, Bitboard::default());
+    let bishop_attacks = attacks::bishop(king_square, Bitboard::default());
+
     let them = Side::opposite(side);
 
-    let enemy_rooks = *board.piece_bitboard(Piece::Rook, them);
-    let enemy_bishops = *board.piece_bitboard(Piece::Bishop, them);
-    let enemy_queens = *board.piece_bitboard(Piece::Queen, them);
+    let rooks = board.piece_kind_bitboard(Piece::Rook);
+    let bishops = board.piece_kind_bitboard(Piece::Bishop);
+    let queens = board.piece_kind_bitboard(Piece::Queen);
 
-    let snipers = attacks_from_king & (enemy_rooks | enemy_bishops | enemy_queens);
+    // Snipers attack the king square when other other snipers are removed
+    let snipers = (rook_attacks & (rooks | queens))
+        | (bishop_attacks & (bishops | queens)) & board.pieces(them);
 
-    // Our pieces excluding the king
-    let our_pieces = board.pieces(side) ^ Bitboard::from_square(king_square);
-    for square in snipers.iter() {
-        let between_ray = rays::between(king_square, square);
-        let blkrs_bb = between_ray & our_pieces;
-        if blkrs_bb.number_of_occupied_squares() == 1 {
-            blockers |= blkrs_bb;
+    let occ = board.all_pieces() ^ snipers;
+
+    for sq in snipers.iter() {
+        let bb = rays::between(king_square, sq) & occ;
+        if bb.number_of_occupied_squares() == 1 {
+            blockers |= bb;
         }
     }
 
@@ -1273,5 +1274,11 @@ mod tests {
         let blockers = attacks::blockers_for_king(&board, Side::White);
         let expected_blockers = Bitboard::from_square(Squares::E5);
         assert_eq!(blockers, expected_blockers);
+
+        const FEN_2: &str = "8/p2r1pK1/6p1/1kp1P1P1/2p5/2P5/8/4R3 b - - 0 43";
+        let board_2 = Board::from_fen(FEN_2).unwrap();
+        let b2_blockers = attacks::blockers_for_king(&board_2, Side::White);
+        let expected_b2_blockers = Bitboard::from_square(Squares::F7);
+        assert_eq!(b2_blockers, expected_b2_blockers);
     }
 }
