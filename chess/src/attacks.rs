@@ -547,6 +547,14 @@ pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
     blockers
 }
 
+/// Calculate all pieces that are checking the king for the given side on the given board.
+///
+/// # Arguments
+/// - `board` - The current [`Board`].
+/// - `side` - The [`Side`] to check for (i.e. which king to check, not the attacking side).
+///
+/// # Returns
+/// - A [`Bitboard`] representing all the pieces that are checking the king for the given side on the given board.
 pub fn checkers(board: &Board, side: Side) -> Bitboard {
     let us = side;
     let them = Side::opposite(us);
