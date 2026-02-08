@@ -372,7 +372,7 @@ impl MoveGenerator {
         match PieceCategory::from(piece) {
             PieceCategory::Slider(slider) => self.get_slider_attacks(slider, square, occupancy),
             PieceCategory::NonSlider(non_slider) => {
-                self.get_non_slider_attacks(Side::opposite(attacking_side), non_slider, square)
+                self.get_non_slider_attacks(attacking_side.opposite(), non_slider, square)
             }
         }
     }
@@ -522,7 +522,7 @@ impl MoveGenerator {
         );
 
         let us = board.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let our_pieces = board.pieces(us);
         let their_pieces = board.pieces(them);
         let occupancy = board.all_pieces();
@@ -587,7 +587,7 @@ impl MoveGenerator {
     #[cfg_attr(debug_assertions, inline(never))]
     fn get_pawn_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
         let us = board.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let their_pieces = board.pieces(them);
         let occupancy = board.all_pieces();
         let empty = !occupancy;
@@ -704,7 +704,7 @@ impl MoveGenerator {
 
         let mut bb = *bitboard;
         let us = board.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let enemy_pieces = board.pieces(them);
         let promotion_rank = Rank::promotion_rank(us);
         while bb > 0 {
@@ -831,7 +831,7 @@ impl MoveGenerator {
         );
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
-        let pawn_attacks = attacks::pawn(square.to_square_index(), Side::opposite(attacking_side));
+        let pawn_attacks = attacks::pawn(square.to_square_index(), attacking_side.opposite());
 
         let is_king_attacker = (king_attacks & *king_bb) > 0;
         let is_knight_attacker = (knight_attacks & *knight_bb) > 0;
@@ -894,7 +894,7 @@ mod tests {
             assert!(move_gen.is_square_attacked(
                 &board,
                 &Square::from_square_index(square),
-                Side::opposite(board.side_to_move())
+                board.side_to_move().opposite()
             ));
         }
 

@@ -108,7 +108,7 @@ impl Board {
         let piece = mv.piece();
 
         let us = self.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
 
         let piece_and_side = self.piece_on_square(from);
         if piece_and_side.is_none() {
@@ -186,7 +186,7 @@ impl Board {
         let captured_piece = mv.captured_piece();
 
         let us = self.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let can_castle = self.castling_rights() > 0;
         let update_zobrist_hash = true;
 
@@ -374,7 +374,7 @@ impl Board {
     #[cfg_attr(debug_assertions, inline(never))]
     pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
         let us = self.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         self.make_move_unchecked(mv)?;
 
         // check if the move is legal
@@ -415,7 +415,7 @@ impl Board {
         self.set_board_state(state);
 
         let us = self.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         // this is move that we're unmaking
         let chess_move = state.next_move;
 
@@ -552,7 +552,7 @@ impl Board {
 
     /// Switch the side to move, and update the zobrist hash (see [Board::set_side_to_move]).
     fn switch_side(&mut self) {
-        self.set_side_to_move(Side::opposite(self.side_to_move()));
+        self.set_side_to_move(self.side_to_move().opposite());
     }
 }
 

@@ -45,7 +45,7 @@ jobs:
           make -j CXX=clang++
 
       - name: Build byte-knight
-        run: just build-native-release byte-knight
+        run: just build-target-release byte-knight
 
       - name: Run UCI compliance tests
         run: |

@@ -494,7 +494,7 @@ impl Board {
         move_gen.is_square_attacked(
             self,
             &Square::from_square_index(king_square),
-            Side::opposite(self.side_to_move()),
+            self.side_to_move().opposite(),
         )
     }
 
@@ -527,7 +527,7 @@ impl Board {
             if move_gen.is_square_attacked_with_occupancy(
                 self,
                 &Square::from_square_index(square as u8),
-                Side::opposite(self.side_to_move()),
+                self.side_to_move().opposite(),
                 &occupancy,
             ) {
                 return true;

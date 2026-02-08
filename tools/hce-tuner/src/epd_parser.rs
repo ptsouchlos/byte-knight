@@ -14,7 +14,7 @@ use crate::{offsets::Offsets, tuning_position::TuningPosition};
 
 pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
     let mut positions = Vec::new();
-    let file = File::open(file_path).expect("Failed to open file");
+    let file = File::open(file_path).expect(format!("Failed to open file: {}", file_path).as_str());
     let reader = BufReader::new(file);
     for line in reader.lines() {
         let line = line.expect("Failed to read line");
@@ -162,7 +162,7 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     for side in [Side::White, Side::Black] {
         let king_sq = board.king_square(side);
         let king_ring = attacks::king(king_sq);
-        let opposite = Side::opposite(side);
+        let opposite = side.opposite();
         // loop through all pieces except king
         for piece in Piece::iter().filter(|&p| p != Piece::King) {
             // Get enemy piece bb

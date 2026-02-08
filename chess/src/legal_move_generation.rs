@@ -37,7 +37,7 @@ impl MoveGenerator {
     ) -> (Bitboard, Bitboard, Bitboard, Bitboard, Bitboard, Bitboard) {
         // helpers to simplify things later
         let us = board.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let occupancy = board.all_pieces();
         let empty = !occupancy;
         let their_pieces = board.pieces(them);
@@ -195,7 +195,7 @@ impl MoveGenerator {
     /// A [`Bitboard`] representing the squares that are checking the king
     fn calculate_checkers(&self, board: &Board, occupancy: &Bitboard) -> Bitboard {
         let us = board.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let king_bb = board.piece_bitboard(Piece::King, us);
         let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
 
@@ -210,7 +210,7 @@ impl MoveGenerator {
             self.get_piece_attacks(Piece::Bishop, king_square, us, &kingless_occupancy);
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
-        let pawn_attacks = attacks::pawn(king_square, Side::opposite(them));
+        let pawn_attacks = attacks::pawn(king_square, them.opposite());
 
         let enemy_pawns = board.piece_bitboard(Piece::Pawn, them);
         let enemy_knights = board.piece_bitboard(Piece::Knight, them);
@@ -323,7 +323,7 @@ impl MoveGenerator {
         // also, we need to take into account the pin directions
         let is_pinned = pinned_pieces.intersects(Bitboard::from_square(square.to_square_index()));
         let us = board.side_to_move();
-        let their_pieces = board.pieces(Side::opposite(us));
+        let their_pieces = board.pieces(us.opposite());
         let direction = match us {
             Side::White => NORTH as u8,
             Side::Black => SOUTH as u8,
@@ -442,7 +442,7 @@ impl MoveGenerator {
     ) -> Bitboard {
         let is_pinned = pinned_mask.intersects(Bitboard::from_square(square.to_square_index()));
         let us = board.side_to_move();
-        let their_pieces = board.pieces(Side::opposite(us));
+        let their_pieces = board.pieces(us.opposite());
         let from_square = square.to_square_index();
         let occupancy = board.all_pieces();
         // TODO: properly use orthogonal and diagonal pin rays
@@ -646,7 +646,7 @@ impl MoveGenerator {
         checkers: &Bitboard,
     ) -> Bitboard {
         let us = board.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let our_pieces = board.pieces(us);
         let their_pieces = board.pieces(them);
         let occupancy = our_pieces | their_pieces;
