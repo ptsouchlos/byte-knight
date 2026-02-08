@@ -9,5 +9,5 @@ chess = { workspace = true }
 anyhow = { workspace = true }
 itertools = { workspace = true }
 uci-parser = { workspace = true, features = ["parse-go-perft", "parse-position-kiwipete", "types", "clamp-negatives"] }
-rand = { workspace = true, features = ["small_rng"] }
+rand = { workspace = true }
 arrayvec = { workspace = true }

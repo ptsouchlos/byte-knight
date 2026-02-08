@@ -9,8 +9,7 @@ repository = { workspace = true }
 [dependencies]
 chess = { workspace = true }
 anyhow = { workspace = true }
-rand = { workspace = true, features = ["small_rng"] }
-rand_chacha = { workspace = true }
+rand = { workspace = true }
 thiserror = { workspace = true }
 
 [[bin]]
