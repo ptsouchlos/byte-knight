@@ -13,9 +13,11 @@ use engine::defs::About;
 use engine::engine::ByteKnight;
 use std::process::exit;
 
+shadow_rs::shadow!(build);
+
 #[derive(Parser)]
 #[command(
-    version = About::VERSION, about = About::SHORT_DESCRIPTION, long_about = About::SHORT_DESCRIPTION
+    version = build::CLAP_LONG_VERSION, about = About::SHORT_DESCRIPTION, long_about = About::SHORT_DESCRIPTION
 )]
 struct Options {
     #[command(subcommand)]
