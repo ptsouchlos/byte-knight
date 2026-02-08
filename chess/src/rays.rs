@@ -64,7 +64,7 @@ pub fn between(from: u8, to: u8) -> Bitboard {
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the line that intersects both `from` and `to`. If `from` and `to` are not aligned,
-/// this returns an empty `Bitboard`.
+///   this returns an empty `Bitboard`.
 pub fn line(from: u8, to: u8) -> Bitboard {
     let bishop_from = attacks::bishop(from, Bitboard::default());
     let bishop_to = attacks::bishop(to, Bitboard::default());
@@ -132,7 +132,7 @@ mod tests {
         }
     }
 
-    const EXPECTED_LINES: [(u16, u64); 1456] = [
+    static EXPECTED_LINES: [(u16, u64); 1456] = [
         (1, 255),
         (2, 255),
         (3, 255),
@@ -1595,7 +1595,7 @@ mod tests {
     fn test_line() {
         let from = Squares::C4;
         let to = Squares::F7;
-        let line_bb = super::line(from.into(), to.into());
+        let line_bb = super::line(from, to);
         let expected_line_bb =
             super::between(Squares::A2, Squares::G8) | Squares::A2.into() | Squares::G8.into();
 
