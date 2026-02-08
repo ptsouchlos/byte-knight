@@ -13,8 +13,7 @@ use chess::{
     move_generation::MoveGenerator,
     pieces::{Piece, SQUARE_NAME},
 };
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaChaRng;
+use rand::prelude::*;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -96,7 +95,7 @@ fn try_to_make_table(
 }
 
 fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
-    let mut rng = ChaChaRng::from_os_rng();
+    let mut rng = rand::rng();
     let mut magic_numbers = Vec::with_capacity(NumberOf::SQUARES);
     assert!(piece == Piece::Rook || piece == Piece::Bishop);
 
