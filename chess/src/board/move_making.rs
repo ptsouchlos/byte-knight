@@ -251,43 +251,53 @@ impl Board {
                     update_zobrist_hash,
                 );
             }
-            // check if this is a double pawn push
-            // if so, set the en passant square
+            // Check if this is a double pawn push
             if mv.is_pawn_two_up() {
-                // get the en passant square from the new move
-                // if white, the en passant square is one rank below the destination square
-                // if black, the en passant square is one rank above the destination square
+                // Get the en passant square from the new move.
+                // If white, the en passant square is one rank below the destination square
+                // If black, the en passant square is one rank above the destination square
                 let en_passant_square = if us == Side::White {
                     to - 8u8
                 } else {
                     to + 8u8
                 };
 
+                // -----------------------------------------------------------------------------------------------
                 // Check to see if the en passant square is a legal move for the opponent
-                // These checks are based on this patch from Stockfish.
-                // https://github.com/official-stockfish/Stockfish/commit/94175524b1c06f1a4ce80a5640272a15120dcbbd
-                // 1. Check if there are any enemy pawns attacking the EP square
+                // These checks are based on this commit from Stockfish.
+                // https://github.com/official-stockfish/Stockfish/commit/2321cf2f77b241d685ee68c9896f6574a6f12d0d
+                // -----------------------------------------------------------------------------------------------
+
+                // Check if there are any enemy pawns attacking the EP square. We only consider pawns of the opponent
+                // who intersect our pawn attacks _from_ the EP square.
                 let pawns =
                     attacks::pawn(en_passant_square, us) & *self.piece_bitboard(Piece::Pawn, them);
 
-                // println!("pawns\n{}", pawns);
                 // Are there any pawns attacking attacking the EP square? If not, then EP capture is not possible.
                 if pawns.number_of_occupied_squares() >= 1 {
+                    // Now that we know there's at least one pawn that can capture en passant, we need to check
+                    // if the pawn(s) are pinned or not or if they give discovered check.
+
                     let king_sq = self.king_square(them);
                     let (king_file, _) = square::from_square(king_sq);
                     let (from_file, _) = square::from_square(from);
 
+                    // Get the blockers from the opponent king's perspective. This is because we're now checking for check of the opponent king.
+                    // We (side to move) are making a pawn double push, so we're now checking the potential of an EP capture on the part of the opponent.
                     let king_blockers = attacks::blockers_for_king(&previous_board, them);
-                    // println!("k blks:\n{}", king_blockers);
                     let not_blockers = !king_blockers;
-                    // println!("k !blks:\n{}", not_blockers);
+
+                    // Determine if there's no discovery check or if the pawn is on the same file as the king. If either is true, the EP capture does
+                    // not result in a discovered check.
                     let no_discovery = !(Bitboard::from_square(from) & not_blockers).empty()
                         || king_file == from_file;
-                    // println!("no discovery? {}", no_discovery);
 
-                    let bb = pawns & (not_blockers | rays::line(en_passant_square, king_sq));
-                    // println!("bb\n{}", bb);
-                    if no_discovery && (pawns & bb).number_of_occupied_squares() >= 1 {
+                    // Now check if any of the pawns overlap with any non-blockers from the king's perspective and if they don't overlap
+                    // the line intersecting the king and the EP square (if any). If they do overlap, then the EP capture would result
+                    // in a check and is thus illegal.
+                    let pawn_bb_check =
+                        pawns & (not_blockers | rays::line(en_passant_square, king_sq));
+                    if no_discovery && pawn_bb_check.number_of_occupied_squares() >= 1 {
                         // If there are more than one pawn that can capture en passant, but all of them are pinned, then we can't set the en passant square as it won't be legal for the opponent to capture it anyway.
                         self.set_en_passant_square(Some(en_passant_square));
                     }
@@ -296,6 +306,7 @@ impl Board {
                     self.set_en_passant_square(None);
                 }
             } else {
+                // Move is not a double pawn push, so ensure the EP square is cleared.
                 self.set_en_passant_square(None);
             }
         } else {
