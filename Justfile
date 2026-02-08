@@ -10,13 +10,13 @@ default:
 
 [doc('Build binary target in debug for native CPU')]
 [group('dev')]
-build-native target:
-    cargo rustc --bin {{ target }} -- -C target-cpu=native
+build-target target:
+    cargo rustc -p {{ target }} --bin {{ target }} -- -C target-cpu=native
 
 [doc('Build binary target in debug for native CPU')]
 [group('dev')]
-build-native-release target:
-    cargo rustc --release --bin {{ target }} -- -C target-cpu=native
+build-target-release target:
+    cargo rustc --release -p {{ target }} --bin {{ target }} -- -C target-cpu=native
 
 [doc('Build the project (default is debug)')]
 [group('dev')]
@@ -72,26 +72,26 @@ lint:
 [doc('Run sarch benchmark - required before committing for OpenBench.')]
 [group('chess')]
 [group('performance')]
-search-bench: (build-native-release "byte-knight")
+search-bench: (build-target-release "byte-knight")
     echo "Running search benchmark..."
     ./target/release/byte-knight bench
 
 [doc('Run perft at a specified depth')]
 [group('chess')]
-perft depth:
+perft depth: (build-target-release "byte-knight")
     echo "Running perft..."
-    cargo run --release --bin perft -- -d {{ depth }}
+    ./target/release/byte-knight perft -d {{ depth }}
 
 [doc('Run perft over the EPD test suite')]
 [group('chess')]
-perft-epd:
+perft-epd: (build-target-release "byte-knight")
     echo "Running EPD perft test suite..."
-    cargo run --release --bin perft -- --epd-file data/standard.epd
+    ./target/release/byte-knight perft --epd-file data/standard.epd
 
 [doc('Run perft benchmark over the EPD test suite')]
 [group('chess')]
 [group('performance')]
-perft-bench: (build-native-release "perft-bench")
+perft-bench: (build-target-release "perft-bench")
     echo "Running perft benchmark..."
     target/release/perft-bench -e data/standard.epd
 
@@ -99,30 +99,24 @@ perft-bench: (build-native-release "perft-bench")
 [group('chess')]
 magics:
     echo "Generating magics..."
-    cargo run --release --bin generate_magics
+    cargo run --release --bin generate-magics
 
 [doc('Verify that generated Zobrist hashes are unique')]
 [group('chess')]
 verify-zobrist:
     echo "Verifying Zobrist hash..."
-    cargo run --release --bin verify_zobrist
-
-[doc('Generate release binaries for given target.')]
-[group('dev')]
-release target:
-    echo "Building release binaries..."
-    cargo rustc --release --bin byte-knight --target={{ target }}
+    cargo run --release --bin verify-zobrist
 
 [doc('Caches the release binary to bk-main for testing.')]
 [group('dev')]
-cache-main: (build-native-release "byte-knight")
+cache-main: (build-target-release "byte-knight")
     echo "Caching binary for testing..."
     cp target/release/byte-knight ./bk-main
 
 [doc('Run the engine against itself. Requires @cache-main to be run first and fastchess to be installed.')]
 [group('chess')]
 [group('dev')]
-compare-to-main: (build-native-release "byte-knight")
+compare-to-main: (build-target-release "byte-knight")
     echo "Comparing byte-knight to bk-main"
     fastchess -engine cmd="./target/release/byte-knight" name="dev" -engine cmd="./bk-main" name="bk-main" -openings file="./data/Pohl.epd" format=epd order=random -each tc=10+0.1 -rounds 200 -repeat -concurrency 8 -sprt elo0=0 elo1=5 alpha=0.05 beta=0.1 model=normalized -output format=cutechess
 
@@ -133,6 +127,6 @@ format:
 
 [doc('Run the HCE tuner on the given input book')]
 [group('dev')]
-hce-tune book epochs: (build-native-release "hce-tuner")
+hce-tune book epochs: (build-target-release "hce-tuner")
     echo "Running HCE tuner..."
     ./target/release/hce-tuner tune -i {{ book }} -e {{ epochs }} -p engine-values

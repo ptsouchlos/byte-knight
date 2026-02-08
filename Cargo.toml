@@ -1,13 +1,5 @@
-[package]
-name = "byte-knight"
-version = "3.0.0"
-edition = { workspace = true }
-authors = { workspace = true }
-license = { workspace = true }
-repository = { workspace = true }
-
 [workspace]
-members = ["engine", "chess", "tools/*"]
+members = ["chess", "engine", "engine-cli", "tools/*"]
 resolver = "3"
 
 [workspace.package]
@@ -35,13 +27,6 @@ serde = "1.0.228"
 textplots = "0.8.7"
 thiserror = "2.0.18"
 uci-parser = "1.1.0"
-
-[dependencies]
-engine = { workspace = true }
-chess = { workspace = true }
-clap = { workspace = true, features = ["derive"] }
-colored = { workspace = true }
-rayon = { workspace = true }
 
 [profile.dev]
 opt-level = 1

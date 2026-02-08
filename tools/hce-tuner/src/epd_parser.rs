@@ -14,7 +14,7 @@ use crate::{offsets::Offsets, tuning_position::TuningPosition};
 
 pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
     let mut positions = Vec::new();
-    let file = File::open(file_path).expect("Failed to open file");
+    let file = File::open(file_path).expect(format!("Failed to open file: {}", file_path).as_str());
     let reader = BufReader::new(file);
     for line in reader.lines() {
         let line = line.expect("Failed to read line");
