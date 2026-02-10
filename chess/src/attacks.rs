@@ -547,48 +547,6 @@ pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
     blockers
 }
 
-/// Calculate all pieces that are checking the king for the given side on the given board.
-///
-/// # Arguments
-/// - `board` - The current [`Board`].
-/// - `side` - The [`Side`] to check for (i.e. which king to check, not the attacking side).
-///
-/// # Returns
-/// - A [`Bitboard`] representing all the pieces that are checking the king for the given side on the given board.
-pub fn checkers(board: &Board, side: Side) -> Bitboard {
-    let us = side;
-    let them = Side::opposite(us);
-    let king_bb = board.piece_bitboard(Piece::King, us);
-    let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
-    let occupancy = board.all_pieces();
-
-    // ensure we definitely don't have the king in the occupancy
-    let kingless_occupancy = occupancy & !(*king_bb);
-    // an enemy king cannot check our king, so we ignore it
-    let knight_attacks =
-        attacks::for_piece_on_square(Piece::Knight, king_square, kingless_occupancy, us);
-    let rook_attacks =
-        attacks::for_piece_on_square(Piece::Rook, king_square, kingless_occupancy, us);
-    let bishop_attacks =
-        attacks::for_piece_on_square(Piece::Bishop, king_square, kingless_occupancy, us);
-    let queen_attacks = rook_attacks | bishop_attacks;
-    // note we use the opposite side for the pawn attacks
-    let pawn_attacks = attacks::pawn(king_square, Side::opposite(them));
-
-    let enemy_pawns = board.piece_bitboard(Piece::Pawn, them);
-    let enemy_knights = board.piece_bitboard(Piece::Knight, them);
-    let enemy_bishops = board.piece_bitboard(Piece::Bishop, them);
-    let enemy_rooks = board.piece_bitboard(Piece::Rook, them);
-    let enemy_queens = board.piece_bitboard(Piece::Queen, them);
-
-    // calculate our checkers bb
-    knight_attacks & *enemy_knights
-        | rook_attacks & *enemy_rooks
-        | bishop_attacks & *enemy_bishops
-        | queen_attacks & *enemy_queens
-        | pawn_attacks & *enemy_pawns
-}
-
 #[cfg(test)]
 mod tests {
     use crate::{
