@@ -162,7 +162,7 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     for side in [Side::White, Side::Black] {
         let king_sq = board.king_square(side);
         let king_ring = attacks::king(king_sq);
-        let opposite = Side::opposite(side);
+        let opposite = side.opposite();
         // loop through all pieces except king
         for piece in Piece::iter().filter(|&p| p != Piece::King) {
             // Get enemy piece bb
