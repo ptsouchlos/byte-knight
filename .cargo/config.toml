@@ -3,3 +3,6 @@ linker = "aarch64-linux-gnu-gcc"
 
 [target.armv7-unknown-linux-gnueabihf]
 linker = "arm-linux-gnu-gcc"
+
+[env]
+CARGO_WORKSPACE_DIR = { value = "", relative = true }

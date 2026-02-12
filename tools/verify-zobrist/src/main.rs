@@ -57,7 +57,7 @@ fn decompress_data(output_data_path: &Path, compressed_data_path: &Path) -> anyh
 
 fn main() {
     // load data
-    let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let mut data_path = PathBuf::from(env!("CARGO_WORKSPACE_DIR"));
     data_path.push("data/lichess_db_puzzle.csv");
     if !data_path.exists() {
         println!("Data file not found, decompressing from .zst file...");
