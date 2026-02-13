@@ -1,4 +1,4 @@
-./fastchess.exe `
+fastchess.exe `
     -engine name="bk" cmd="$PSScriptRoot/../target/release/byte-knight.exe" `
     -engine name="bk1" cmd="$PSScriptRoot/../target/release/byte-knight.exe" `
     -each tc=0:10+1 `
