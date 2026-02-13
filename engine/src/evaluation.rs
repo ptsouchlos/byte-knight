@@ -106,7 +106,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         }
 
         let stm_idx = side_to_move as usize;
-        let opposite = Side::opposite(side_to_move);
+        let opposite = side_to_move.opposite();
         let opp_idx = opposite as usize;
 
         // Evaluate bishop pair bonus
@@ -135,7 +135,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         // Score both sides for king safety
         for side in Side::iter() {
             let us = side;
-            let them = Side::opposite(us);
+            let them = us.opposite();
             // Get our king ring
             let king_ring = attacks::king(board.king_square(us));
             // Loop through enemy pieces (except king) and check overlap with king ring
