@@ -3,6 +3,12 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
+//! This module contains the definition and implementation for the history table.
+//! See https://www.chessprogramming.org/History_Heuristic
+//! This table gets updated where there is a cutoff. The new best move gets a bonus in the table,
+//! while all other moves previously searched get a malus. The history table is used when scoring
+//! moves for move ordering.
+
 use chess::{definitions::NumberOf, pieces::PIECE_NAMES, side::Side, square::Square};
 
 use crate::score::{LargeScoreType, Score};
@@ -27,9 +33,20 @@ fn calculate_bonus_for_depth(depth: i16) -> i16 {
         .saturating_sub(Score::HISTORY_OFFSET)
 }
 
+/// Implementation of the history gravity formula.
+/// See https://www.chessprogramming.org/History_Heuristic
+///
+/// # Arguments
+/// - `current_value`: The current value stored in the table.
+/// - `clamped_bonus`: The clamped bonus value.
+///
+/// # Returns
+/// - An updated score value.
 fn gravity_update(current_value: i32, clamped_bonus: i32) -> i32 {
     current_value + clamped_bonus - current_value * clamped_bonus.abs() / Score::MAX_HISTORY
 }
+
+/// History update type (+ or -)
 pub(crate) enum HistoryUpdateType {
     Bonus,
     Malus,
@@ -71,9 +88,9 @@ impl HistoryTable {
 
     pub(crate) fn clear(&mut self) {
         for side in 0..NumberOf::SIDES {
-            for piece_type in 0..NumberOf::PIECE_TYPES {
-                for square in 0..NumberOf::SQUARES {
-                    self.table[side][piece_type][square] = Default::default();
+            for sq_from in 0..NumberOf::SQUARES {
+                for sq_to in 0..NumberOf::SQUARES {
+                    self.table[side][sq_from][sq_to] = Default::default();
                 }
             }
         }
@@ -110,17 +127,21 @@ mod tests {
     };
 
     use super::{HistoryTable, calculate_bonus_for_depth};
-    use chess::{definitions::Squares, side::Side, square::Square};
+    use chess::{
+        definitions::{NumberOf, Squares},
+        side::Side,
+        square::Square,
+    };
 
     #[test]
     fn initialize_history_table() {
         let history_table = HistoryTable::new();
         // loop through all sides, piece types, and squares
         for side in 0..2 {
-            for piece_type in 0..6 {
-                for square in 0..64 {
+            for sq_from in 0..NumberOf::SQUARES {
+                for sq_to in 0..NumberOf::SQUARES {
                     assert_eq!(
-                        history_table.table[side][piece_type][square],
+                        history_table.table[side][sq_from][sq_to],
                         Default::default()
                     );
                 }
