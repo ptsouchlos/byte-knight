@@ -1,4 +1,4 @@
-./fastchess.exe `
+fastchess.exe `
     -engine name="bk" cmd="$PSScriptRoot/../target/release/byte-knight.exe" `
     -engine name="bk1" cmd="$PSScriptRoot/../target/release/byte-knight.exe" `
     -each tc=0:10+1 `
@@ -9,4 +9,5 @@
     -rounds 100 `
     -concurrency 20 `
     -sprt elo0=0 elo1=2 alpha=0.05 beta=0.05 `
-    -openings file="$PSScriptRoot/../data/Pohl.epd" format=epd order=random
+    -openings file="$PSScriptRoot/../data/Pohl.epd" format=epd order=random `
+    -log file="compare-output" level="trace" engine=true

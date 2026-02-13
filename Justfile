@@ -4,6 +4,7 @@ set shell := ["bash", "-c"]
 make_dir := if os_family() == "windows" { "New-Item -ItemType Directory -Force" } else { "mkdir -p" }
 env_var_prefix := if os_family() == "windows" { "$env:" } else { "" }
 env_var_postfix := if os_family() == "windows" { ";" } else { "" }
+exe_postfix := if os_family() == "windows" { ".exe" } else { "" }
 
 default:
     @just -l
@@ -111,14 +112,14 @@ verify-zobrist:
 [group('dev')]
 cache-main: (build-target-release "byte-knight")
     echo "Caching binary for testing..."
-    cp target/release/byte-knight ./bk-main
+    cp ./target/release/byte-knight{{ exe_postfix }} ./bk-main{{ exe_postfix }}
 
 [doc('Run the engine against itself. Requires @cache-main to be run first and fastchess to be installed.')]
 [group('chess')]
 [group('dev')]
-compare-to-main: (build-target-release "byte-knight")
+compare-to-main threads: (build-target-release "byte-knight")
     echo "Comparing byte-knight to bk-main"
-    fastchess -engine cmd="./target/release/byte-knight" name="dev" -engine cmd="./bk-main" name="bk-main" -openings file="./data/Pohl.epd" format=epd order=random -each tc=10+0.1 -rounds 200 -repeat -concurrency 8 -sprt elo0=0 elo1=5 alpha=0.05 beta=0.1 model=normalized -output format=cutechess
+    fastchess -engine cmd="./target/release/byte-knight{{ exe_postfix }}" name="dev" -engine cmd="./bk-main{{ exe_postfix }}" name="bk-main" -openings file="./data/Pohl.epd" format=epd order=random -each tc=10+0.1 -rounds 200 -repeat -concurrency {{ threads }} -sprt elo0=0 elo1=5 alpha=0.05 beta=0.1 model=normalized -output format=cutechess
 
 [doc('Format all Rust code')]
 [group('dev')]

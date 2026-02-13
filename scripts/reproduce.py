@@ -22,36 +22,47 @@
 # ./reproduce.py --pgn bug.pgn --white --nodes --option.Hash=16
 
 import argparse
-import chess
+
 import chess.pgn
+
+import chess
+import common
 
 def iterate_uci_options(unknown):
     for arg in unknown:
-        if '=' in arg and arg.startswith('--option.'):
-            yield arg[len('--option.'):].split('=')
+        if "=" in arg and arg.startswith("--option."):
+            yield arg[len("--option.") :].split("=")
+
 
 def parse_args():
 
-    p = argparse.ArgumentParser(description='Add UCI options with: --option.Name=Value')
-    p.add_argument('--pgn', type=str, required=True, help='.pgn with only a single game')
+    p = argparse.ArgumentParser(description="Add UCI options with: --option.Name=Value")
+    p.add_argument(
+        "--pgn", type=str, required=True, help=".pgn with only a single game"
+    )
 
     # Must pick between replicating game with fixed nodes or fixed depth
-    p.add_argument('--nodes',  action='store_true', help='Generate commands using "go nodes"')
-    p.add_argument('--depth',  action='store_true', help='Generate commands using "go depth"')
+    p.add_argument(
+        "--nodes", action="store_true", help='Generate commands using "go nodes"'
+    )
+    p.add_argument(
+        "--depth", action="store_true", help='Generate commands using "go depth"'
+    )
 
     # Provide commands only for the desired colour
-    p.add_argument('--white',  action='store_true', help='Generate commands for White')
-    p.add_argument('--black',  action='store_true', help='Generate commands for Black')
+    p.add_argument("--white", action="store_true", help="Generate commands for White")
+    p.add_argument("--black", action="store_true", help="Generate commands for Black")
 
     args, unknown = p.parse_known_args()
 
     if args.nodes == args.depth:
-        raise Exception('Must use either --nodes or --depth')
+        raise Exception("Must use either --nodes or --depth")
 
     if args.white == args.black:
-        raise Exception('Must use either --white or --black')
+        raise Exception("Must use either --white or --black")
 
     return args, iterate_uci_options(unknown)
+
 
 def main():
 
@@ -61,35 +72,35 @@ def main():
         game = chess.pgn.read_game(pgn_file)
 
     if not game:
-        raise Exception('Empty PGN file')
+        raise Exception("Empty PGN file")
 
-    print ('uci')
+    print("uci")
     for opt_name, opt_value in uci_options:
-        print ('setoption name %s value %s' % (opt_name, opt_value))
-    print ('ucinewgame')
-    print ('isready')
+        print("setoption name %s value %s" % (opt_name, opt_value))
+    print("ucinewgame")
+    print("isready")
 
-    fen = game.headers.get('FEN', None)
-    pos = 'position fen %s moves' % (fen) if fen else 'position startpos moves'
+    fen = game.headers.get("FEN", None)
+    pos = "position fen %s moves" % (fen) if fen else "position startpos moves"
 
     node = game
     while node.variations:
-
         next_node = node.variation(0)
 
         if (node.turn() and args.white) or (not node.turn() and args.black):
+            print(pos)
 
-            print (pos)
+            data = common.parse_fastchess_pgn_comment(next_node.comment)
 
-            try: score, depths, timems, nodes = next_node.comment.split()
-            except: exit()
-            depth, seldepth = depths.split('/')
+            depth = data['depth']
+            nodes = data['nodes']
 
-            print ('go depth %s' % (depth) if args.depth else 'go nodes %s' % (nodes))
-            print ('wait')
+            print("go depth %s" % (depth) if args.depth else "go nodes %s" % (nodes))
+            print("wait")
 
-        pos += ' ' + next_node.move.uci()
+        pos += " " + next_node.move.uci()
         node = next_node
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
