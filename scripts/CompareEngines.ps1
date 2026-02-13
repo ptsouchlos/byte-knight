@@ -9,4 +9,5 @@
     -rounds 100 `
     -concurrency 20 `
     -sprt elo0=0 elo1=2 alpha=0.05 beta=0.05 `
-    -openings file="$PSScriptRoot/../data/Pohl.epd" format=epd order=random
+    -openings file="$PSScriptRoot/../data/Pohl.epd" format=epd order=random `
+    -log file="compare-output" level="trace" engine=true
