@@ -18,7 +18,7 @@ console = "0.16.2"
 criterion = "0.8"
 csv = "1.4.0"
 engine = { path = "engine" }
-indicatif = "0.18.3"
+indicatif = "0.18.4"
 itertools = "0.14.0"
 rand = "0.10.0"
 rayon = "1.11.0"
