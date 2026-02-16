@@ -525,7 +525,7 @@ pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
     let rook_attacks = attacks::rook(king_square, Bitboard::default());
     let bishop_attacks = attacks::bishop(king_square, Bitboard::default());
 
-    let them = Side::opposite(side);
+    let them = side.opposite();
 
     let rooks = board.piece_kind_bitboard(Piece::Rook);
     let bishops = board.piece_kind_bitboard(Piece::Bishop);
