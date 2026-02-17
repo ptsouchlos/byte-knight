@@ -115,24 +115,28 @@ mod tests {
     use crate::defs::MAX_DEPTH;
 
     use super::{HistoryTable, calculate_bonus_for_depth};
-    use chess::{definitions::Squares, pieces::Piece, side::Side};
+    use chess::{
+        definitions::{NumberOf, Squares},
+        pieces::Piece,
+        side::Side,
+    };
 
     #[test]
     fn initialize_history_table() {
         let history_table = HistoryTable::new();
         // loop through all sides, piece types, and squares
-        for side in 0..2u8 {
-            for piece_type in 0..6 {
-                for square in 0..64 {
-                    for is_from_attacked in 0..2 {
-                        for is_to_attacked in 0..2 {
+        for side in [Side::White, Side::Black] {
+            for piece_type in Piece::iter() {
+                for square in 0..NumberOf::SQUARES {
+                    for is_from_attacked in [true, false] {
+                        for is_to_attacked in [true, false] {
                             assert_eq!(
                                 history_table.get(
-                                    Side::try_from(side).unwrap(),
-                                    Piece::try_from(piece_type).unwrap(),
+                                    side,
+                                    piece_type,
                                     square as u8,
-                                    is_from_attacked != 0,
-                                    is_to_attacked != 0,
+                                    is_from_attacked,
+                                    is_to_attacked,
                                 ),
                                 Default::default()
                             );
