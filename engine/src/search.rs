@@ -16,14 +16,8 @@ use std::{
 use anyhow::{Result, bail};
 use arrayvec::ArrayVec;
 use chess::{
-    board::Board,
-    definitions::MAX_MOVE_LIST_SIZE,
-    move_generation::MoveGenerator,
-    move_list::MoveList,
-    moves::Move,
-    pieces::Piece,
-    side::{self, Side},
-    square::Square,
+    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
+    move_list::MoveList, moves::Move, pieces::Piece, square::Square,
 };
 use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
@@ -485,7 +479,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         self.move_gen.generate_legal_moves(board, &mut move_list);
         let attacked_by_opponent = self.move_gen.get_attacked_squares(
             board,
-            side::Side::opposite(board.side_to_move()),
+            board.side_to_move().opposite(),
             &board.all_pieces(),
         );
         // do we have moves?
@@ -596,7 +590,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     // update history table for quiets
                     if mv.is_quiet() {
                         let us = board.side_to_move();
-                        let them = Side::opposite(us);
+                        let them = us.opposite();
 
                         // calculate history bonus
                         let bonus = history_table::calculate_bonus_for_depth(depth);
@@ -769,7 +763,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         self.move_gen.generate_legal_moves(board, &mut move_list);
         let attacked_by_opponent = self.move_gen.get_attacked_squares(
             board,
-            side::Side::opposite(board.side_to_move()),
+            board.side_to_move().opposite(),
             &board.all_pieces(),
         );
 
@@ -925,7 +919,6 @@ mod tests {
 
     use chess::{
         bitboard::Bitboard, board::Board, move_generation::MoveGenerator, pieces::ALL_PIECES,
-        side::Side,
     };
 
     use crate::{
@@ -1150,7 +1143,7 @@ mod tests {
             let mut board = Board::from_fen(fen).unwrap();
             let attacked_by_opponent = move_gen.get_attacked_squares(
                 &board,
-                Side::opposite(board.side_to_move()),
+                board.side_to_move().opposite(),
                 &board.all_pieces(),
             );
             let is_from_attacked = |sq: u8| Bitboard::from_square(sq) & attacked_by_opponent != 0;

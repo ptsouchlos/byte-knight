@@ -111,9 +111,7 @@ impl MoveOrder {
 
 #[cfg(test)]
 mod tests {
-    use chess::{
-        board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move, side::Side,
-    };
+    use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
     use itertools::Itertools;
 
     use crate::{
@@ -136,7 +134,7 @@ mod tests {
 
         let attacked_by_opponent = move_gen.get_attacked_squares(
             &board,
-            Side::opposite(board.side_to_move()),
+            board.side_to_move().opposite(),
             &board.all_pieces(),
         );
 
