@@ -59,19 +59,19 @@ impl<Values: EvalValues> Evaluation<Values> {
     }
 
     /// Helper to evaluate the threats of the current position.
-    /// The position is evaluated from the perspective of the side to move.
     ///
     /// # Arguments
     /// - `board`: The board to evaluate the threats on.
+    /// - `side`: The side to evaluate the threats for.
     ///
     /// # Returns
     /// A [`PhasedScore`] representing the threat evaluation of the position.
-    fn evaluate_threats(&self, board: &Board) -> PhasedScore
+    fn evaluate_threats(&self, board: &Board, side: Side) -> PhasedScore
     where
         PhasedScore: AddAssign<Values::ReturnScore>,
     {
         let mut score = PhasedScore::default();
-        let us = board.side_to_move();
+        let us = side;
         let them = us.opposite();
         let pawn_attacks = attacks::for_piece(Piece::Pawn, board, us);
         let knight_attacks = attacks::for_piece(Piece::Knight, board, us);
@@ -192,12 +192,14 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             }
         }
 
-        let threats_val = self.evaluate_threats(board);
-        mg[stm_idx] += threats_val.mg() as i32;
-        eg[stm_idx] += threats_val.eg() as i32;
+        let our_threats_val = self.evaluate_threats(board, board.side_to_move());
+        let their_threats_val = self.evaluate_threats(board, board.side_to_move().opposite());
 
-        mg[opp_idx] -= threats_val.mg() as i32;
-        eg[opp_idx] -= threats_val.eg() as i32;
+        mg[stm_idx] += our_threats_val.mg() as i32;
+        eg[stm_idx] += our_threats_val.eg() as i32;
+
+        mg[opp_idx] += their_threats_val.mg() as i32;
+        eg[opp_idx] += their_threats_val.eg() as i32;
 
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
