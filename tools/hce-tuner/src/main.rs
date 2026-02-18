@@ -145,7 +145,34 @@ fn print_params(params: &Parameters) {
         let val = params.as_slice()[idx];
         print!("{val:?}, ");
     }
-    print!("];");
+    println!("];");
+
+    println!();
+    println!("pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] [=");
+    for piece_idx in Piece::iter() {
+        let idx = Offsets::PAWN_THREAT as usize + piece_idx as usize;
+        let val = params.as_slice()[idx];
+        println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
+    }
+    println!("];");
+
+    println!();
+    println!("pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
+    for piece_idx in Piece::iter() {
+        let idx = Offsets::KNIGHT_THREAT as usize + piece_idx as usize;
+        let val = params.as_slice()[idx];
+        println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
+    }
+    println!("];");
+
+    println!();
+    println!("pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
+    for piece_idx in Piece::iter() {
+        let idx = Offsets::BISHOP_THREAT as usize + piece_idx as usize;
+        let val = params.as_slice()[idx];
+        println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
+    }
+    println!("];");
 }
 
 fn plot_k(tuner: &Tuner) {

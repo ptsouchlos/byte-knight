@@ -187,6 +187,37 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         }
     }
 
+    // Threats
+    for side in [Side::White, Side::Black] {
+        let them = side.opposite();
+        let pawn_attacks = attacks::for_piece(Piece::Pawn, &board, side);
+        let knight_attacks = attacks::for_piece(Piece::Knight, &board, side);
+        let bishop_attacks = attacks::for_piece(Piece::Bishop, &board, side);
+
+        let indexes = match side {
+            Side::White => &mut w_indexes,
+            Side::Black => &mut b_indexes,
+        };
+        for piece_attacked in Piece::iter() {
+            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+
+            let pawn_threat_count = (pawn_attacks & piece_bb).number_of_occupied_squares() as i32;
+            for _ in 0..pawn_threat_count {
+                indexes.push(Offsets::offset_for_threat(Piece::Pawn, piece_attacked));
+            }
+            let knight_threat_count =
+                (knight_attacks & piece_bb).number_of_occupied_squares() as i32;
+            for _ in 0..knight_threat_count {
+                indexes.push(Offsets::offset_for_threat(Piece::Knight, piece_attacked));
+            }
+            let bishop_threat_count =
+                (bishop_attacks & piece_bb).number_of_occupied_squares() as i32;
+            for _ in 0..bishop_threat_count {
+                indexes.push(Offsets::offset_for_threat(Piece::Bishop, piece_attacked));
+            }
+        }
+    }
+
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
     let tuning_pos = TuningPosition::new(w_indexes, b_indexes, scaled_phase, result);
 
