@@ -661,6 +661,51 @@ impl Board {
     pub fn last_move(&self) -> Option<Move> {
         self.history.iter().last().map(|m| m.next_move)
     }
+
+    /// Returns a new board with the position mirrored vertically (ranks flipped).
+    ///
+    /// White and black pieces are swapped, the side to move is toggled, castling
+    /// rights are swapped between the two sides, and the en passant square is
+    /// flipped.
+    pub fn flip(&self) -> Board {
+        let mut flipped = Board::new();
+
+        // Swap sides and flip each bitboard vertically (swap_bytes mirrors ranks).
+        for piece in 0..NumberOf::PIECE_TYPES {
+            let white = self.piece_bitboards[Side::White as usize][piece].as_number();
+            let black = self.piece_bitboards[Side::Black as usize][piece].as_number();
+            flipped.piece_bitboards[Side::White as usize][piece] =
+                Bitboard::new(black.swap_bytes());
+            flipped.piece_bitboards[Side::Black as usize][piece] =
+                Bitboard::new(white.swap_bytes());
+        }
+
+        flipped.state.side_to_move = self.state.side_to_move.opposite();
+        flipped.state.half_move_clock = self.state.half_move_clock;
+        flipped.state.full_move_number = self.state.full_move_number;
+
+        // Swap castling rights between sides.
+        let cr = self.state.castling_rights;
+        let mut flipped_cr = CastlingAvailability::NONE;
+        if cr & CastlingAvailability::WHITE_KINGSIDE != 0 {
+            flipped_cr |= CastlingAvailability::BLACK_KINGSIDE;
+        }
+        if cr & CastlingAvailability::WHITE_QUEENSIDE != 0 {
+            flipped_cr |= CastlingAvailability::BLACK_QUEENSIDE;
+        }
+        if cr & CastlingAvailability::BLACK_KINGSIDE != 0 {
+            flipped_cr |= CastlingAvailability::WHITE_KINGSIDE;
+        }
+        if cr & CastlingAvailability::BLACK_QUEENSIDE != 0 {
+            flipped_cr |= CastlingAvailability::WHITE_QUEENSIDE;
+        }
+        flipped.state.castling_rights = flipped_cr;
+
+        flipped.state.en_passant_square = self.state.en_passant_square.map(crate::square::flip);
+
+        flipped.state.zobrist_hash = flipped.initialize_zobrist_hash();
+        flipped
+    }
 }
 
 #[cfg(test)]
