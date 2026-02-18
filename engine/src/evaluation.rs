@@ -73,20 +73,28 @@ impl<Values: EvalValues> Evaluation<Values> {
         let mut score = PhasedScore::default();
         let us = side;
         let them = us.opposite();
-        let pawn_attacks = attacks::for_piece(Piece::Pawn, board, us);
-        let knight_attacks = attacks::for_piece(Piece::Knight, board, us);
-        let bishop_attacks = attacks::for_piece(Piece::Bishop, board, us);
 
-        for piece_attacked in Piece::iter() {
+        let pawn_attacks = attacks::for_piece(Piece::Pawn, board, us);
+        for piece_attacked in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
-            let pawn_threat_bonus = self.values().threat_value(Piece::Pawn, piece_attacked)
+            score += self.values().threat_value(Piece::Pawn, piece_attacked)
                 * (pawn_attacks & piece_bb).number_of_occupied_squares() as i32;
-            let knight_threat_bonus = self.values().threat_value(Piece::Knight, piece_attacked)
-                * (knight_attacks & piece_bb).number_of_occupied_squares() as i32;
-            let bishop_threat_bonus = self.values().threat_value(Piece::Bishop, piece_attacked)
-                * (bishop_attacks & piece_bb).number_of_occupied_squares() as i32;
-            score += pawn_threat_bonus + knight_threat_bonus + bishop_threat_bonus;
         }
+
+        let knight_attacks = attacks::for_piece(Piece::Knight, board, us);
+        for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Queen] {
+            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+            score += self.values().threat_value(Piece::Knight, piece_attacked)
+                * (knight_attacks & piece_bb).number_of_occupied_squares() as i32;
+        }
+
+        let bishop_attacks = attacks::for_piece(Piece::Bishop, board, us);
+        for piece_attacked in [Piece::Knight, Piece::Rook, Piece::Queen] {
+            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+            score += self.values().threat_value(Piece::Bishop, piece_attacked)
+                * (bishop_attacks & piece_bb).number_of_occupied_squares() as i32;
+        }
+
         score
     }
 }
