@@ -510,25 +510,6 @@ pub fn for_piece(piece: Piece, board: &Board, side: Side) -> Bitboard {
     attacks_bb
 }
 
-/// Get all pieces that are blocking the king from being in check.
-///
-/// # Arguments
-/// - `board` - The current [`Board`].
-/// - `side` - The side to check for blockers.
-///
-/// # Returns
-/// - A [`Bitboard`] representing all the pieces that are blocking the king from being in check.
-pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
-    let king_square = board.king_square(side);
-    let occupancy = board.all_pieces();
-
-    // Get attacks from king square as if it were a queen (to cover all directions)
-    let attacks_from_king = attacks::queen(king_square, Bitboard::default());
-    let potential_attackers = attacks_from_king & board.pieces(Side::opposite(side));
-
-    Default::default()
-}
-
 #[cfg(test)]
 mod tests {
     use crate::{
