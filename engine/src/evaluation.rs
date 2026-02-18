@@ -71,22 +71,21 @@ impl<Values: EvalValues> Evaluation<Values> {
         PhasedScore: AddAssign<Values::ReturnScore>,
     {
         let mut score = PhasedScore::default();
-        let _occ = board.all_pieces();
         let us = board.side_to_move();
         let them = us.opposite();
         let pawn_attacks = attacks::for_piece(Piece::Pawn, board, us);
-        let rook_attacks = attacks::for_piece(Piece::Rook, board, us);
+        let knight_attacks = attacks::for_piece(Piece::Knight, board, us);
         let bishop_attacks = attacks::for_piece(Piece::Bishop, board, us);
 
         for piece_attacked in Piece::iter() {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
             let pawn_threat_bonus = self.values().threat_value(Piece::Pawn, piece_attacked)
                 * (pawn_attacks & piece_bb).number_of_occupied_squares() as i32;
-            let rook_threat_bonus = self.values().threat_value(Piece::Rook, piece_attacked)
-                * (rook_attacks & piece_bb).number_of_occupied_squares() as i32;
+            let knight_threat_bonus = self.values().threat_value(Piece::Knight, piece_attacked)
+                * (knight_attacks & piece_bb).number_of_occupied_squares() as i32;
             let bishop_threat_bonus = self.values().threat_value(Piece::Bishop, piece_attacked)
                 * (bishop_attacks & piece_bb).number_of_occupied_squares() as i32;
-            score += pawn_threat_bonus + rook_threat_bonus + bishop_threat_bonus;
+            score += pawn_threat_bonus + knight_threat_bonus + bishop_threat_bonus;
         }
         score
     }
