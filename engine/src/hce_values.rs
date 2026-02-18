@@ -131,6 +131,33 @@ pub const BISHOP_PAIR_BONUS: PhasedScore = S(26, 80);
 pub const KING_SAFETY: [PhasedScore; NumberOf::PIECE_TYPES - 1] =
     [S(-22, -16), S(-42, 9), S(-33, 5), S(-16, 9), S(-16, 16)];
 
+pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
+    S(0, 0),   // King
+    S(30, 30), // Queen
+    S(20, 20), // Rook
+    S(20, 20), // Bishop
+    S(10, 10), // Knight
+    S(0, 0),   // Pawn
+];
+
+pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
+    S(0, 0),   // King
+    S(30, 30), // Queen
+    S(20, 20), // Rook
+    S(20, 20), // Bishop
+    S(0, 0),   // Knight
+    S(0, 0),   // Pawn
+];
+
+pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
+    S(0, 0),   // King
+    S(30, 30), // Queen
+    S(20, 20), // Rook
+    S(0, 0),   // Bishop
+    S(20, 20), // Knight
+    S(0, 0),   // Pawn
+];
+
 const RANK_1: u8 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -165,5 +192,14 @@ impl EvalValues for ByteKnightValues {
     fn king_safety_value(&self, piece: Piece) -> Self::ReturnScore {
         assert!(piece != Piece::King);
         KING_SAFETY[piece as usize - 1]
+    }
+
+    fn threat_value(&self, piece: Piece, attacked_piece: Piece) -> Self::ReturnScore {
+        match piece {
+            Piece::Pawn => PAWN_THREAT[attacked_piece as usize],
+            Piece::Knight => KNIGHT_THREAT[attacked_piece as usize],
+            Piece::Bishop => BISHOP_THREAT[attacked_piece as usize],
+            _ => S(0, 0),
+        }
     }
 }

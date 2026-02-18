@@ -3,6 +3,8 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
+use std::ops::AddAssign;
+
 use chess::{attacks, bitboard_helpers, board::Board, pieces::Piece, side::Side};
 
 use crate::{
@@ -54,6 +56,39 @@ impl<Values: EvalValues> Evaluation<Values> {
             Piece::Knight => 2,
             Piece::Pawn => 1,
         }
+    }
+
+    /// Helper to evaluate the threats of the current position.
+    /// The position is evaluated from the perspective of the side to move.
+    ///
+    /// # Arguments
+    /// - `board`: The board to evaluate the threats on.
+    ///
+    /// # Returns
+    /// A [`PhasedScore`] representing the threat evaluation of the position.
+    fn evaluate_threats(&self, board: &Board) -> PhasedScore
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let mut score = PhasedScore::default();
+        let _occ = board.all_pieces();
+        let us = board.side_to_move();
+        let them = us.opposite();
+        let pawn_attacks = attacks::for_piece(Piece::Pawn, board, us);
+        let rook_attacks = attacks::for_piece(Piece::Rook, board, us);
+        let bishop_attacks = attacks::for_piece(Piece::Bishop, board, us);
+
+        for piece_attacked in Piece::iter() {
+            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+            let pawn_threat_bonus = self.values().threat_value(Piece::Pawn, piece_attacked)
+                * (pawn_attacks & piece_bb).number_of_occupied_squares() as i32;
+            let rook_threat_bonus = self.values().threat_value(Piece::Rook, piece_attacked)
+                * (rook_attacks & piece_bb).number_of_occupied_squares() as i32;
+            let bishop_threat_bonus = self.values().threat_value(Piece::Bishop, piece_attacked)
+                * (bishop_attacks & piece_bb).number_of_occupied_squares() as i32;
+            score += pawn_threat_bonus + rook_threat_bonus + bishop_threat_bonus;
+        }
+        score
     }
 }
 
@@ -157,6 +192,13 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                 }
             }
         }
+
+        let threats_val = self.evaluate_threats(board);
+        mg[stm_idx] += threats_val.mg() as i32;
+        eg[stm_idx] += threats_val.eg() as i32;
+
+        mg[opp_idx] -= threats_val.mg() as i32;
+        eg[opp_idx] -= threats_val.eg() as i32;
 
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
