@@ -19,4 +19,5 @@ pub trait EvalValues {
     fn isolated_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn bishop_pair_bonus_value(&self) -> Self::ReturnScore;
     fn king_safety_value(&self, piece: Piece) -> Self::ReturnScore;
+    fn threat_value(&self, piece: Piece, attacked_piece: Piece) -> Self::ReturnScore;
 }
