@@ -148,7 +148,7 @@ fn print_params(params: &Parameters) {
     println!("];");
 
     println!();
-    println!("pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] [=");
+    println!("pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
     for piece_idx in Piece::iter() {
         let idx = Offsets::PAWN_THREAT as usize + piece_idx as usize;
         let val = params.as_slice()[idx];
