@@ -37,8 +37,8 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, MAX_RFP_DEPTH,
-        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, LMR_MIN_DEPTH,
+        LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
@@ -504,12 +504,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move = tt_move;
-        let mut moves_seen = 0;
+        // let mut moves_seen = 0;
 
         // Loop through all moves
-        for (i, mv) in move_iter.into_iter().enumerate() {
+        for (moves_seen, mv) in move_iter.into_iter().enumerate() {
             // Calculate the LMR reduction and depth which will be used later in FP
-            let lmr_table_value = self.lmr_table.at(depth as usize, i);
+            let lmr_table_value = self.lmr_table.at(depth as usize, moves_seen);
             let base_reduction = if let Some(table_val) = lmr_table_value {
                 *table_val
             } else {
@@ -530,7 +530,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if !is_root && !is_pv && !is_in_check && !best_score.mated() {
                 let min_lmp_moves =
                     LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
-                if i >= min_lmp_moves {
+                if moves_seen >= min_lmp_moves {
                     break;
                 }
             }
@@ -550,7 +550,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if moves_seen == 0 {
                     -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                 } else {
-                    let reduction = if mv.is_quiet() && depth >= 3 && moves_seen >= 3 {
+                    let reduction = if mv.is_quiet() && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
                         lmr_reduction
                     } else {
                         1
@@ -582,7 +582,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // undo the move
             board.unmake_move().unwrap();
-            moves_seen += 1;
 
             // check the results
             if score > best_score {
@@ -609,7 +608,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         );
 
                         // apply a penalty to all quiets searched so far
-                        for mv in move_list.iter().take(i).filter(|mv| mv.is_quiet()) {
+                        for mv in move_list.iter().take(moves_seen).filter(|mv| mv.is_quiet()) {
                             self.history_table.update(
                                 board.side_to_move(),
                                 mv.piece(),
