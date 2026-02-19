@@ -30,7 +30,7 @@ use crate::{
     lmr,
     log_level::LogLevel,
     move_order::MoveOrder,
-    node_types::{NodeType, NonPvNode, PvNode, RootNode},
+    node_types::{NodeType, NonPvNode, RootNode},
     principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
     table::Table,
@@ -504,6 +504,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move = tt_move;
+        let mut moves_seen = 0;
 
         // Loop through all moves
         for (i, mv) in move_iter.into_iter().enumerate() {
@@ -546,8 +547,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if !board.is_draw() {
                 score =
                 // Principal Variation Search (PVS)
-                if Node::PV && i == 0 {
-                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
+                if moves_seen == 0 {
+                    -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                 } else {
                     let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
                         lmr_reduction
@@ -556,6 +557,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     };
                     // search with a null window
                     let temp_score = -self.negamax::<NonPvNode>(board, depth - reduction, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
+
                     // if it fails, we need to do a full re-search
                     if temp_score > alpha_use && temp_score < beta {
                         -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
@@ -568,6 +570,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // undo the move
             board.unmake_move().unwrap();
+            moves_seen += 1;
 
             // check the results
             if score > best_score {
