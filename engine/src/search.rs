@@ -504,12 +504,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move = tt_move;
-        // let mut moves_seen = 0;
+        let mut moves_seen = 0;
 
         // Loop through all moves
-        for (moves_seen, mv) in move_iter.into_iter().enumerate() {
+        #[allow(clippy::explicit_counter_loop)]
+        for (loop_counter, mv) in move_iter.into_iter().enumerate() {
             // Calculate the LMR reduction and depth which will be used later in FP
-            let lmr_table_value = self.lmr_table.at(depth as usize, moves_seen);
+            let lmr_table_value = self.lmr_table.at(depth as usize, loop_counter);
             let base_reduction = if let Some(table_val) = lmr_table_value {
                 *table_val
             } else {
@@ -530,7 +531,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if !is_root && !is_pv && !is_in_check && !best_score.mated() {
                 let min_lmp_moves =
                     LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
-                if moves_seen >= min_lmp_moves {
+                if loop_counter >= min_lmp_moves {
                     break;
                 }
             }
@@ -582,6 +583,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // undo the move
             board.unmake_move().unwrap();
+            moves_seen += 1;
 
             // check the results
             if score > best_score {
@@ -608,7 +610,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         );
 
                         // apply a penalty to all quiets searched so far
-                        for mv in move_list.iter().take(moves_seen).filter(|mv| mv.is_quiet()) {
+                        for mv in move_list
+                            .iter()
+                            .take(loop_counter)
+                            .filter(|mv| mv.is_quiet())
+                        {
                             self.history_table.update(
                                 board.side_to_move(),
                                 mv.piece(),
