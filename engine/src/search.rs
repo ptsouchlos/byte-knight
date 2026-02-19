@@ -37,8 +37,8 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        FUTILITY_COEFF, FUTILITY_MAX_DEPTH, FUTILITY_OFFSET, IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH,
-        LMP_MIN_THRESHOLD_DEPTH, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, LMR_MIN_DEPTH,
+        LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
@@ -504,19 +504,20 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move = tt_move;
+        let mut moves_seen = 0;
 
         // Loop through all moves
-        for (i, mv) in move_iter.into_iter().enumerate() {
+        #[allow(clippy::explicit_counter_loop)]
+        for (loop_counter, mv) in move_iter.into_iter().enumerate() {
             // Calculate the LMR reduction and depth which will be used later in FP
-            let lmr_table_value = self.lmr_table.at(depth as usize, i);
+            let lmr_table_value = self.lmr_table.at(depth as usize, loop_counter);
             let base_reduction = if let Some(table_val) = lmr_table_value {
                 *table_val
             } else {
                 1f64
             };
+
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
-            // TODO: Use LMR depth for futility pruning
-            let _lmr_depth = depth.saturating_sub(lmr_reduction);
             let is_in_check = board.is_in_check(&self.move_gen);
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
@@ -543,7 +544,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if !is_root && !is_pv && !is_in_check && !best_score.mated() {
                 let min_lmp_moves =
                     LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
-                if i >= min_lmp_moves {
+                if loop_counter >= min_lmp_moves {
                     break;
                 }
             }
@@ -560,19 +561,32 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if !board.is_draw() {
                 score =
                 // Principal Variation Search (PVS)
-                if Node::PV && i == 0 {
-                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
+                if moves_seen == 0 {
+                    -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                 } else {
-                    let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
+                    let reduction = if mv.is_quiet() && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
                         lmr_reduction
                     } else {
                         1
                     };
-                    // search with a null window
-                    let temp_score = -self.negamax::<NonPvNode>(board, depth - reduction, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
-                    // if it fails, we need to do a full re-search
+
+                    // Calculate the reduced depth
+                    let reduced_depth = depth.saturating_sub(reduction);
+
+                    // Search with a null window at a reduced depth
+                    let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
+
+                    // If the reduced depth failed, verify again at full depth with null window to avoid a more expensive full re-search
+                    temp_score = if temp_score > alpha_use && reduction > 1 {
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv)
+                    }
+                    else {
+                        temp_score
+                    };
+
+                    // If it fails again, we now know we need to do a full re-search
                     if temp_score > alpha_use && temp_score < beta {
-                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
+                        -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                     }
                     else {
                         temp_score
@@ -582,6 +596,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // undo the move
             board.unmake_move().unwrap();
+            moves_seen += 1;
 
             // check the results
             if score > best_score {
@@ -608,7 +623,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         );
 
                         // apply a penalty to all quiets searched so far
-                        for mv in move_list.iter().take(i).filter(|mv| mv.is_quiet()) {
+                        for mv in move_list
+                            .iter()
+                            .take(loop_counter)
+                            .filter(|mv| mv.is_quiet())
+                        {
                             self.history_table.update(
                                 board.side_to_move(),
                                 mv.piece(),

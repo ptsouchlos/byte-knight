@@ -492,7 +492,7 @@ impl Board {
         move_gen.is_square_attacked(
             self,
             &Square::from_square_index(king_square),
-            Side::opposite(self.side_to_move()),
+            self.side_to_move().opposite(),
         )
     }
 
@@ -525,7 +525,7 @@ impl Board {
             if move_gen.is_square_attacked_with_occupancy(
                 self,
                 &Square::from_square_index(square as u8),
-                Side::opposite(self.side_to_move()),
+                self.side_to_move().opposite(),
                 &occupancy,
             ) {
                 return true;
@@ -660,6 +660,51 @@ impl Board {
     /// Otherwise, returns the last move made.
     pub fn last_move(&self) -> Option<Move> {
         self.history.iter().last().map(|m| m.next_move)
+    }
+
+    /// Returns a new board with the position mirrored vertically (ranks flipped).
+    ///
+    /// White and black pieces are swapped, the side to move is toggled, castling
+    /// rights are swapped between the two sides, and the en passant square is
+    /// flipped.
+    pub fn flip(&self) -> Board {
+        let mut flipped = Board::new();
+
+        // Swap sides and flip each bitboard vertically (swap_bytes mirrors ranks).
+        for piece in 0..NumberOf::PIECE_TYPES {
+            let white = self.piece_bitboards[Side::White as usize][piece].as_number();
+            let black = self.piece_bitboards[Side::Black as usize][piece].as_number();
+            flipped.piece_bitboards[Side::White as usize][piece] =
+                Bitboard::new(black.swap_bytes());
+            flipped.piece_bitboards[Side::Black as usize][piece] =
+                Bitboard::new(white.swap_bytes());
+        }
+
+        flipped.state.side_to_move = self.state.side_to_move.opposite();
+        flipped.state.half_move_clock = self.state.half_move_clock;
+        flipped.state.full_move_number = self.state.full_move_number;
+
+        // Swap castling rights between sides.
+        let cr = self.state.castling_rights;
+        let mut flipped_cr = CastlingAvailability::NONE;
+        if cr & CastlingAvailability::WHITE_KINGSIDE != 0 {
+            flipped_cr |= CastlingAvailability::BLACK_KINGSIDE;
+        }
+        if cr & CastlingAvailability::WHITE_QUEENSIDE != 0 {
+            flipped_cr |= CastlingAvailability::BLACK_QUEENSIDE;
+        }
+        if cr & CastlingAvailability::BLACK_KINGSIDE != 0 {
+            flipped_cr |= CastlingAvailability::WHITE_KINGSIDE;
+        }
+        if cr & CastlingAvailability::BLACK_QUEENSIDE != 0 {
+            flipped_cr |= CastlingAvailability::WHITE_QUEENSIDE;
+        }
+        flipped.state.castling_rights = flipped_cr;
+
+        flipped.state.en_passant_square = self.state.en_passant_square.map(crate::square::flip);
+
+        flipped.state.zobrist_hash = flipped.initialize_zobrist_hash();
+        flipped
     }
 }
 
@@ -922,5 +967,151 @@ mod tests {
 
         let all = board.all_pieces();
         assert_eq!(all, white_pieces_bb | black_pieces_bb);
+    }
+
+    #[test]
+    fn flip() {
+        // standard EPD suite FEN positions
+        let positions = [
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            "4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+            "4k3/8/8/8/8/8/8/R3K3 w Q - 0 1",
+            "4k2r/8/8/8/8/8/8/4K3 w k - 0 1",
+            "r3k3/8/8/8/8/8/8/4K3 w q - 0 1",
+            "4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+            "r3k2r/8/8/8/8/8/8/4K3 w kq - 0 1",
+            "8/8/8/8/8/8/6k1/4K2R w K - 0 1",
+            "8/8/8/8/8/8/1k6/R3K3 w Q - 0 1",
+            "4k2r/6K1/8/8/8/8/8/8 w k - 0 1",
+            "r3k3/1K6/8/8/8/8/8/8 w q - 0 1",
+            "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
+            "r3k2r/8/8/8/8/8/8/1R2K2R w Kkq - 0 1",
+            "r3k2r/8/8/8/8/8/8/2R1K2R w Kkq - 0 1",
+            "r3k2r/8/8/8/8/8/8/R3K1R1 w Qkq - 0 1",
+            "1r2k2r/8/8/8/8/8/8/R3K2R w KQk - 0 1",
+            "2r1k2r/8/8/8/8/8/8/R3K2R w KQk - 0 1",
+            "r3k1r1/8/8/8/8/8/8/R3K2R w KQq - 0 1",
+            "4k3/8/8/8/8/8/8/4K2R b K - 0 1",
+            "4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
+            "4k2r/8/8/8/8/8/8/4K3 b k - 0 1",
+            "r3k3/8/8/8/8/8/8/4K3 b q - 0 1",
+            "4k3/8/8/8/8/8/8/R3K2R b KQ - 0 1",
+            "r3k2r/8/8/8/8/8/8/4K3 b kq - 0 1",
+            "8/8/8/8/8/8/6k1/4K2R b K - 0 1",
+            "8/8/8/8/8/8/1k6/R3K3 b Q - 0 1",
+            "4k2r/6K1/8/8/8/8/8/8 b k - 0 1",
+            "r3k3/1K6/8/8/8/8/8/8 b q - 0 1",
+            "r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1",
+            "r3k2r/8/8/8/8/8/8/1R2K2R b Kkq - 0 1",
+            "r3k2r/8/8/8/8/8/8/2R1K2R b Kkq - 0 1",
+            "r3k2r/8/8/8/8/8/8/R3K1R1 b Qkq - 0 1",
+            "1r2k2r/8/8/8/8/8/8/R3K2R b KQk - 0 1",
+            "2r1k2r/8/8/8/8/8/8/R3K2R b KQk - 0 1",
+            "r3k1r1/8/8/8/8/8/8/R3K2R b KQq - 0 1",
+            "8/1n4N1/2k5/8/8/5K2/1N4n1/8 w - - 0 1",
+            "8/1k6/8/5N2/8/4n3/8/2K5 w - - 0 1",
+            "8/8/4k3/3Nn3/3nN3/4K3/8/8 w - - 0 1",
+            "K7/8/2n5/1n6/8/8/8/k6N w - - 0 1",
+            "k7/8/2N5/1N6/8/8/8/K6n w - - 0 1",
+            "8/1n4N1/2k5/8/8/5K2/1N4n1/8 b - - 0 1",
+            "8/1k6/8/5N2/8/4n3/8/2K5 b - - 0 1",
+            "8/8/3K4/3Nn3/3nN3/4k3/8/8 b - - 0 1",
+            "K7/8/2n5/1n6/8/8/8/k6N b - - 0 1",
+            "k7/8/2N5/1N6/8/8/8/K6n b - - 0 1",
+            "B6b/8/8/8/2K5/4k3/8/b6B w - - 0 1",
+            "8/8/1B6/7b/7k/8/2B1b3/7K w - - 0 1",
+            "k7/B7/1B6/1B6/8/8/8/K6b w - - 0 1",
+            "K7/b7/1b6/1b6/8/8/8/k6B w - - 0 1",
+            "B6b/8/8/8/2K5/5k2/8/b6B b - - 0 1",
+            "8/8/1B6/7b/7k/8/2B1b3/7K b - - 0 1",
+            "k7/B7/1B6/1B6/8/8/8/K6b b - - 0 1",
+            "K7/b7/1b6/1b6/8/8/8/k6B b - - 0 1",
+            "7k/RR6/8/8/8/8/rr6/7K w - - 0 1",
+            "R6r/8/8/2K5/5k2/8/8/r6R w - - 0 1",
+            "7k/RR6/8/8/8/8/rr6/7K b - - 0 1",
+            "R6r/8/8/2K5/5k2/8/8/r6R b - - 0 1",
+            "6kq/8/8/8/8/8/8/7K w - - 0 1",
+            "6KQ/8/8/8/8/8/8/7k b - - 0 1",
+            "K7/8/8/3Q4/4q3/8/8/7k w - - 0 1",
+            "6qk/8/8/8/8/8/8/7K b - - 0 1",
+            "6KQ/8/8/8/8/8/8/7k b - - 0 1",
+            "K7/8/8/3Q4/4q3/8/8/7k b - - 0 1",
+            "8/8/8/8/8/K7/P7/k7 w - - 0 1",
+            "8/8/8/8/8/7K/7P/7k w - - 0 1",
+            "K7/p7/k7/8/8/8/8/8 w - - 0 1",
+            "7K/7p/7k/8/8/8/8/8 w - - 0 1",
+            "8/2k1p3/3pP3/3P2K1/8/8/8/8 w - - 0 1",
+            "8/8/8/8/8/K7/P7/k7 b - - 0 1",
+            "8/8/8/8/8/7K/7P/7k b - - 0 1",
+            "K7/p7/k7/8/8/8/8/8 b - - 0 1",
+            "7K/7p/7k/8/8/8/8/8 b - - 0 1",
+            "8/2k1p3/3pP3/3P2K1/8/8/8/8 b - - 0 1",
+            "8/8/8/8/8/4k3/4P3/4K3 w - - 0 1",
+            "4k3/4p3/4K3/8/8/8/8/8 b - - 0 1",
+            "8/8/7k/7p/7P/7K/8/8 w - - 0 1",
+            "8/8/k7/p7/P7/K7/8/8 w - - 0 1",
+            "8/8/3k4/3p4/3P4/3K4/8/8 w - - 0 1",
+            "8/3k4/3p4/8/3P4/3K4/8/8 w - - 0 1",
+            "8/8/3k4/3p4/8/3P4/3K4/8 w - - 0 1",
+            "k7/8/3p4/8/3P4/8/8/7K w - - 0 1",
+            "8/8/7k/7p/7P/7K/8/8 b - - 0 1",
+            "8/8/k7/p7/P7/K7/8/8 b - - 0 1",
+            "8/8/3k4/3p4/3P4/3K4/8/8 b - - 0 1",
+            "8/3k4/3p4/8/3P4/3K4/8/8 b - - 0 1",
+            "8/8/3k4/3p4/8/3P4/3K4/8 b - - 0 1",
+            "k7/8/3p4/8/3P4/8/8/7K b - - 0 1",
+            "7k/3p4/8/8/3P4/8/8/K7 w - - 0 1",
+            "7k/8/8/3p4/8/8/3P4/K7 w - - 0 1",
+            "k7/8/8/7p/6P1/8/8/K7 w - - 0 1",
+            "k7/8/7p/8/8/6P1/8/K7 w - - 0 1",
+            "k7/8/8/6p1/7P/8/8/K7 w - - 0 1",
+            "k7/8/6p1/8/8/7P/8/K7 w - - 0 1",
+            "k7/8/8/3p4/4p3/8/8/7K w - - 0 1",
+            "k7/8/3p4/8/8/4P3/8/7K w - - 0 1",
+            "7k/3p4/8/8/3P4/8/8/K7 b - - 0 1",
+            "7k/8/8/3p4/8/8/3P4/K7 b - - 0 1",
+            "k7/8/8/7p/6P1/8/8/K7 b - - 0 1",
+            "k7/8/7p/8/8/6P1/8/K7 b - - 0 1",
+            "k7/8/8/6p1/7P/8/8/K7 b - - 0 1",
+            "k7/8/6p1/8/8/7P/8/K7 b - - 0 1",
+            "k7/8/8/3p4/4p3/8/8/7K b - - 0 1",
+            "k7/8/3p4/8/8/4P3/8/7K b - - 0 1",
+            "7k/8/8/p7/1P6/8/8/7K w - - 0 1",
+            "7k/8/p7/8/8/1P6/8/7K w - - 0 1",
+            "7k/8/8/1p6/P7/8/8/7K w - - 0 1",
+            "7k/8/1p6/8/8/P7/8/7K w - - 0 1",
+            "k7/7p/8/8/8/8/6P1/K7 w - - 0 1",
+            "k7/6p1/8/8/8/8/7P/K7 w - - 0 1",
+            "3k4/3pp3/8/8/8/8/3PP3/3K4 w - - 0 1",
+            "7k/8/8/p7/1P6/8/8/7K b - - 0 1",
+            "7k/8/p7/8/8/1P6/8/7K b - - 0 1",
+            "7k/8/8/1p6/P7/8/8/7K b - - 0 1",
+            "7k/8/1p6/8/8/P7/8/7K b - - 0 1",
+            "k7/7p/8/8/8/8/6P1/K7 b - - 0 1",
+            "k7/6p1/8/8/8/8/7P/K7 b - - 0 1",
+            "3k4/3pp3/8/8/8/8/3PP3/3K4 b - - 0 1",
+            "8/Pk6/8/8/8/8/6Kp/8 w - - 0 1",
+            "n1n5/1Pk5/8/8/8/8/5Kp1/5N1N w - - 0 1",
+            "8/PPPk4/8/8/8/8/4Kppp/8 w - - 0 1",
+            "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N w - - 0 1",
+            "8/Pk6/8/8/8/8/6Kp/8 b - - 0 1",
+            "n1n5/1Pk5/8/8/8/8/5Kp1/5N1N b - - 0 1",
+            "8/PPPk4/8/8/8/8/4Kppp/8 b - - 0 1",
+            "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1",
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+            "rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3",
+        ];
+
+        for fen in positions {
+            let board = Board::from_fen(fen).unwrap();
+            let flipped = board.flip();
+            let flipped_back = flipped.flip();
+            assert_eq!(
+                board.to_fen(),
+                flipped_back.to_fen(),
+                "Failed on FEN: {fen}"
+            );
+        }
     }
 }

@@ -8,6 +8,8 @@ pub trait NodeType {
     const PV: bool;
     #[allow(dead_code)]
     const ROOT: bool;
+
+    type Next: NodeType;
 }
 
 /// The root node of the search tree.
@@ -24,16 +26,22 @@ pub(crate) struct NonPvNode;
 impl NodeType for RootNode {
     const PV: bool = true;
     const ROOT: bool = true;
+
+    type Next = PvNode;
 }
 
 /// PV nodes are nodes on the principle variation path, but not the root.
 impl NodeType for PvNode {
     const PV: bool = true;
     const ROOT: bool = false;
+
+    type Next = PvNode;
 }
 
 /// Not on the PV path or root.
 impl NodeType for NonPvNode {
     const PV: bool = false;
     const ROOT: bool = false;
+
+    type Next = NonPvNode;
 }
