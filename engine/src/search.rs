@@ -470,9 +470,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         // can we prune the current node with something other than TT?
-        if let Some(score) =
-            self.pruned_score::<Node>(board, depth, ply, beta, alpha_use, &mut local_pv)
-        {
+        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta, alpha_use) {
             return score;
         }
 
@@ -677,7 +675,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         ply: ScoreType,
         beta: Score,
         alpha: Score,
-        local_pv: &mut PrincipleVariation,
     ) -> Option<Score> {
         // no pruning if we are in check or if we are in a PV node
         if board.is_in_check(&self.move_gen) || Node::PV {
@@ -692,7 +689,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let razoring_margin = RAZORING_OFFSET + RAZORING_SCALING * depth;
         if depth <= RAZORING_MAX_DEPTH && static_eval + razoring_margin < alpha {
             let mut brd_cpy = board.clone();
-            let score = self.quiescence::<Node>(&mut brd_cpy, alpha, alpha + 1, local_pv);
+            let mut razor_pv = PrincipleVariation::new();
+            let score = self.quiescence::<NonPvNode>(&mut brd_cpy, alpha, alpha + 1, &mut razor_pv);
             if score < alpha && !score.is_mate() {
                 return Some(score);
             }
@@ -732,15 +730,15 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let null_move_depth = depth - NMP_DEPTH_REDUCTION - 1;
             let mut null_board = board.clone();
             null_board.null_move();
-            let null_score = -self.negamax::<Node>(
+            let mut nmp_pv = PrincipleVariation::new();
+            let null_score = -self.negamax::<NonPvNode>(
                 &mut null_board,
                 null_move_depth,
                 ply + 1,
                 -beta,
                 -beta + 1,
-                local_pv,
+                &mut nmp_pv,
             );
-            null_board.unmake_move().unwrap();
             if null_score >= beta {
                 return Some(null_score);
             }
