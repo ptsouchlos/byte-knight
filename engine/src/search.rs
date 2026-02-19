@@ -558,7 +558,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     };
 
                     // Calculate the reduced depth
-                    let reduced_depth = depth.saturating_sub(reduction);
+                    let reduced_depth = depth.saturating_sub(reduction).max(0);
 
                     // Search with a null window at a reduced depth
                     let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
