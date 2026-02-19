@@ -37,8 +37,9 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, LMR_MIN_DEPTH,
-        LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
+        FUTILITY_COEFF, FUTILITY_MAX_DEPTH, FUTILITY_OFFSET, IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH,
+        LMP_MIN_THRESHOLD_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
+        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
@@ -505,6 +506,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_score = -Score::INF;
         let mut best_move = tt_move;
         let mut moves_seen = 0;
+        let static_eval = self.eval.eval(board);
 
         // Loop through all moves
         #[allow(clippy::explicit_counter_loop)]
@@ -527,7 +529,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // Futility pruning
             // If we are at a shallow depth and have already found a good score, we start skipping moves
             if !is_root && !is_pv && !is_in_check && !best_score.mated() {
-                let static_eval = self.eval.eval(board);
                 let fp_margin = depth * FUTILITY_COEFF + FUTILITY_OFFSET;
                 if mv.is_quiet()
                     && depth < FUTILITY_MAX_DEPTH
