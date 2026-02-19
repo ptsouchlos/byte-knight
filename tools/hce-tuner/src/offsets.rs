@@ -148,4 +148,25 @@ mod tests {
             assert!(king_offset < Offsets::END as usize);
         }
     }
+
+    #[test]
+    fn offsets_for_threats() {
+        let offset = Offsets::offset_for_threat(Piece::Pawn, Piece::Queen);
+        assert_eq!(
+            offset,
+            (Offsets::PAWN_THREAT + Piece::Queen as u16) as usize
+        );
+
+        let offset = Offsets::offset_for_threat(Piece::Knight, Piece::Rook);
+        assert_eq!(
+            offset,
+            (Offsets::KNIGHT_THREAT + Piece::Rook as u16) as usize
+        );
+
+        let offset = Offsets::offset_for_threat(Piece::Bishop, Piece::Knight);
+        assert_eq!(
+            offset,
+            (Offsets::BISHOP_THREAT + Piece::Knight as u16) as usize
+        );
+    }
 }

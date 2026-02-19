@@ -198,20 +198,43 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
             Side::White => &mut w_indexes,
             Side::Black => &mut b_indexes,
         };
-        for piece_attacked in Piece::iter() {
+
+        // Pawn threats
+        for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Knight, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
 
             let pawn_threat_count = (pawn_attacks & piece_bb).number_of_occupied_squares() as i32;
+            if pawn_threat_count == 0 {
+                continue;
+            }
             for _ in 0..pawn_threat_count {
                 indexes.push(Offsets::offset_for_threat(Piece::Pawn, piece_attacked));
             }
+        }
+
+        // Knight threats
+        for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Queen] {
+            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+
             let knight_threat_count =
                 (knight_attacks & piece_bb).number_of_occupied_squares() as i32;
+            if knight_threat_count == 0 {
+                continue;
+            }
             for _ in 0..knight_threat_count {
                 indexes.push(Offsets::offset_for_threat(Piece::Knight, piece_attacked));
             }
+        }
+
+        // Bishop threats
+        for piece_attacked in [Piece::Rook, Piece::Knight, Piece::Queen] {
+            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+
             let bishop_threat_count =
                 (bishop_attacks & piece_bb).number_of_occupied_squares() as i32;
+            if bishop_threat_count == 0 {
+                continue;
+            }
             for _ in 0..bishop_threat_count {
                 indexes.push(Offsets::offset_for_threat(Piece::Bishop, piece_attacked));
             }

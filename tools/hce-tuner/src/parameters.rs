@@ -10,8 +10,8 @@ use chess::{
     square,
 };
 use engine::hce_values::{
-    BISHOP_PAIR_BONUS, DOUBLED_PAWN_VALUES, ISOLATED_PAWN_VALUES, KING_SAFETY, PASSED_PAWN_BONUS,
-    PAWN_THREAT, PSQTS,
+    BISHOP_PAIR_BONUS, BISHOP_THREAT, DOUBLED_PAWN_VALUES, ISOLATED_PAWN_VALUES, KING_SAFETY,
+    KNIGHT_THREAT, PASSED_PAWN_BONUS, PAWN_THREAT, PSQTS,
 };
 
 use crate::{
@@ -85,12 +85,12 @@ impl Parameters {
         }
 
         // Knight threats
-        for (idx, val) in PAWN_THREAT.iter().enumerate() {
+        for (idx, val) in KNIGHT_THREAT.iter().enumerate() {
             params[Offsets::KNIGHT_THREAT as usize + idx] = (*val).into();
         }
 
         // Bishop threats
-        for (idx, val) in PAWN_THREAT.iter().enumerate() {
+        for (idx, val) in BISHOP_THREAT.iter().enumerate() {
             params[Offsets::BISHOP_THREAT as usize + idx] = (*val).into();
         }
 
