@@ -30,7 +30,7 @@ use crate::{
     lmr,
     log_level::LogLevel,
     move_order::MoveOrder,
-    node_types::{NodeType, NonPvNode, RootNode},
+    node_types::{NodeType, NonPvNode, PvNode, RootNode},
     principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
     table::Table,
@@ -515,8 +515,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             } else {
                 1f64
             };
+
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
-            let _lmr_depth = depth.saturating_sub(lmr_reduction);
             let is_in_check = board.is_in_check(&self.move_gen);
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
@@ -550,17 +550,29 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if moves_seen == 0 {
                     -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                 } else {
-                    let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
+                    let reduction = if mv.is_quiet() && depth >= 3 && moves_seen >= 3 {
                         lmr_reduction
                     } else {
                         1
                     };
-                    // search with a null window
-                    let temp_score = -self.negamax::<NonPvNode>(board, depth - reduction, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
 
-                    // if it fails, we need to do a full re-search
+                    // Calculate the reduced depth
+                    let reduced_depth = depth.saturating_sub(reduction);
+
+                    // Search with a null window at a reduced depth
+                    let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
+
+                    // If the reduced depth failed, verify again at full depth with null window to avoid a more expensive full re-search
+                    temp_score = if temp_score > alpha_use && reduction > 1 {
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv)
+                    }
+                    else {
+                        temp_score
+                    };
+
+                    // If it fails again, we now know we need to do a full re-search
                     if temp_score > alpha_use && temp_score < beta {
-                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
+                        -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                     }
                     else {
                         temp_score
