@@ -49,13 +49,13 @@ impl PhasedScore {
     }
 }
 
-impl Mul<i32> for PhasedScore {
+impl Mul<i16> for PhasedScore {
     type Output = Self;
 
-    fn mul(self, rhs: i32) -> Self::Output {
+    fn mul(self, rhs: i16) -> Self::Output {
         Self::new(
-            (self.mg() as i32).saturating_mul(rhs) as ScoreType,
-            (self.eg() as i32).saturating_mul(rhs) as ScoreType,
+            self.mg().saturating_mul(rhs) as ScoreType,
+            self.eg().saturating_mul(rhs) as ScoreType,
         )
     }
 }
@@ -164,7 +164,7 @@ mod tests {
         assert_eq!(ps2.eg(), 26);
 
         let ps = PhasedScore::new(100, 500);
-        let ps2 = ps * i16::MAX as i32;
+        let ps2 = ps * i16::MAX;
         assert_eq!(ps2.mg(), i16::MAX);
         assert_eq!(ps2.eg(), i16::MAX);
     }

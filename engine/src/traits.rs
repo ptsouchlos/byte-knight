@@ -14,7 +14,7 @@ pub trait Eval<Board> {
 }
 
 pub trait EvalValues {
-    type ReturnScore: Mul<i32, Output = Self::ReturnScore> + Add<Output = Self::ReturnScore>;
+    type ReturnScore: Mul<i16, Output = Self::ReturnScore> + Add<Output = Self::ReturnScore>;
     fn psqt(&self, square: u8, piece: Piece, side: Side) -> Self::ReturnScore;
     fn passed_pawn_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn doubled_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;

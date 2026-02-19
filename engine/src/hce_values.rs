@@ -137,7 +137,7 @@ pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
     S(76, -18), //Rook
     S(45, 42),  //Bishop
     S(46, 2),   //Knight
-    S(30, 0),   //Pawn
+    S(0, 0),    //Pawn
 ];
 
 pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
@@ -145,17 +145,17 @@ pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
     S(27, -49), //Queen
     S(56, -16), //Rook
     S(26, 28),  //Bishop
-    S(10, 25),  //Knight
-    S(-16, 7),  //Pawn
+    S(0, 0),    //Knight
+    S(0, 0),    //Pawn
 ];
 
 pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
     S(0, 0),   //King
     S(48, 44), //Queen
     S(42, 4),  //Rook
-    S(45, 42), //Bishop
+    S(0, 0),   //Bishop
     S(23, 19), //Knight
-    S(-2, 8),  //Pawn
+    S(0, 0),   //Pawn
 ];
 
 const RANK_1: u8 = 1;
