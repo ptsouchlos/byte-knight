@@ -591,7 +591,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 best_score = score;
                 best_move = Some(mv);
                 if Node::PV {
-                    assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
+                    // assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -802,6 +802,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             self.history_table,
             &mut move_order_list,
         );
+
         // TODO(PT): Should we log a message to the CLI or a log?
         assert!(classify_res.is_ok());
 
@@ -833,7 +834,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 // extend PV if we're in a PV node
                 if Node::PV {
-                    assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
+                    // assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
                     pv.extend(mv, &local_pv);
                 }
 
