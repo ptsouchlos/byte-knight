@@ -809,8 +809,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if static_eval > alpha {
                 alpha_use = static_eval;
             }
-            if alpha >= beta {
-                return (alpha + beta) / 2;
+            if alpha_use >= beta {
+                return static_eval;
             }
         }
 
@@ -846,7 +846,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let moves_slice = moves.as_mut_slice();
         let move_iter = InplaceIncrementalSort::new(moves_slice, &mut move_order_list);
 
-        let mut best = static_eval;
+        let mut best = if is_in_check {
+            -Score::INF
+        } else {
+            static_eval
+        };
         let mut best_move = None;
         let original_alpha = alpha_use;
         let mut move_count = 0;
