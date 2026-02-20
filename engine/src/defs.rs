@@ -23,3 +23,4 @@ impl About {
 }
 
 pub(crate) const MAX_DEPTH: u8 = 128;
+pub(crate) const MAX_PLY: usize = 256;
