@@ -83,6 +83,41 @@ impl Score {
     pub fn mated(&self) -> bool {
         self.0 <= -Score::MINIMUM_MATE.0 && self.0 > -Score::INF.0
     }
+
+    /// Add ply bias to the current score if it is a mate score.
+    ///
+    /// # Arguments
+    /// - `ply`: The ply bias to add to the mate score.
+    ///
+    /// # Returns
+    /// A new score with ply bias if it is a mate score.
+    pub fn ply_relative(&self, ply: ScoreType) -> Score {
+        if self.0 >= Score::MINIMUM_MATE.0 {
+            Score::new(self.0 - ply)
+        } else if self.0 <= -Score::MINIMUM_MATE.0 {
+            Score::new(self.0 + ply)
+        } else {
+            *self
+        }
+    }
+
+    /// Remove ply bias from a score if it is a mate score.
+    ///
+    /// # Arguments
+    /// - `ply`: The ply to remove from the mate score.
+    ///
+    /// # Returns
+    /// A new score with the ply bias removed if the current score is a mate score.
+    /// Otherwise, it just returns a clone of the same score.
+    pub fn remove_ply_bias(&self, ply: ScoreType) -> Score {
+        if self.0 >= Score::MINIMUM_MATE.0 {
+            Score::new(self.0 + ply)
+        } else if self.0 <= -Score::MINIMUM_MATE.0 {
+            Score::new(self.0 - ply)
+        } else {
+            *self
+        }
+    }
 }
 
 impl From<Score> for UciScore {
