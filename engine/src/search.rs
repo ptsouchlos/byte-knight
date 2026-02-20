@@ -451,7 +451,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             {
                 ttable::ProbeResult::CutOff(entry) => {
                     // we have a cutoff, so return the score, but only in a non-PV node
-                    self.nodes += 1;
                     if !Node::PV {
                         return entry.score;
                     }
@@ -782,6 +781,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return static_eval;
         }
 
+        self.nodes += 1;
+
         let is_in_check = board.is_in_check(&self.move_gen);
         let mut alpha_use = alpha;
 
@@ -864,10 +865,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval =
-                    -self.quiescence::<Node>(board, ply + 1, -beta, -alpha_use, &mut local_pv);
-                self.nodes += 1;
-                eval
+                -self.quiescence::<Node>(board, ply + 1, -beta, -alpha_use, &mut local_pv)
             };
             board.unmake_move().unwrap();
             move_count += 1;
