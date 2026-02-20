@@ -453,7 +453,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     // we have a cutoff, so return the score, but only in a non-PV node
                     self.nodes += 1;
                     if !Node::PV {
-                        return entry.score;
+                        return entry.score.ply_relative(ply);
                     }
                     Some(entry.board_move)
                 }
@@ -643,15 +643,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 ttable::EntryFlag::Exact
             };
 
-            self.transposition_table
-                .store_entry(TranspositionTableEntry::new(
-                    board.zobrist_hash(),
-                    depth as u8,
-                    best_score,
-                    flag,
-                    bm,
-                ));
-        }
+        self.transposition_table
+            .store_entry(TranspositionTableEntry::new(
+                board.zobrist_hash(),
+                depth as u8,
+                best_score.remove_ply_bias(ply),
+                flag,
+                best_move.unwrap(),
+            ));
 
         best_score
     }
@@ -813,8 +812,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 ttable::ProbeResult::CutOff(entry) => {
                     // we have a cutoff, so return the score, but only in a non-PV node
                     if !Node::PV {
-                        return entry.score;
-                    }
+                        return entry.score.ply_relative(ply);
+                    };
                     Some(entry.board_move)
                 }
                 ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
@@ -893,7 +892,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 .store_entry(TranspositionTableEntry::new(
                     board.zobrist_hash(),
                     0u8,
-                    best,
+                    best.remove_ply_bias(ply),
                     flag,
                     bm,
                 ));
