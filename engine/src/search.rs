@@ -771,27 +771,19 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         if standing_eval >= beta {
             return beta;
         }
-        let mut alpha_use: Score = alpha.max(standing_eval);
 
-        let mut move_list = MoveList::new();
-        let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        self.move_gen.generate_legal_moves(board, &mut move_list);
-
-        let mut local_pv = PrincipleVariation::new();
-        // clear the current PV because this is a new position
-        pv.clear();
-
-        // we only want captures here
-        let mut captures = move_list
-            .iter()
-            .filter(|mv| mv.captured_piece().is_some())
-            .copied()
-            .collect::<Vec<_>>();
-
-        // no captures
-        if captures.is_empty() {
-            return standing_eval;
+        if ply > 0 && board.is_draw() {
+            return Score::DRAW;
         }
+
+        let static_eval = self.eval.eval(board);
+
+        if ply >= MAX_PLY as ScoreType {
+            return static_eval;
+        }
+
+        let is_in_check = board.is_in_check(&self.move_gen);
+        let mut alpha_use = alpha;
 
         // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
         // Check if we have a transposition table entry and if we can return early
@@ -804,17 +796,45 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     // we have a cutoff, so return the score, but only in a non-PV node
                     if !Node::PV {
                         return entry.score;
-                    }
+                    };
                     Some(entry.board_move)
                 }
                 ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
                 ttable::ProbeResult::Empty => None,
             };
 
+        // If we're not in check, we can choose to stop checking captures and return the static
+        // eval of the position if it's good enough.
+        if !is_in_check {
+            if static_eval > alpha {
+                alpha_use = static_eval;
+            }
+            if alpha >= beta {
+                return (alpha + beta) / 2;
+            }
+        }
+
+        let mut move_list = MoveList::new();
+        let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
+        self.move_gen.generate_legal_moves(board, &mut move_list);
+
+        let mut local_pv = PrincipleVariation::new();
+        // clear the current PV because this is a new position
+        pv.clear();
+
+        let filter = if is_in_check {
+            |_mv: &&Move| -> bool { true }
+        } else {
+            |mv: &&Move| -> bool { mv.captured_piece().is_some() }
+        };
+
+        // Moves to go through
+        let mut moves = move_list.iter().filter(filter).copied().collect::<Vec<_>>();
+
         // sort moves by MVV/LVA
         let classify_res = MoveOrder::classify_all(
             board.side_to_move(),
-            captures.as_slice(),
+            moves.as_slice(),
             &tt_move,
             self.history_table,
             &mut move_order_list,
@@ -823,12 +843,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // TODO(PT): Should we log a message to the CLI or a log?
         assert!(classify_res.is_ok());
 
-        let captures_slice = captures.as_mut_slice();
-        let move_iter = InplaceIncrementalSort::new(captures_slice, &mut move_order_list);
+        let moves_slice = moves.as_mut_slice();
+        let move_iter = InplaceIncrementalSort::new(moves_slice, &mut move_order_list);
 
-        let mut best = standing_eval;
-        let mut best_move = tt_move;
+        let mut best = static_eval;
+        let mut best_move = None;
         let original_alpha = alpha_use;
+        let mut move_count = 0;
 
         for mv in move_iter.into_iter() {
             // local PV is for each node below this one is different when we call negamax recursively
@@ -845,6 +866,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 eval
             };
             board.unmake_move().unwrap();
+            move_count += 1;
 
             if score > best {
                 best = score;
@@ -867,6 +889,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if self.should_stop_searching() {
                 break;
             }
+        }
+
+        if move_count == 0 && is_in_check {
+            return -Score::MATE + ply;
         }
 
         if let Some(bm) = best_move {
