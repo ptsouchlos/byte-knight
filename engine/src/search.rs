@@ -807,7 +807,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         pv.clear();
 
         let filter = if is_in_check {
-            |_mv: &&Move| -> bool { true }
+            |mv: &&Move| -> bool { mv.captured_piece().is_some() || mv.piece() == Piece::King }
         } else {
             |mv: &&Move| -> bool { mv.captured_piece().is_some() }
         };
