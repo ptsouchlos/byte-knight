@@ -12,7 +12,7 @@ repository = "https://github.com/ptsouchlos/byte-knight"
 anyhow = "1.0.101"
 arrayvec = "0.7.6"
 chess = { path = "chess" }
-clap = "4.5.58"
+clap = "4.5.60"
 colored = "3.1.1"
 console = "0.16.2"
 criterion = "0.8"
