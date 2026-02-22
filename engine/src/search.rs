@@ -877,7 +877,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         if move_count == 0 && is_in_check {
-            return -Score::MATE + ply;
+            // If there are truly no legal moves, it's checkmate.
+            // If move_list has moves but none passed the filter (only quiet blocking moves
+            // were available), approximate with static_eval rather than returning mate.
+            return if move_list.is_empty() {
+                -Score::MATE + ply
+            } else {
+                static_eval
+            };
         }
 
         if let Some(bm) = best_move {
