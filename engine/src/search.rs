@@ -773,6 +773,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
         let mut alpha_use: Score = alpha.max(standing_eval);
 
+        // Have we exceeded max ply?
+        if ply >= MAX_PLY {
+            return standing_eval;
+        }
+
         let mut move_list = MoveList::new();
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
