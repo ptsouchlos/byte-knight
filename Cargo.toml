@@ -9,7 +9,7 @@ license = "GPL-3.0"
 repository = "https://github.com/ptsouchlos/byte-knight"
 
 [workspace.dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 arrayvec = "0.7.6"
 chess = { path = "chess" }
 clap = "4.5.60"
