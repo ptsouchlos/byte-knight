@@ -23,7 +23,7 @@ use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
 use crate::{
     aspiration_window::AspirationWindow,
-    defs::MAX_DEPTH,
+    defs::{MAX_DEPTH, MAX_PLY},
     evaluation::ByteKnightEvaluation,
     history_table::{self, HistoryTable},
     inplace_incremental_sort::InplaceIncrementalSort,
@@ -435,7 +435,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut alpha_use = alpha;
 
         if depth <= 0 {
-            return self.quiescence::<Node>(board, alpha, beta, pv);
+            return self.quiescence::<Node>(board, ply, alpha, beta, pv);
         }
 
         let mut local_pv = PrincipleVariation::new();
@@ -746,15 +746,31 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     fn quiescence<Node: NodeType>(
         &mut self,
         board: &mut Board,
+        ply: ScoreType,
         alpha: Score,
         beta: Score,
         pv: &mut PrincipleVariation,
     ) -> Score {
+        // Do we need to stop searching?
+        if self.should_stop_searching() {
+            return alpha;
+        }
+
+        // Are we in a draw?
+        if ply > 0 && board.is_draw() {
+            return Score::DRAW;
+        }
+
         let standing_eval = self.eval.eval(board);
         if standing_eval >= beta {
             return beta;
         }
         let mut alpha_use: Score = alpha.max(standing_eval);
+
+        // Have we exceeded max ply?
+        if ply >= MAX_PLY {
+            return standing_eval;
+        }
 
         let mut move_list = MoveList::new();
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
@@ -822,7 +838,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use, &mut local_pv);
+                let eval = -self.quiescence::<Node>(board, ply, -beta, -alpha_use, &mut local_pv);
                 self.nodes += 1;
                 eval
             };
