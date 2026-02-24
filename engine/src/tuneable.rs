@@ -24,3 +24,6 @@ pub(crate) const LMR_MIN_MOVES_SEEN: usize = 3;
 
 // Minimum threshold depth for LMP to be considered
 pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 6;
+
+// How much to extend search when in check
+pub(crate) const CHECK_EXTENSION_DEPTH: ScoreType = 1;
