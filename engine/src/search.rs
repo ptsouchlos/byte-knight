@@ -753,10 +753,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         beta: Score,
         pv: &mut PrincipleVariation,
     ) -> Score {
-        // Do we need to stop searching?
-        if self.should_stop_searching() {
-            return alpha;
-        }
+        // Quiescence search shouldn't be called at root
+        debug_assert!(ply > 0);
 
         // Are we in a draw?
         if ply > 0 && board.is_draw() {
@@ -764,15 +762,16 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         let standing_eval = self.eval.eval(board);
-        if standing_eval >= beta {
-            return beta;
-        }
-        let mut alpha_use: Score = alpha.max(standing_eval);
 
         // Have we exceeded max ply?
         if ply >= MAX_PLY {
             return standing_eval;
         }
+
+        if standing_eval >= beta {
+            return beta;
+        }
+        let mut alpha_use: Score = alpha.max(standing_eval);
 
         let mut move_list = MoveList::new();
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
