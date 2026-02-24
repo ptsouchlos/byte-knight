@@ -10,7 +10,7 @@ use std::{
 };
 use uci_parser::UciScore;
 
-use crate::defs::MAX_DEPTH;
+use crate::defs::MAX_PLY;
 
 pub type ScoreType = i16;
 pub(crate) type LargeScoreType = i32;
@@ -45,7 +45,7 @@ impl Score {
     /// Mate score - this is the upper limit.
     pub const MATE: Score = Score(Score::MATE_VALUE as ScoreType);
     /// The minimum mate score. This is the maximum score minus the maximum depth.
-    pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_DEPTH as ScoreType);
+    pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_PLY);
     /// "Infinity" score
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
     /// Multiplier for the history bonus calculation.
