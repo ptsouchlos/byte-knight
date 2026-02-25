@@ -633,23 +633,25 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             }
         }
 
-        // store the best move in the transposition table
-        let flag = if best_score <= alpha_original {
-            ttable::EntryFlag::UpperBound
-        } else if best_score >= beta {
-            ttable::EntryFlag::LowerBound
-        } else {
-            ttable::EntryFlag::Exact
-        };
+        if let Some(bm) = best_move {
+            // store the best move in the transposition table
+            let flag = if best_score <= alpha_original {
+                ttable::EntryFlag::UpperBound
+            } else if best_score >= beta {
+                ttable::EntryFlag::LowerBound
+            } else {
+                ttable::EntryFlag::Exact
+            };
 
-        self.transposition_table
-            .store_entry(TranspositionTableEntry::new(
-                board.zobrist_hash(),
-                depth as u8,
-                best_score,
-                flag,
-                best_move.unwrap(),
-            ));
+            self.transposition_table
+                .store_entry(TranspositionTableEntry::new(
+                    board.zobrist_hash(),
+                    depth as u8,
+                    best_score,
+                    flag,
+                    bm,
+                ));
+        }
 
         best_score
     }
