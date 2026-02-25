@@ -444,22 +444,24 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
         // Check if we have a transposition table entry and if we can return early
-        let tt_move =
-            match self
-                .transposition_table
-                .probe::<Node>(depth, board.zobrist_hash(), alpha, beta)
-            {
-                ttable::ProbeResult::CutOff(entry) => {
-                    // we have a cutoff, so return the score, but only in a non-PV node
-                    self.nodes += 1;
-                    if !Node::PV {
-                        return entry.score.ply_relative(ply);
-                    }
-                    Some(entry.board_move)
+        let tt_move = match self.transposition_table.probe::<Node>(
+            depth,
+            ply,
+            board.zobrist_hash(),
+            alpha,
+            beta,
+        ) {
+            ttable::ProbeResult::CutOff(entry) => {
+                // we have a cutoff, so return the score, but only in a non-PV node
+                self.nodes += 1;
+                if !Node::PV {
+                    return entry.score.ply_relative(ply);
                 }
-                ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
-                ttable::ProbeResult::Empty => None,
-            };
+                Some(entry.board_move)
+            }
+            ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
+            ttable::ProbeResult::Empty => None,
+        };
 
         // Internal Iterative Reductions: https://www.chessprogramming.org/Internal_Iterative_Reductions
         // If no tt entry was found, searching it will be very costly, so we reduce the depth. This is
@@ -804,21 +806,23 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
         // Check if we have a transposition table entry and if we can return early
-        let tt_move =
-            match self
-                .transposition_table
-                .probe::<Node>(0, board.zobrist_hash(), alpha_use, beta)
-            {
-                ttable::ProbeResult::CutOff(entry) => {
-                    // we have a cutoff, so return the score, but only in a non-PV node
-                    if !Node::PV {
-                        return entry.score.ply_relative(ply);
-                    };
-                    Some(entry.board_move)
-                }
-                ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
-                ttable::ProbeResult::Empty => None,
-            };
+        let tt_move = match self.transposition_table.probe::<Node>(
+            0,
+            ply,
+            board.zobrist_hash(),
+            alpha_use,
+            beta,
+        ) {
+            ttable::ProbeResult::CutOff(entry) => {
+                // we have a cutoff, so return the score, but only in a non-PV node
+                if !Node::PV {
+                    return entry.score.ply_relative(ply);
+                };
+                Some(entry.board_move)
+            }
+            ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
+            ttable::ProbeResult::Empty => None,
+        };
 
         // sort moves by MVV/LVA
         let classify_res = MoveOrder::classify_all(
