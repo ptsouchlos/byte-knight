@@ -643,15 +643,15 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 ttable::EntryFlag::Exact
             };
 
-        self.transposition_table
-            .store_entry(TranspositionTableEntry::new(
-                board.zobrist_hash(),
-                depth as u8,
-                best_score.remove_ply_bias(ply),
-                flag,
-                best_move.unwrap(),
-            ));
-
+            self.transposition_table
+                .store_entry(TranspositionTableEntry::new(
+                    board.zobrist_hash(),
+                    depth as u8,
+                    best_score.remove_ply_bias(ply),
+                    flag,
+                    bm,
+                ));
+        }
         best_score
     }
 
