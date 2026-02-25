@@ -3,8 +3,7 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::StdRng};
 
 use crate::definitions::NumberOf;
 
@@ -55,24 +54,24 @@ impl ZobristRandomValues {
             .for_each(|piece_values| {
                 piece_values.iter_mut().for_each(|square_values| {
                     square_values.iter_mut().for_each(|value| {
-                        *value = random.random();
+                        *value = random.next_u64();
                     });
                 });
             });
 
         random_values.castling_values.iter_mut().for_each(|value| {
-            *value = random.random();
+            *value = random.next_u64();
         });
 
         random_values
             .en_passant_values
             .iter_mut()
             .for_each(|value| {
-                *value = random.random();
+                *value = random.next_u64();
             });
 
         random_values.side_values.iter_mut().for_each(|value| {
-            *value = random.random();
+            *value = random.next_u64();
         });
 
         random_values

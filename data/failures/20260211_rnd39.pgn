@@ -1,0 +1,17 @@
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2026.02.11"]
+[Round "39"]
+[White "Byte-Knight-base"]
+[Black "Byte-Knight-dev"]
+[Result "1-0"]
+[SetUp "1"]
+[FEN "r1bqk2r/pp1p2pp/2pb1n2/4pP2/8/2NB4/PPPPQPPP/R1B1K2R w KQkq - 3 9"]
+[GameDuration "00:01:03"]
+[GameStartTime "2026-02-11T12:02:34 -0500"]
+[GameEndTime "2026-02-11T12:03:38 -0500"]
+[PlyCount "1"]
+[Termination "abandoned"]
+[TimeControl "53.94+0.54"]
+
+9. Bc4 {+1.02/18 3.445s, n=8209082, sd=0, Black disconnects} 1-0

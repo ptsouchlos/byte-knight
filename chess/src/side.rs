@@ -3,7 +3,7 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::fmt::Display;
+use std::{fmt::Display, ops::Not};
 
 /// Represents a side to play in chess.
 #[repr(usize)]
@@ -18,8 +18,8 @@ impl Side {
     const ALL_SIDES: [Side; 2] = [Side::White, Side::Black];
 
     /// Returns the opposite side.
-    pub fn opposite(side: Side) -> Side {
-        match side {
+    pub fn opposite(&self) -> Side {
+        match self {
             Side::White => Side::Black,
             Side::Black => Side::White,
         }
@@ -79,6 +79,14 @@ impl TryFrom<char> for Side {
     }
 }
 
+impl Not for Side {
+    type Output = Side;
+
+    fn not(self) -> Self::Output {
+        self.opposite()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -114,8 +122,14 @@ mod tests {
 
     #[test]
     fn opposite() {
-        assert_eq!(Side::opposite(Side::White), Side::Black);
-        assert_eq!(Side::opposite(Side::Black), Side::White);
+        assert_eq!(Side::White.opposite(), Side::Black);
+        assert_eq!(Side::Black.opposite(), Side::White);
+    }
+
+    #[test]
+    fn not_operator() {
+        assert_eq!(!Side::White, Side::Black);
+        assert_eq!(!Side::Black, Side::White);
     }
 
     #[test]

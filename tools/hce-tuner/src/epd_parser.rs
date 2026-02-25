@@ -14,7 +14,7 @@ use crate::{offsets::Offsets, tuning_position::TuningPosition};
 
 pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
     let mut positions = Vec::new();
-    let file = File::open(file_path).expect("Failed to open file");
+    let file = File::open(file_path).expect(format!("Failed to open file: {}", file_path).as_str());
     let reader = BufReader::new(file);
     for line in reader.lines() {
         let line = line.expect("Failed to read line");
@@ -162,7 +162,7 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     for side in [Side::White, Side::Black] {
         let king_sq = board.king_square(side);
         let king_ring = attacks::king(king_sq);
-        let opposite = Side::opposite(side);
+        let opposite = side.opposite();
         // loop through all pieces except king
         for piece in Piece::iter().filter(|&p| p != Piece::King) {
             // Get enemy piece bb
@@ -170,7 +170,7 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
             while piece_bb.as_number() > 0 {
                 let sq = bitboard_helpers::next_bit(&mut piece_bb);
                 let piece_attacks =
-                    attacks::for_piece(piece, sq as u8, board.all_pieces(), opposite);
+                    attacks::for_piece_on_square(piece, sq as u8, board.all_pieces(), opposite);
 
                 let overlap = piece_attacks & king_ring;
                 if overlap.number_of_occupied_squares() > 0 {
@@ -183,6 +183,60 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
                         index_ref.push(Offsets::offset_for_king_safety(piece));
                     }
                 }
+            }
+        }
+    }
+
+    // Threats
+    for side in [Side::White, Side::Black] {
+        let them = side.opposite();
+        let pawn_attacks = attacks::for_piece(Piece::Pawn, &board, side);
+        let knight_attacks = attacks::for_piece(Piece::Knight, &board, side);
+        let bishop_attacks = attacks::for_piece(Piece::Bishop, &board, side);
+
+        let indexes = match side {
+            Side::White => &mut w_indexes,
+            Side::Black => &mut b_indexes,
+        };
+
+        // Pawn threats
+        for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Knight, Piece::Queen] {
+            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+
+            let pawn_threat_count = (pawn_attacks & piece_bb).number_of_occupied_squares() as i32;
+            if pawn_threat_count == 0 {
+                continue;
+            }
+            for _ in 0..pawn_threat_count {
+                indexes.push(Offsets::offset_for_threat(Piece::Pawn, piece_attacked));
+            }
+        }
+
+        // Knight threats
+        for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Queen] {
+            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+
+            let knight_threat_count =
+                (knight_attacks & piece_bb).number_of_occupied_squares() as i32;
+            if knight_threat_count == 0 {
+                continue;
+            }
+            for _ in 0..knight_threat_count {
+                indexes.push(Offsets::offset_for_threat(Piece::Knight, piece_attacked));
+            }
+        }
+
+        // Bishop threats
+        for piece_attacked in [Piece::Rook, Piece::Knight, Piece::Queen] {
+            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+
+            let bishop_threat_count =
+                (bishop_attacks & piece_bb).number_of_occupied_squares() as i32;
+            if bishop_threat_count == 0 {
+                continue;
+            }
+            for _ in 0..bishop_threat_count {
+                indexes.push(Offsets::offset_for_threat(Piece::Bishop, piece_attacked));
             }
         }
     }

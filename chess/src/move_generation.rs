@@ -18,7 +18,7 @@ use crate::{
     rank::Rank,
     rays,
     side::Side,
-    sliding_piece_attacks::SlidingPieceAttacks,
+    slider_pieces::SliderPiece,
     square::{self, Square},
 };
 
@@ -26,9 +26,7 @@ pub(crate) const NORTH: u64 = 8;
 pub(crate) const SOUTH: u64 = 8;
 
 /// The MoveGenerator struct is responsible for generating moves for a given board state.
-pub struct MoveGenerator {
-    pub(crate) sliding_piece_attacks: SlidingPieceAttacks,
-}
+pub struct MoveGenerator {}
 
 impl Default for MoveGenerator {
     fn default() -> Self {
@@ -37,10 +35,8 @@ impl Default for MoveGenerator {
 }
 
 impl MoveGenerator {
-    pub fn new() -> Self {
-        Self {
-            sliding_piece_attacks: SlidingPieceAttacks::new(),
-        }
+    pub const fn new() -> Self {
+        Self {}
     }
 
     fn edges(file: u8, rank: u8) -> Bitboard {
@@ -346,9 +342,9 @@ impl MoveGenerator {
                     PieceCategory::NonSlider(non_slider) => {
                         self.get_non_slider_attacks(side, non_slider, from)
                     }
-                    PieceCategory::Slider(slider) => self
-                        .sliding_piece_attacks
-                        .get_slider_attack(slider, from, occupancy),
+                    PieceCategory::Slider(slider) => {
+                        self.get_slider_attacks(slider, from, occupancy)
+                    }
                 };
 
                 attacks |= attacks_bb;
@@ -374,11 +370,9 @@ impl MoveGenerator {
         occupancy: &Bitboard,
     ) -> Bitboard {
         match PieceCategory::from(piece) {
-            PieceCategory::Slider(slider) => self
-                .sliding_piece_attacks
-                .get_slider_attack(slider, square, occupancy),
+            PieceCategory::Slider(slider) => self.get_slider_attacks(slider, square, occupancy),
             PieceCategory::NonSlider(non_slider) => {
-                self.get_non_slider_attacks(Side::opposite(attacking_side), non_slider, square)
+                self.get_non_slider_attacks(attacking_side.opposite(), non_slider, square)
             }
         }
     }
@@ -528,7 +522,7 @@ impl MoveGenerator {
         );
 
         let us = board.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let our_pieces = board.pieces(us);
         let their_pieces = board.pieces(them);
         let occupancy = board.all_pieces();
@@ -540,8 +534,7 @@ impl MoveGenerator {
             let from_square = bitboard_helpers::next_bit(&mut piece_bb) as u8;
             let attack_bb = match PieceCategory::from(piece) {
                 PieceCategory::Slider(slider) => {
-                    self.sliding_piece_attacks
-                        .get_slider_attack(slider, from_square, &occupancy)
+                    self.get_slider_attacks(slider, from_square, &occupancy)
                 }
                 PieceCategory::NonSlider(non_slider) => {
                     self.get_non_slider_attacks(us, non_slider, from_square)
@@ -577,11 +570,24 @@ impl MoveGenerator {
         }
     }
 
+    fn get_slider_attacks(
+        &self,
+        piece: SliderPiece,
+        from_square: u8,
+        occupancy: &Bitboard,
+    ) -> Bitboard {
+        match piece {
+            SliderPiece::Bishop => attacks::bishop(from_square, *occupancy),
+            SliderPiece::Rook => attacks::rook(from_square, *occupancy),
+            SliderPiece::Queen => attacks::queen(from_square, *occupancy),
+        }
+    }
+
     #[cfg_attr(not(debug_assertions), inline(always))]
     #[cfg_attr(debug_assertions, inline(never))]
     fn get_pawn_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
         let us = board.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let their_pieces = board.pieces(them);
         let occupancy = board.all_pieces();
         let empty = !occupancy;
@@ -698,7 +704,7 @@ impl MoveGenerator {
 
         let mut bb = *bitboard;
         let us = board.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let enemy_pieces = board.pieces(them);
         let promotion_rank = Rank::promotion_rank(us);
         while bb > 0 {
@@ -825,7 +831,7 @@ impl MoveGenerator {
         );
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
-        let pawn_attacks = attacks::pawn(square.to_square_index(), Side::opposite(attacking_side));
+        let pawn_attacks = attacks::pawn(square.to_square_index(), attacking_side.opposite());
 
         let is_king_attacker = (king_attacks & *king_bb) > 0;
         let is_knight_attacker = (knight_attacks & *knight_bb) > 0;
@@ -888,7 +894,7 @@ mod tests {
             assert!(move_gen.is_square_attacked(
                 &board,
                 &Square::from_square_index(square),
-                Side::opposite(board.side_to_move())
+                board.side_to_move().opposite()
             ));
         }
 
@@ -1150,11 +1156,8 @@ mod tests {
         ];
 
         for (sq, expected) in EXPECTED_ATTACKS.iter().enumerate() {
-            let rook_attack_bb = move_gen.sliding_piece_attacks.get_slider_attack(
-                SliderPiece::Rook,
-                sq as u8,
-                &occupancy,
-            );
+            let rook_attack_bb =
+                move_gen.get_slider_attacks(SliderPiece::Rook, sq as u8, &occupancy);
             // println!("{:#x},", rook_attack_bb.as_number())
             assert_eq!(rook_attack_bb.as_number(), *expected);
         }

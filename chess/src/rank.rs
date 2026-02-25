@@ -5,7 +5,7 @@
 
 use std::ops::Sub;
 
-use crate::side::Side;
+use crate::{bitboard::Bitboard, definitions::RANK_BITBOARDS, side::Side};
 use anyhow::Result;
 
 /// Represents a rank on the chess board.
@@ -44,6 +44,13 @@ impl Rank {
         *self as u8
     }
 
+    /// Returns the rank corresponding to the given square.
+    ///
+    /// # Arguments
+    /// - `sq`: The square index (0-63).
+    ///
+    /// # Returns
+    /// The corresponding `Rank`.
     pub const fn of(sq: u8) -> Self {
         match sq >> 3 {
             0 => Self::R1,
@@ -79,6 +86,11 @@ impl Rank {
             return Some(unsafe { std::mem::transmute::<u8, Rank>(new_rank as u8) });
         }
         None
+    }
+
+    /// Converts the rank to its corresponding bitboard representation.
+    pub fn to_bitboard(self) -> Bitboard {
+        RANK_BITBOARDS[self as usize]
     }
 }
 
@@ -118,5 +130,17 @@ mod tests {
         assert_eq!(Rank::R1.offset(-1), None);
         assert_eq!(Rank::R8.offset(1), None);
         assert_eq!(Rank::R8.offset(-1), Some(Rank::R7));
+    }
+
+    #[test]
+    fn to_bitboard() {
+        assert_eq!(Rank::R1.to_bitboard(), 0x00000000000000FF);
+        assert_eq!(Rank::R2.to_bitboard(), 0x000000000000FF00);
+        assert_eq!(Rank::R3.to_bitboard(), 0x0000000000FF0000);
+        assert_eq!(Rank::R4.to_bitboard(), 0x00000000FF000000);
+        assert_eq!(Rank::R5.to_bitboard(), 0x000000FF00000000);
+        assert_eq!(Rank::R6.to_bitboard(), 0x0000FF0000000000);
+        assert_eq!(Rank::R7.to_bitboard(), 0x00FF000000000000);
+        assert_eq!(Rank::R8.to_bitboard(), 0xFF00000000000000);
     }
 }

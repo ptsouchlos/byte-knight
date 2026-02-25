@@ -1,4 +1,4 @@
-# Originally from the project dannyhammer/toad on GitHub. 
+# Originally from the project dannyhammer/toad on GitHub.
 # See: https://github.com/dannyhammer/toad/blob/main/Makefile
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -12,7 +12,7 @@ ifeq ($(OS),Windows_NT)
 	NAME := $(shell powershell -Command "(Get-Content Cargo.toml | Select-String '^name =').Line -replace '.*= ', '' -replace '\"', ''")
 	VERSION := $(shell powershell -Command "(Get-Content Cargo.toml | Select-String '^version =').Line -replace '.*= ', '' -replace '\"', ''")
 else
-	EXT := 
+	EXT :=
 	NAME := $(shell sed -n '0,/^name = "\(.*\)"/s//\1/p' Cargo.toml)
 	VERSION := $(shell sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml)
 endif
@@ -24,12 +24,16 @@ else
 	EXE := $(EXE)$(EXT)
 endif
 
+# Force clang to be our CC compiler when not on Windows
+ifneq ($(OS),Windows_NT)
+	export HOST_CC=clang
+endif
 
 
 # Compile an executable for use with OpenBench
 openbench:
 	@echo Compiling $(EXE) for OpenBench
-	cargo rustc --release --bin byte-knight -- -C target-cpu=native --emit link=$(EXE)
+	cargo rustc --release -p byte-knight --bin byte-knight -- -C target-cpu=native --emit link=$(EXE)
 
 # Remove the EXE created
 clean:

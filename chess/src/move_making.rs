@@ -105,7 +105,7 @@ impl Board {
         let piece = mv.piece();
 
         let us = self.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
 
         let piece_and_side = self.piece_on_square(from);
         if piece_and_side.is_none() {
@@ -181,7 +181,7 @@ impl Board {
         let captured_piece = mv.captured_piece();
 
         let us = self.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         let can_castle = self.castling_rights() > 0;
         let update_zobrist_hash = true;
 
@@ -268,7 +268,9 @@ impl Board {
             }
             // just move the piece
             self.move_piece(us, piece, from, to, update_zobrist_hash);
-            self.set_half_move_clock(self.half_move_clock() + 1);
+            if captured_piece.is_none() {
+                self.set_half_move_clock(self.half_move_clock() + 1);
+            }
         }
 
         // update the castling rights
@@ -337,7 +339,7 @@ impl Board {
     #[cfg_attr(debug_assertions, inline(never))]
     pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
         let us = self.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         self.make_move_unchecked(mv)?;
 
         // check if the move is legal
@@ -378,7 +380,7 @@ impl Board {
         self.set_board_state(state);
 
         let us = self.side_to_move();
-        let them = Side::opposite(us);
+        let them = us.opposite();
         // this is move that we're unmaking
         let chess_move = state.next_move;
 
@@ -515,7 +517,7 @@ impl Board {
 
     /// Switch the side to move, and update the zobrist hash (see [Board::set_side_to_move]).
     fn switch_side(&mut self) {
-        self.set_side_to_move(Side::opposite(self.side_to_move()));
+        self.set_side_to_move(self.side_to_move().opposite());
     }
 }
 
@@ -774,5 +776,29 @@ mod tests {
             // check side to move
             assert_eq!(board.side_to_move(), Side::Black);
         }
+    }
+
+    // Test that a non-pawn capture resets the half-move clock to 0, and does not decrement it (previously a bug)
+    #[test]
+    fn non_pawn_capture_resets_half_move_clock() {
+        // Position: white knight on f3 can capture the black pawn on e5.
+        // Half-move clock is set to 5 to confirm it is reset (not decremented).
+        // FEN: rnbqkb1r/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 5 3
+        let mut board =
+            Board::from_fen("rnbqkb1r/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 5 3")
+                .unwrap();
+
+        assert_eq!(board.half_move_clock(), 5);
+
+        // Knight captures pawn: Nxe5
+        let mv_ok = board.make_uci_move("f3e5");
+        assert!(mv_ok.is_ok());
+
+        assert_eq!(
+            board.half_move_clock(),
+            0,
+            "half-move clock should be 0 after a non-pawn capture, got {}",
+            board.half_move_clock()
+        );
     }
 }
