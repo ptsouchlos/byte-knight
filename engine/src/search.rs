@@ -23,7 +23,7 @@ use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
 use crate::{
     aspiration_window::AspirationWindow,
-    defs::MAX_DEPTH,
+    defs::{MAX_DEPTH, MAX_PLY},
     evaluation::ByteKnightEvaluation,
     history_table::{self, HistoryTable},
     inplace_incremental_sort::InplaceIncrementalSort,
@@ -435,7 +435,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut alpha_use = alpha;
 
         if depth <= 0 {
-            return self.quiescence::<Node>(board, alpha, beta, pv);
+            return self.quiescence::<Node>(board, ply, alpha, beta, pv);
         }
 
         let mut local_pv = PrincipleVariation::new();
@@ -748,11 +748,26 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     fn quiescence<Node: NodeType>(
         &mut self,
         board: &mut Board,
+        ply: ScoreType,
         alpha: Score,
         beta: Score,
         pv: &mut PrincipleVariation,
     ) -> Score {
+        // Quiescence search shouldn't be called at root
+        debug_assert!(ply > 0);
+
+        // Are we in a draw?
+        if ply > 0 && board.is_draw() {
+            return Score::DRAW;
+        }
+
         let standing_eval = self.eval.eval(board);
+
+        // Have we exceeded max ply?
+        if ply >= MAX_PLY {
+            return standing_eval;
+        }
+
         if standing_eval >= beta {
             return beta;
         }
@@ -824,7 +839,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use, &mut local_pv);
+                let eval =
+                    -self.quiescence::<Node>(board, ply + 1, -beta, -alpha_use, &mut local_pv);
                 self.nodes += 1;
                 eval
             };

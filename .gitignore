@@ -6,3 +6,6 @@
 *.profraw
 *.profdata
 *.lcov
+
+# Python stuff
+*/__pycache__/
