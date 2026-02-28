@@ -686,7 +686,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Razoring: https://www.chessprogramming.org/Razoring
         // Check if the static eval + margin is less than alpha. For byte-knight, we prune based on qsearch evaluation.
         // If we can't beat alpha with the qsearch score, then we fail-low.
-        let razoring_margin = RAZORING_OFFSET + RAZORING_SCALING * depth * depth;
+        let razoring_margin = RAZORING_OFFSET + RAZORING_SCALING * depth;
         if static_eval + razoring_margin < alpha {
             let mut brd_cpy = board.clone();
             let mut razor_pv = PrincipleVariation::new();
