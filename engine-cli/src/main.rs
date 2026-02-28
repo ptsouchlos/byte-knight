@@ -10,7 +10,7 @@ use chess::definitions::DEFAULT_FEN;
 use chess::move_generation::MoveGenerator;
 use clap::{Parser, Subcommand};
 use engine::defs::About;
-use engine::engine::ByteKnight;
+use engine::uci_handler::UciHandler;
 use std::process::exit;
 
 shadow_rs::shadow!(build);
@@ -62,15 +62,21 @@ enum Command {
 }
 
 fn run_uci() {
-    let mut engine = ByteKnight::new();
-    let engine_run_result = engine.run();
-    match engine_run_result {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Error running engine: {e}");
-            exit(1);
-        }
-    }
+    // Spawn UCI handler on a thread with 8 MiB stack — the search is deeply recursive
+    // and the default main thread stack size is insufficient on some platforms.
+    let handle = std::thread::Builder::new()
+        .name("bk-main".to_string())
+        .stack_size(8 * 1024 * 1024)
+        .spawn(|| {
+            let mut handler = UciHandler::new();
+            let result = handler.run();
+            if let Err(e) = result {
+                eprintln!("Error running engine: {e}");
+                exit(1);
+            }
+        })
+        .unwrap();
+    handle.join().unwrap();
 }
 
 fn main() {
