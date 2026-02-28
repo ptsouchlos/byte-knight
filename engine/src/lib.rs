@@ -28,3 +28,4 @@ pub(crate) mod table;
 pub mod traits;
 pub mod ttable;
 pub mod tuneable;
+pub mod uci_handler;
