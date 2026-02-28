@@ -38,8 +38,8 @@ use crate::{
     ttable::{self, TranspositionTableEntry},
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, LMR_MIN_DEPTH,
-        LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_MAX_DEPTH,
-        RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
+        LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET,
+        RAZORING_SCALING, RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
@@ -686,11 +686,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Razoring: https://www.chessprogramming.org/Razoring
         // Check if the static eval + margin is less than alpha. For byte-knight, we prune based on qsearch evaluation.
         // If we can't beat alpha with the qsearch score, then we fail-low.
-        let razoring_margin = RAZORING_OFFSET + RAZORING_SCALING * depth;
-        if depth <= RAZORING_MAX_DEPTH && static_eval + razoring_margin < alpha {
+        let razoring_margin = RAZORING_OFFSET + RAZORING_SCALING * depth * depth;
+        if static_eval + razoring_margin < alpha {
             let mut brd_cpy = board.clone();
             let mut razor_pv = PrincipleVariation::new();
-            let score = self.quiescence::<NonPvNode>(&mut brd_cpy, alpha, alpha + 1, &mut razor_pv);
+            let score =
+                self.quiescence::<NonPvNode>(&mut brd_cpy, ply, alpha, alpha + 1, &mut razor_pv);
             if score < alpha && !score.is_mate() {
                 return Some(score);
             }

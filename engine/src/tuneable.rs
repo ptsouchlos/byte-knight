@@ -25,6 +25,5 @@ pub(crate) const LMR_MIN_MOVES_SEEN: usize = 3;
 // Minimum threshold depth for LMP to be considered
 pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 6;
 
-pub(crate) const RAZORING_MAX_DEPTH: ScoreType = 2;
-pub(crate) const RAZORING_SCALING: ScoreType = 128;
-pub(crate) const RAZORING_OFFSET: ScoreType = 256;
+pub(crate) const RAZORING_SCALING: ScoreType = 250;
+pub(crate) const RAZORING_OFFSET: ScoreType = 300;
