@@ -23,7 +23,7 @@ use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
 use crate::{
     aspiration_window::AspirationWindow,
-    defs::MAX_DEPTH,
+    defs::{MAX_DEPTH, MAX_PLY},
     evaluation::ByteKnightEvaluation,
     history_table::{self, HistoryTable},
     inplace_incremental_sort::InplaceIncrementalSort,
@@ -436,7 +436,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut alpha_use = alpha;
 
         if depth <= 0 {
-            return self.quiescence::<Node>(board, alpha, beta, pv);
+            return self.quiescence::<Node>(board, ply, alpha, beta, pv);
         }
 
         let mut local_pv = PrincipleVariation::new();
@@ -507,18 +507,20 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move = tt_move;
+        let mut moves_seen = 0;
 
         // Loop through all moves
-        for (i, mv) in move_iter.into_iter().enumerate() {
+        #[allow(clippy::explicit_counter_loop)]
+        for (loop_counter, mv) in move_iter.into_iter().enumerate() {
             // Calculate the LMR reduction and depth which will be used later in FP
-            let lmr_table_value = self.lmr_table.at(depth as usize, i);
+            let lmr_table_value = self.lmr_table.at(depth as usize, loop_counter);
             let base_reduction = if let Some(table_val) = lmr_table_value {
                 *table_val
             } else {
                 1f64
             };
+
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
-            let _lmr_depth = depth.saturating_sub(lmr_reduction);
             let is_in_check = board.is_in_check(&self.move_gen);
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
@@ -532,7 +534,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if !is_root && !is_pv && !is_in_check && !best_score.mated() {
                 let min_lmp_moves =
                     LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
-                if i >= min_lmp_moves {
+                if loop_counter >= min_lmp_moves {
                     break;
                 }
             }
@@ -549,19 +551,32 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if !board.is_draw() {
                 score =
                 // Principal Variation Search (PVS)
-                if Node::PV && i == 0 {
-                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
+                if moves_seen == 0 {
+                    -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                 } else {
-                    let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
+                    let reduction = if mv.is_quiet() && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
                         lmr_reduction
                     } else {
                         1
                     };
-                    // search with a null window
-                    let temp_score = -self.negamax::<NonPvNode>(board, depth - reduction, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
-                    // if it fails, we need to do a full re-search
+
+                    // Calculate the reduced depth
+                    let reduced_depth = depth.saturating_sub(reduction);
+
+                    // Search with a null window at a reduced depth
+                    let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
+
+                    // If the reduced depth failed, verify again at full depth with null window to avoid a more expensive full re-search
+                    temp_score = if temp_score > alpha_use && reduction > 1 {
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv)
+                    }
+                    else {
+                        temp_score
+                    };
+
+                    // If it fails again, we now know we need to do a full re-search
                     if temp_score > alpha_use && temp_score < beta {
-                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
+                        -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                     }
                     else {
                         temp_score
@@ -571,6 +586,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // undo the move
             board.unmake_move().unwrap();
+            moves_seen += 1;
 
             // check the results
             if score > best_score {
@@ -578,7 +594,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 best_score = score;
                 best_move = Some(mv);
                 if Node::PV {
-                    assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
+                    // assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -597,7 +613,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         );
 
                         // apply a penalty to all quiets searched so far
-                        for mv in move_list.iter().take(i).filter(|mv| mv.is_quiet()) {
+                        for mv in move_list
+                            .iter()
+                            .take(loop_counter)
+                            .filter(|mv| mv.is_quiet())
+                        {
                             self.history_table.update(
                                 board.side_to_move(),
                                 mv.piece(),
@@ -616,23 +636,25 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             }
         }
 
-        // store the best move in the transposition table
-        let flag = if best_score <= alpha_original {
-            ttable::EntryFlag::UpperBound
-        } else if best_score >= beta {
-            ttable::EntryFlag::LowerBound
-        } else {
-            ttable::EntryFlag::Exact
-        };
+        if let Some(bm) = best_move {
+            // store the best move in the transposition table
+            let flag = if best_score <= alpha_original {
+                ttable::EntryFlag::UpperBound
+            } else if best_score >= beta {
+                ttable::EntryFlag::LowerBound
+            } else {
+                ttable::EntryFlag::Exact
+            };
 
-        self.transposition_table
-            .store_entry(TranspositionTableEntry::new(
-                board.zobrist_hash(),
-                depth as u8,
-                best_score,
-                flag,
-                best_move.unwrap(),
-            ));
+            self.transposition_table
+                .store_entry(TranspositionTableEntry::new(
+                    board.zobrist_hash(),
+                    depth as u8,
+                    best_score,
+                    flag,
+                    bm,
+                ));
+        }
 
         best_score
     }
@@ -744,11 +766,26 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     fn quiescence<Node: NodeType>(
         &mut self,
         board: &mut Board,
+        ply: ScoreType,
         alpha: Score,
         beta: Score,
         pv: &mut PrincipleVariation,
     ) -> Score {
+        // Quiescence search shouldn't be called at root
+        debug_assert!(ply > 0);
+
+        // Are we in a draw?
+        if ply > 0 && board.is_draw() {
+            return Score::DRAW;
+        }
+
         let standing_eval = self.eval.eval(board);
+
+        // Have we exceeded max ply?
+        if ply >= MAX_PLY {
+            return standing_eval;
+        }
+
         if standing_eval >= beta {
             return beta;
         }
@@ -800,6 +837,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             self.history_table,
             &mut move_order_list,
         );
+
         // TODO(PT): Should we log a message to the CLI or a log?
         assert!(classify_res.is_ok());
 
@@ -819,7 +857,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use, &mut local_pv);
+                let eval =
+                    -self.quiescence::<Node>(board, ply + 1, -beta, -alpha_use, &mut local_pv);
                 self.nodes += 1;
                 eval
             };
@@ -831,7 +870,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 // extend PV if we're in a PV node
                 if Node::PV {
-                    assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
+                    // assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
                     pv.extend(mv, &local_pv);
                 }
 

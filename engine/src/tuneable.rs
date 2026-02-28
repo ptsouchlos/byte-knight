@@ -19,6 +19,8 @@ pub(crate) const NMP_DEPTH_REDUCTION: ScoreType = 2;
 
 pub(crate) const LMR_OFFSET: f64 = 0.2;
 pub(crate) const LMR_SCALING_FACTOR: f64 = 2.0;
+pub(crate) const LMR_MIN_DEPTH: i16 = 3;
+pub(crate) const LMR_MIN_MOVES_SEEN: usize = 3;
 
 // Minimum threshold depth for LMP to be considered
 pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 6;

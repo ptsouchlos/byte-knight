@@ -10,7 +10,7 @@ use std::{
 };
 use uci_parser::UciScore;
 
-use crate::defs::MAX_DEPTH;
+use crate::defs::MAX_PLY;
 
 pub type ScoreType = i16;
 pub(crate) type LargeScoreType = i32;
@@ -38,17 +38,20 @@ pub(crate) type LargeScoreType = i32;
 pub struct Score(pub ScoreType);
 
 impl Score {
+    /// Score for a draw.
     pub const DRAW: Score = Score(0);
-    pub const MATE: Score = Score(ScoreType::MAX as ScoreType);
+    /// Numerical value for max mate value
+    pub const MATE_VALUE: ScoreType = 30_000;
+    /// Mate score - this is the upper limit.
+    pub const MATE: Score = Score(Score::MATE_VALUE as ScoreType);
     /// The minimum mate score. This is the maximum score minus the maximum depth.
-    pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_DEPTH as ScoreType);
+    pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_PLY);
+    /// "Infinity" score
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
-
     /// Multiplier for the history bonus calculation.
     pub const HISTORY_MULT: ScoreType = 300;
     /// Offset for the history bonus calculation.
     pub const HISTORY_OFFSET: ScoreType = 250;
-
     /// Max/min score for history heuristic
     /// Must be lower then the minimum score for captures in MVV_LVA
     pub const MAX_HISTORY: LargeScoreType = 16_384;
@@ -61,32 +64,57 @@ impl Score {
         Score(self.0.clamp(min, max))
     }
 
-    /// Returns true if the score is a mate score.
-    /// This is the case if the absolute value of the score is greater than or equal to `Score::MINIMUM_MATE`.
+    /// Check if the score is a mate score. This is true if the score is between [MINIMUM_MATE, INF).
+    ///
+    /// # Returns
+    /// - true if the score is a mate score, false otherwise.
     pub fn is_mate(&self) -> bool {
-        self.0.abs() >= Score::MINIMUM_MATE.0.abs()
+        self.0.abs() >= Score::MINIMUM_MATE.0.abs() && self.0.abs() < Score::INF.0
     }
 
     pub fn pow(&self, exp: u32) -> Score {
         Score(self.0.pow(exp))
     }
 
-    /// Returns true if the score indicates that you are being mated
+    /// Check if a score is a "mated" score, meaning we are being mated.
+    ///
+    /// # Returns
+    /// - True if the score indicates that you are being mated, false otherwise.
     pub fn mated(&self) -> bool {
-        self.0 <= -Score::MINIMUM_MATE.0
+        self.0 <= -Score::MINIMUM_MATE.0 && self.0 > -Score::INF.0
     }
 }
 
 impl From<Score> for UciScore {
     fn from(value: Score) -> Self {
-        UciScore::cp(value.0.into())
+        if value.is_mate() {
+            // Mate scores are MATE - d where d is the number of plies to mate.
+            // With UCI, "mate N" means we're mating and "mate -N" means we're being mated
+            // So we can figure out the plies based on the difference between the score
+            // and the mate score since that's the upper limit and the minimum is scaled by max plies.
+            let plies = Score::MATE.0 - value.0.abs();
+            let moves = (plies + 1) / 2;
+            if value.0 > 0 {
+                UciScore::mate(moves as i32)
+            } else {
+                UciScore::mate(-(moves as i32))
+            }
+        } else {
+            UciScore::cp(value.0.into())
+        }
     }
 }
 
 impl Display for Score {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        if self.0.abs() >= Score::MATE.0.abs() {
-            write!(f, "mate {}", (self.0 - Score::MATE.0) / 2)
+        if self.is_mate() {
+            let plies = Score::MATE.0 - self.0.abs();
+            let moves = (plies + 1) / 2;
+            if self.0 > 0 {
+                write!(f, "mate {}", moves)
+            } else {
+                write!(f, "mate -{}", moves)
+            }
         } else {
             write!(f, "cp {}", self.0)
         }
@@ -222,5 +250,66 @@ mod tests {
         let mut right = Score::INF / 2;
         right += Score::INF;
         assert_eq!(right, Score::INF);
+    }
+
+    #[test]
+    fn display_mate_score() {
+        // Mate scores are MATE - d plies; moves = d/2
+        // d=1 → mate in 1 move (we move once, opponent is mated)
+        assert_eq!(Score::new(Score::MATE.0 - 1).to_string(), "mate 1");
+        // d=3 → mate in 2 moves
+        assert_eq!(Score::new(Score::MATE.0 - 3).to_string(), "mate 2");
+        // d=2 → mate in 1 move (ceiling of 2/2)
+        assert_eq!(Score::new(Score::MATE.0 - 2).to_string(), "mate 1");
+        // Being mated in 1 (negative score)
+        assert_eq!(Score::new(-(Score::MATE.0 - 1)).to_string(), "mate -1");
+        // Being mated in 2 moves
+        assert_eq!(Score::new(-(Score::MATE.0 - 3)).to_string(), "mate -2");
+        // Regular cp score never shows as mate
+        assert_eq!(Score::new(100).to_string(), "cp 100");
+        assert_eq!(Score::new(-500).to_string(), "cp -500");
+        assert_eq!(Score::new(0).to_string(), "cp 0");
+    }
+
+    #[test]
+    fn uci_score_from_mate() {
+        // Mate in 1 move
+        assert_eq!(
+            UciScore::from(Score::new(Score::MATE.0 - 1)),
+            UciScore::mate(1)
+        );
+        // Mate in 2 moves
+        assert_eq!(
+            UciScore::from(Score::new(Score::MATE.0 - 3)),
+            UciScore::mate(2)
+        );
+        // Being mated in 1 move
+        assert_eq!(
+            UciScore::from(Score::new(-(Score::MATE.0 - 1))),
+            UciScore::mate(-1)
+        );
+        // Being mated in 2 moves
+        assert_eq!(
+            UciScore::from(Score::new(-(Score::MATE.0 - 3))),
+            UciScore::mate(-2)
+        );
+        // Regular scores convert to centipawns
+        assert_eq!(UciScore::from(Score::new(150)), UciScore::cp(150));
+        assert_eq!(UciScore::from(Score::new(-300)), UciScore::cp(-300));
+    }
+
+    #[test]
+    fn is_mate() {
+        let mut score = Score::INF;
+        assert!(!score.is_mate());
+
+        score = Score::MATE;
+        assert!(score.is_mate());
+
+        score = -Score::MINIMUM_MATE;
+        assert!(score.mated());
+
+        score = Score::MINIMUM_MATE;
+        assert!(score.is_mate());
     }
 }

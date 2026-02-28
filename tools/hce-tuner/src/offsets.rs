@@ -12,6 +12,9 @@ const DOUBLED_PAWN_SIZE: u16 = NumberOf::FILES as u16;
 const ISOLATED_PAWN_SIZE: u16 = NumberOf::FILES as u16;
 const BISHOP_PAIR_SIZE: u16 = 1;
 const KING_SAFETY_SIZE: u16 = (NumberOf::PIECE_TYPES - 1) as u16;
+const PAWN_THREAT_SIZE: u16 = NumberOf::PIECE_TYPES as u16;
+const KNIGHT_THREAT_SIZE: u16 = NumberOf::PIECE_TYPES as u16;
+const BISHOP_THREAT_SIZE: u16 = NumberOf::PIECE_TYPES as u16;
 
 impl Offsets {
     pub const PSQT: u16 = 0;
@@ -20,7 +23,10 @@ impl Offsets {
     pub const ISOLATED_PAWN: u16 = Offsets::DOUBLED_PAWN + DOUBLED_PAWN_SIZE;
     pub const BISHOP_PAIR: u16 = Offsets::ISOLATED_PAWN + ISOLATED_PAWN_SIZE;
     pub const KING_SAFETY: u16 = Offsets::BISHOP_PAIR + BISHOP_PAIR_SIZE;
-    pub const END: u16 = Offsets::KING_SAFETY + KING_SAFETY_SIZE;
+    pub const PAWN_THREAT: u16 = Offsets::KING_SAFETY + KING_SAFETY_SIZE;
+    pub const KNIGHT_THREAT: u16 = Offsets::PAWN_THREAT + PAWN_THREAT_SIZE;
+    pub const BISHOP_THREAT: u16 = Offsets::KNIGHT_THREAT + KNIGHT_THREAT_SIZE;
+    pub const END: u16 = Offsets::BISHOP_THREAT + BISHOP_THREAT_SIZE;
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
         Offsets::PSQT as usize
@@ -55,6 +61,26 @@ impl Offsets {
             "Cannot check safety if attacker if King"
         );
         Offsets::KING_SAFETY as usize + piece as usize - 1
+    }
+
+    pub(crate) fn offset_for_threat(piece: Piece, attacked_piece: Piece) -> usize {
+        assert_ne!(
+            piece,
+            Piece::King,
+            "Cannot check safety if attacker if King"
+        );
+        assert_ne!(
+            attacked_piece,
+            Piece::King,
+            "Cannot check safety if attacked piece is King"
+        );
+        let base_offset = match piece {
+            Piece::Pawn => Offsets::PAWN_THREAT as usize,
+            Piece::Knight => Offsets::KNIGHT_THREAT as usize,
+            Piece::Bishop => Offsets::BISHOP_THREAT as usize,
+            _ => unreachable!(),
+        };
+        base_offset + attacked_piece as usize
     }
 }
 
@@ -121,5 +147,26 @@ mod tests {
             assert!(king_offset >= Offsets::KING_SAFETY as usize);
             assert!(king_offset < Offsets::END as usize);
         }
+    }
+
+    #[test]
+    fn offsets_for_threats() {
+        let offset = Offsets::offset_for_threat(Piece::Pawn, Piece::Queen);
+        assert_eq!(
+            offset,
+            (Offsets::PAWN_THREAT + Piece::Queen as u16) as usize
+        );
+
+        let offset = Offsets::offset_for_threat(Piece::Knight, Piece::Rook);
+        assert_eq!(
+            offset,
+            (Offsets::KNIGHT_THREAT + Piece::Rook as u16) as usize
+        );
+
+        let offset = Offsets::offset_for_threat(Piece::Bishop, Piece::Knight);
+        assert_eq!(
+            offset,
+            (Offsets::BISHOP_THREAT + Piece::Knight as u16) as usize
+        );
     }
 }

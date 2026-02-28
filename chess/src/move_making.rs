@@ -268,7 +268,9 @@ impl Board {
             }
             // just move the piece
             self.move_piece(us, piece, from, to, update_zobrist_hash);
-            self.set_half_move_clock(self.half_move_clock() + 1);
+            if captured_piece.is_none() {
+                self.set_half_move_clock(self.half_move_clock() + 1);
+            }
         }
 
         // update the castling rights
@@ -774,5 +776,29 @@ mod tests {
             // check side to move
             assert_eq!(board.side_to_move(), Side::Black);
         }
+    }
+
+    // Test that a non-pawn capture resets the half-move clock to 0, and does not decrement it (previously a bug)
+    #[test]
+    fn non_pawn_capture_resets_half_move_clock() {
+        // Position: white knight on f3 can capture the black pawn on e5.
+        // Half-move clock is set to 5 to confirm it is reset (not decremented).
+        // FEN: rnbqkb1r/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 5 3
+        let mut board =
+            Board::from_fen("rnbqkb1r/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 5 3")
+                .unwrap();
+
+        assert_eq!(board.half_move_clock(), 5);
+
+        // Knight captures pawn: Nxe5
+        let mv_ok = board.make_uci_move("f3e5");
+        assert!(mv_ok.is_ok());
+
+        assert_eq!(
+            board.half_move_clock(),
+            0,
+            "half-move clock should be 0 after a non-pawn capture, got {}",
+            board.half_move_clock()
+        );
     }
 }

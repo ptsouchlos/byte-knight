@@ -3,7 +3,10 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign, Mul},
+};
 
 use crate::score::{LargeScoreType, ScoreType};
 
@@ -46,6 +49,57 @@ impl PhasedScore {
     }
 }
 
+impl Mul<i16> for PhasedScore {
+    type Output = Self;
+
+    fn mul(self, rhs: i16) -> Self::Output {
+        Self::new(
+            self.mg().saturating_mul(rhs) as ScoreType,
+            self.eg().saturating_mul(rhs) as ScoreType,
+        )
+    }
+}
+
+impl Add<Self> for PhasedScore {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.mg().saturating_add(rhs.mg()),
+            self.eg().saturating_add(rhs.eg()),
+        )
+    }
+}
+
+impl Add<i16> for PhasedScore {
+    type Output = Self;
+
+    fn add(self, rhs: i16) -> Self::Output {
+        Self::new(
+            self.mg().saturating_add(rhs) as ScoreType,
+            self.eg().saturating_add(rhs) as ScoreType,
+        )
+    }
+}
+
+impl AddAssign<Self> for PhasedScore {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = Self::new(
+            self.mg().saturating_add(rhs.mg()),
+            self.eg().saturating_add(rhs.eg()),
+        );
+    }
+}
+
+impl AddAssign<i16> for PhasedScore {
+    fn add_assign(&mut self, rhs: i16) {
+        *self = Self::new(
+            self.mg().saturating_add(rhs) as ScoreType,
+            self.eg().saturating_add(rhs) as ScoreType,
+        );
+    }
+}
+
 const fn phase_score(mg: ScoreType, eg: ScoreType) -> PhasedScore {
     PhasedScore::new(mg, eg)
 }
@@ -63,6 +117,8 @@ impl Display for PhasedScore {
 
 #[cfg(test)]
 mod tests {
+    use crate::{phased_score::PhasedScore, score::ScoreType};
+
     #[test]
     fn phased_score() {
         use super::PhasedScore;
@@ -86,5 +142,81 @@ mod tests {
         assert_eq!(ps.mg(), 56);
         assert_eq!(ps.eg(), -26);
         assert_eq!(ps.taper(phase, 24), 56);
+    }
+
+    #[test]
+    fn phased_score_mul() {
+        use super::PhasedScore;
+
+        let ps = PhasedScore::new(100, 50);
+        let ps2 = ps * 2;
+        assert_eq!(ps2.mg(), 200);
+        assert_eq!(ps2.eg(), 100);
+
+        let ps = PhasedScore::new(40, 80);
+        let ps2 = ps * 3;
+        assert_eq!(ps2.mg(), 120);
+        assert_eq!(ps2.eg(), 240);
+
+        let ps = PhasedScore::new(56, -26);
+        let ps2 = ps * -1;
+        assert_eq!(ps2.mg(), -56);
+        assert_eq!(ps2.eg(), 26);
+
+        let ps = PhasedScore::new(100, 500);
+        let ps2 = ps * i16::MAX;
+        assert_eq!(ps2.mg(), i16::MAX);
+        assert_eq!(ps2.eg(), i16::MAX);
+    }
+
+    #[test]
+    fn store_max_values() {
+        let ps = PhasedScore::new(i16::MAX as ScoreType, i16::MAX as ScoreType);
+        assert_eq!(ps.mg(), i16::MAX);
+        assert_eq!(ps.eg(), i16::MAX);
+    }
+
+    #[test]
+    fn phased_score_add() {
+        use super::PhasedScore;
+
+        let ps1 = PhasedScore::new(100, 50);
+        let ps2 = PhasedScore::new(200, 100);
+        let ps3 = ps1 + ps2;
+        assert_eq!(ps3.mg(), 300);
+        assert_eq!(ps3.eg(), 150);
+
+        let ps1 = PhasedScore::new(40, 80);
+        let ps2 = PhasedScore::new(120, 240);
+        let ps3 = ps1 + ps2;
+        assert_eq!(ps3.mg(), 160);
+        assert_eq!(ps3.eg(), 320);
+
+        let ps1 = PhasedScore::new(56, -26);
+        let ps2 = PhasedScore::new(-56, 26);
+        let ps3 = ps1 + ps2;
+        assert_eq!(ps3.mg(), 0);
+        assert_eq!(ps3.eg(), 0);
+
+        let mut ps1 = PhasedScore::new(100, 500);
+        let ps2 = PhasedScore::new(i16::MAX as ScoreType, i16::MAX as ScoreType);
+        ps1 += ps2;
+        assert_eq!(ps1.mg(), i16::MAX);
+        assert_eq!(ps1.eg(), i16::MAX);
+
+        let ps1 = PhasedScore::new(100, 50);
+        let ps2 = ps1 + 50;
+        assert_eq!(ps2.mg(), 150);
+        assert_eq!(ps2.eg(), 100);
+
+        let mut ps1 = PhasedScore::new(100, 50);
+        ps1 += 50;
+        assert_eq!(ps1.mg(), 150);
+        assert_eq!(ps1.eg(), 100);
+
+        let ps1 = PhasedScore::new((i16::MAX - 10) as ScoreType, (i16::MAX - 10) as ScoreType);
+        let ps2 = ps1 + 20;
+        assert_eq!(ps2.mg(), i16::MAX);
+        assert_eq!(ps2.eg(), i16::MAX);
     }
 }
