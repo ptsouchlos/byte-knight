@@ -38,7 +38,8 @@ use crate::{
     ttable::{self, TranspositionTableEntry},
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, LMR_MIN_DEPTH,
-        LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
+        LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET,
+        RAZORING_SCALING, RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
@@ -471,7 +472,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         // can we prune the current node with something other than TT?
-        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta, &mut local_pv) {
+        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta, alpha_use) {
             return score;
         }
 
@@ -674,7 +675,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         depth: ScoreType,
         ply: ScoreType,
         beta: Score,
-        local_pv: &mut PrincipleVariation,
+        alpha: Score,
     ) -> Option<Score> {
         // no pruning if we are in check or if we are in a PV node
         if board.is_in_check(&self.move_gen) || Node::PV {
@@ -682,22 +683,38 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         let static_eval = self.eval.eval(board);
+
+        // Razoring: https://www.chessprogramming.org/Razoring
+        // Check if the static eval + margin is less than alpha. For byte-knight, we prune based on qsearch evaluation.
+        // If we can't beat alpha with the qsearch score, then we fail-low.
+        let razoring_margin = RAZORING_OFFSET + RAZORING_SCALING * depth;
+        if static_eval + razoring_margin < alpha {
+            let mut brd_cpy = board.clone();
+            let mut razor_pv = PrincipleVariation::new();
+            let score =
+                self.quiescence::<NonPvNode>(&mut brd_cpy, ply, alpha, alpha + 1, &mut razor_pv);
+            if score < alpha && !score.is_mate() {
+                return Some(score);
+            }
+        }
+
+        // --------------------------------------------------------------------------------------------------------
         // Reverse futility pruning
         // https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html
         // https://www.chessprogramming.org/Reverse_Futility_Pruning
         // If the static evaluation is very high and beats beta by a depth-dependent margin, we can prune the move.
+        // --------------------------------------------------------------------------------------------------------
         if depth <= MAX_RFP_DEPTH && static_eval - RFP_MARGIN * depth > beta {
             return Some(static_eval);
         }
 
-        /*
-        Null move pruning
-        https://www.chessprogramming.org/Null_Move_Pruning
-        https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html
-        Give the opponent a free move. If they cannot improve their position (beat beta)
-        then prune the tree as our advantage is too great to bother searching further.
-        */
-
+        // --------------------------------------------------------------------------------
+        // Null move pruning
+        // https://www.chessprogramming.org/Null_Move_Pruning
+        // https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html
+        // Give the opponent a free move. If they cannot improve their position (beat beta)
+        // then prune the tree as our advantage is too great to bother searching further.
+        // --------------------------------------------------------------------------------
         // Are we left with more than just kings and pawns?
         let sufficient_material = (board.all_pieces()
             ^ board.piece_kind_bitboard(Piece::King)
@@ -715,15 +732,15 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let null_move_depth = depth - NMP_DEPTH_REDUCTION - 1;
             let mut null_board = board.clone();
             null_board.null_move();
-            let null_score = -self.negamax::<Node>(
+            let mut nmp_pv = PrincipleVariation::new();
+            let null_score = -self.negamax::<NonPvNode>(
                 &mut null_board,
                 null_move_depth,
                 ply + 1,
                 -beta,
                 -beta + 1,
-                local_pv,
+                &mut nmp_pv,
             );
-            null_board.unmake_move().unwrap();
             if null_score >= beta {
                 return Some(null_score);
             }
