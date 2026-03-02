@@ -5,7 +5,10 @@
 
 use chess::moves::Move;
 
-use crate::{node_types::NodeType, score::Score};
+use crate::{
+    node_types::NodeType,
+    score::{Score, ScoreType},
+};
 
 const BYTES_PER_MB: usize = 1024 * 1024;
 
@@ -140,7 +143,8 @@ impl TranspositionTable {
     /// - `ProbeResult` - The result of the probe.
     pub(crate) fn probe<Node: NodeType>(
         &mut self,
-        depth: i16,
+        depth: ScoreType,
+        ply: ScoreType,
         zobrist: u64,
         alpha: Score,
         beta: Score,
@@ -158,9 +162,10 @@ impl TranspositionTable {
                     // - the entry type is lower bound and the score >= beta
                     // - the entry type is upper bound and the score <= alpha
                     // see https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+                    let ply_relative_score = entry.score.ply_relative(ply);
                     if entry.flag == EntryFlag::Exact
-                        || ((entry.flag == EntryFlag::LowerBound && entry.score >= beta)
-                            || (entry.flag == EntryFlag::UpperBound && entry.score <= alpha))
+                        || ((entry.flag == EntryFlag::LowerBound && ply_relative_score >= beta)
+                            || (entry.flag == EntryFlag::UpperBound && ply_relative_score <= alpha))
                     {
                         return ProbeResult::CutOff(entry);
                     }
