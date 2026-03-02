@@ -49,7 +49,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: byte-knight-${{ matrix.target }}${{ matrix.extension }}
           path: ./target/release/${{ matrix.artifact_name }}${{ matrix.extension }}
