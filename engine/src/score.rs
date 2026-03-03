@@ -60,14 +60,14 @@ impl Score {
         Score(score)
     }
 
-    // Returns a new "mate" score (positive).
-    // This is the largest mate score possible.
+    /// Returns a new "mate" score (positive).
+    /// This is the largest mate score possible.
     pub fn new_mate() -> Score {
         Score::MATE
     }
 
-    // Returns a new "mated" score (negative).
-    // This is the largest mate score possible.
+    /// Returns a new "mated" score (negative).
+    /// This is the largest mate score possible.
     pub fn new_mated() -> Score {
         -Score::MATE
     }
