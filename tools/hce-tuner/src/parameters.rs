@@ -168,7 +168,11 @@ impl Add<Parameters> for Parameters {
 
 #[cfg(test)]
 mod tests {
-    use chess::{definitions::NumberOf, pieces::{ALL_PIECES, Piece}, side::Side};
+    use chess::{
+        definitions::NumberOf,
+        pieces::{ALL_PIECES, Piece},
+        side::Side,
+    };
     use engine::{evaluation::ByteKnightEvaluation, traits::EvalValues};
 
     use super::Parameters;
@@ -177,19 +181,6 @@ mod tests {
     #[test]
     fn parameter_access() {
         // ensure that we can access parameters correctly at the correct index
-        let params = Parameters::create_from_engine_values();
-        let eval = ByteKnightEvaluation::default();
-        for piece in ALL_PIECES {
-            for square in 0..NumberOf::SQUARES as u8 {
-                let side = Side::White;
-                let value = params.value(piece, square, side);
-                assert_eq!(value, eval.values().psqt(square, piece, side).into());
-            }
-        }
-    }
-
-    #[test]
-    fn create_from_engine_values_all_params() {
         let params = Parameters::create_from_engine_values();
         let eval = ByteKnightEvaluation::default();
 
@@ -251,7 +242,9 @@ mod tests {
             for &attacked in ALL_PIECES.iter().filter(|&&p| p != Piece::King) {
                 assert_eq!(
                     params[Offsets::offset_for_threat(attacker, attacked)],
-                    eval.values().threat_value(attacker, attacked, Side::White).into(),
+                    eval.values()
+                        .threat_value(attacker, attacked, Side::White)
+                        .into(),
                     "Threat mismatch for {attacker:?} -> {attacked:?}"
                 );
             }
