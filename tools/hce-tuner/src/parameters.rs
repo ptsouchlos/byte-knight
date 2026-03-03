@@ -59,39 +59,40 @@ impl Parameters {
 
         // Add passed pawn bonuses
         for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
-            params[Offsets::PASSED_PAWN as usize + idx] = (*val).into();
+            params[Offsets::PASSED_PAWN + idx] = (*val).into();
         }
 
         // Add doubled pawn values
         for (idx, val) in DOUBLED_PAWN_VALUES.iter().enumerate() {
-            params[Offsets::DOUBLED_PAWN as usize + idx] = (*val).into();
+            params[Offsets::DOUBLED_PAWN + idx] = (*val).into();
         }
 
+        // Add isolated pawn values
         for (idx, val) in ISOLATED_PAWN_VALUES.iter().enumerate() {
-            params[Offsets::ISOLATED_PAWN as usize + idx] = (*val).into();
+            params[Offsets::ISOLATED_PAWN + idx] = (*val).into();
         }
 
         // Bishop pair
-        params[Offsets::BISHOP_PAIR as usize] = BISHOP_PAIR_BONUS.into();
+        params[Offsets::BISHOP_PAIR] = BISHOP_PAIR_BONUS.into();
 
         // King safety
         for (idx, val) in KING_SAFETY.iter().enumerate() {
-            params[Offsets::KING_SAFETY as usize + idx] = (*val).into();
+            params[Offsets::KING_SAFETY + idx] = (*val).into();
         }
 
         // Pawn threats
         for (idx, val) in PAWN_THREAT.iter().enumerate() {
-            params[Offsets::PAWN_THREAT as usize + idx] = (*val).into();
+            params[Offsets::PAWN_THREAT + idx] = (*val).into();
         }
 
         // Knight threats
         for (idx, val) in KNIGHT_THREAT.iter().enumerate() {
-            params[Offsets::KNIGHT_THREAT as usize + idx] = (*val).into();
+            params[Offsets::KNIGHT_THREAT + idx] = (*val).into();
         }
 
         // Bishop threats
         for (idx, val) in BISHOP_THREAT.iter().enumerate() {
-            params[Offsets::BISHOP_THREAT as usize + idx] = (*val).into();
+            params[Offsets::BISHOP_THREAT + idx] = (*val).into();
         }
 
         params
@@ -109,7 +110,7 @@ impl Parameters {
 
         // Add passed pawn bonuses
         for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
-            params[Offsets::PASSED_PAWN as usize + idx] = (*val).into();
+            params[Offsets::PASSED_PAWN + idx] = (*val).into();
         }
 
         params

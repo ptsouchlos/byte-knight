@@ -7,10 +7,10 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
-use chess::{attacks, bitboard_helpers, board::Board, pieces::Piece, side::Side};
-use engine::{hce_values::GAME_PHASE_INC, hce_values::GAME_PHASE_MAX};
+use chess::{board::Board, side::Side};
+use engine::{evaluation::Evaluation, traits::Eval};
 
-use crate::{offsets::Offsets, tuning_position::TuningPosition};
+use crate::{tracing_values::TracingValues, tuning_position::TuningPosition};
 
 pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
     let mut positions = Vec::new();
@@ -55,34 +55,12 @@ fn process_epd_line(line: &str) -> Result<(Board, f64)> {
 fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     let (board, game_result) = process_epd_line(line)?;
 
-    let mut w_indexes = Vec::new();
-    let mut b_indexes = Vec::new();
-    // loop through all pieces on the board and calculate the index into the parameter array
-    // for each piece
-    let mut phase = 0;
-    for piece in Piece::iter() {
-        let mut w_bb = *board.piece_bitboard(piece, Side::White);
-        let mut b_bb = *board.piece_bitboard(piece, Side::Black);
-
-        // update game phase
-        phase += w_bb.as_number().count_ones() as usize * GAME_PHASE_INC[piece as usize] as usize;
-        phase += b_bb.as_number().count_ones() as usize * GAME_PHASE_INC[piece as usize] as usize;
-        while w_bb.as_number() > 0 {
-            let sq = bitboard_helpers::next_bit(&mut w_bb);
-            // note we still have to flip the square for the white side
-            let index = Offsets::offset_for_piece_and_square(sq, piece, Side::White);
-            w_indexes.push(index);
-        }
-        // repeat for black
-        while b_bb.as_number() > 0 {
-            let sq = bitboard_helpers::next_bit(&mut b_bb);
-            let index = Offsets::offset_for_piece_and_square(sq, piece, Side::Black);
-            b_indexes.push(index);
-        }
-    }
+    let tracing = TracingValues::new();
+    let eval = Evaluation::new(tracing);
+    let _ = eval.eval(&board);
+    let (white_indexes, black_indexes, scaled_phase) = eval.into_values().into_trace();
 
     let is_white_relative = matches!(game_result, 0.0 | 0.5 | 1.0);
-
     let result = if is_white_relative {
         game_result
     } else {
@@ -92,159 +70,12 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         }
     };
 
-    // detect passed pawns
-    let pawn_eval = engine::pawn_structure::PawnEvaluator::new();
-    let pawn_structure = pawn_eval.detect_pawn_structure(&board);
-    let mut white_pawns_bb = pawn_structure.passed_pawns[Side::White as usize];
-    let mut black_pawns_bb = pawn_structure.passed_pawns[Side::Black as usize];
-
-    while white_pawns_bb.as_number() > 0 {
-        let white_pawn_idx = bitboard_helpers::next_bit(&mut white_pawns_bb);
-        let index = Offsets::offset_for_passed_pawn(white_pawn_idx, Side::White);
-        w_indexes.push(index);
-    }
-
-    while black_pawns_bb.as_number() > 0 {
-        let black_pawn_idx = bitboard_helpers::next_bit(&mut black_pawns_bb);
-        let index = Offsets::offset_for_passed_pawn(black_pawn_idx, Side::Black);
-        b_indexes.push(index);
-    }
-
-    // detect doubled pawns
-    let mut white_doubled_bb = pawn_structure.doubled_pawns[Side::White as usize];
-    let mut black_doubled_bb = pawn_structure.doubled_pawns[Side::Black as usize];
-
-    while white_doubled_bb.as_number() > 0 {
-        let white_doubled_idx = bitboard_helpers::next_bit(&mut white_doubled_bb);
-        let index = Offsets::offset_for_doubled_pawn(white_doubled_idx, Side::White);
-        w_indexes.push(index);
-    }
-
-    while black_doubled_bb.as_number() > 0 {
-        let black_doubled_idx = bitboard_helpers::next_bit(&mut black_doubled_bb);
-        let index = Offsets::offset_for_doubled_pawn(black_doubled_idx, Side::Black);
-        b_indexes.push(index);
-    }
-
-    let mut isolated_white_bb = pawn_structure.isolated_pawns[Side::White as usize];
-    let mut isolated_black_bb = pawn_structure.isolated_pawns[Side::Black as usize];
-
-    while isolated_white_bb.as_number() > 0 {
-        let isolated_white_idx = bitboard_helpers::next_bit(&mut isolated_white_bb);
-        let index = Offsets::offset_for_isolated_pawn(isolated_white_idx, Side::White);
-        w_indexes.push(index);
-    }
-
-    while isolated_black_bb.as_number() > 0 {
-        let isolated_black_idx = bitboard_helpers::next_bit(&mut isolated_black_bb);
-        let index = Offsets::offset_for_isolated_pawn(isolated_black_idx, Side::Black);
-        b_indexes.push(index);
-    }
-
-    // Bishop pair bonus
-    if board
-        .piece_bitboard(Piece::Bishop, Side::White)
-        .number_of_occupied_squares()
-        >= 2
-    {
-        w_indexes.push(Offsets::offset_for_bishop_pair());
-    }
-
-    if board
-        .piece_bitboard(Piece::Bishop, Side::Black)
-        .number_of_occupied_squares()
-        >= 2
-    {
-        b_indexes.push(Offsets::offset_for_bishop_pair());
-    }
-
-    // King safety
-    for side in [Side::White, Side::Black] {
-        let king_sq = board.king_square(side);
-        let king_ring = attacks::king(king_sq);
-        let opposite = side.opposite();
-        // loop through all pieces except king
-        for piece in Piece::iter().filter(|&p| p != Piece::King) {
-            // Get enemy piece bb
-            let mut piece_bb = *board.piece_bitboard(piece, opposite);
-            while piece_bb.as_number() > 0 {
-                let sq = bitboard_helpers::next_bit(&mut piece_bb);
-                let piece_attacks =
-                    attacks::for_piece_on_square(piece, sq as u8, board.all_pieces(), opposite);
-
-                let overlap = piece_attacks & king_ring;
-                if overlap.number_of_occupied_squares() > 0 {
-                    let index_ref = match side {
-                        Side::White => &mut w_indexes,
-                        Side::Black => &mut b_indexes,
-                    };
-
-                    for _ in 0..overlap.number_of_occupied_squares() {
-                        index_ref.push(Offsets::offset_for_king_safety(piece));
-                    }
-                }
-            }
-        }
-    }
-
-    // Threats
-    for side in [Side::White, Side::Black] {
-        let them = side.opposite();
-        let pawn_attacks = attacks::for_piece(Piece::Pawn, &board, side);
-        let knight_attacks = attacks::for_piece(Piece::Knight, &board, side);
-        let bishop_attacks = attacks::for_piece(Piece::Bishop, &board, side);
-
-        let indexes = match side {
-            Side::White => &mut w_indexes,
-            Side::Black => &mut b_indexes,
-        };
-
-        // Pawn threats
-        for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Knight, Piece::Queen] {
-            let piece_bb = *board.piece_bitboard(piece_attacked, them);
-
-            let pawn_threat_count = (pawn_attacks & piece_bb).number_of_occupied_squares() as i32;
-            if pawn_threat_count == 0 {
-                continue;
-            }
-            for _ in 0..pawn_threat_count {
-                indexes.push(Offsets::offset_for_threat(Piece::Pawn, piece_attacked));
-            }
-        }
-
-        // Knight threats
-        for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Queen] {
-            let piece_bb = *board.piece_bitboard(piece_attacked, them);
-
-            let knight_threat_count =
-                (knight_attacks & piece_bb).number_of_occupied_squares() as i32;
-            if knight_threat_count == 0 {
-                continue;
-            }
-            for _ in 0..knight_threat_count {
-                indexes.push(Offsets::offset_for_threat(Piece::Knight, piece_attacked));
-            }
-        }
-
-        // Bishop threats
-        for piece_attacked in [Piece::Rook, Piece::Knight, Piece::Queen] {
-            let piece_bb = *board.piece_bitboard(piece_attacked, them);
-
-            let bishop_threat_count =
-                (bishop_attacks & piece_bb).number_of_occupied_squares() as i32;
-            if bishop_threat_count == 0 {
-                continue;
-            }
-            for _ in 0..bishop_threat_count {
-                indexes.push(Offsets::offset_for_threat(Piece::Bishop, piece_attacked));
-            }
-        }
-    }
-
-    let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
-    let tuning_pos = TuningPosition::new(w_indexes, b_indexes, scaled_phase, result);
-
-    Ok(tuning_pos)
+    Ok(TuningPosition::new(
+        white_indexes,
+        black_indexes,
+        scaled_phase,
+        result,
+    ))
 }
 
 /// Parse the game result from part of the EPD line.
