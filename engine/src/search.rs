@@ -423,8 +423,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         board: &mut Board,
         mut depth: ScoreType,
         ply: ScoreType,
-        alpha: Score,
-        beta: Score,
+        mut alpha: Score,
+        mut beta: Score,
         pv: &mut PrincipleVariation,
     ) -> Score
     where
@@ -432,12 +432,20 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     {
         // increment node count
         self.nodes += 1;
-        let alpha_original = alpha;
-        let mut alpha_use = alpha;
 
         if depth <= 0 {
             return self.quiescence::<Node>(board, ply, alpha, beta, pv);
         }
+
+        // Mate Distance Pruning
+        // If we have already found a mate, prune nodes where no shorter mate is possible
+        alpha = alpha.max(Score::mated_in(ply));
+        beta = beta.min(Score::mate_in(ply + 1));
+        if alpha >= beta {
+            return alpha;
+        }
+
+        let alpha_original = alpha;
 
         let mut local_pv = PrincipleVariation::new();
         // clear the current PV because this is a new position
@@ -471,7 +479,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         // can we prune the current node with something other than TT?
-        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta, alpha_use) {
+        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta, alpha) {
             return score;
         }
 
@@ -551,7 +559,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 score =
                 // Principal Variation Search (PVS)
                 if moves_seen == 0 {
-                    -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
+                    -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
                 } else {
                     let reduction = if mv.is_quiet() && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
                         lmr_reduction
@@ -563,19 +571,19 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     let reduced_depth = depth.saturating_sub(reduction);
 
                     // Search with a null window at a reduced depth
-                    let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
+                    let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha - 1, -alpha, &mut local_pv);
 
                     // If the reduced depth failed, verify again at full depth with null window to avoid a more expensive full re-search
-                    temp_score = if temp_score > alpha_use && reduction > 1 {
-                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv)
+                    temp_score = if temp_score > alpha && reduction > 1 {
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha - 1, -alpha, &mut local_pv)
                     }
                     else {
                         temp_score
                     };
 
                     // If it fails again, we now know we need to do a full re-search
-                    if temp_score > alpha_use && temp_score < beta {
-                        -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
+                    if temp_score > alpha && temp_score < beta {
+                        -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
                     }
                     else {
                         temp_score
@@ -597,9 +605,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     pv.extend(mv, &local_pv);
                 }
 
-                alpha_use = alpha_use.max(best_score);
+                alpha = alpha.max(best_score);
                 // Did we fail high?
-                if alpha_use >= beta {
+                if alpha >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
