@@ -119,30 +119,18 @@ mod tests {
 
         let doubled_offset =
             Offsets::offset_for_doubled_pawn(sq.to_square_index() as usize, Side::White);
-        assert_eq!(
-            Offsets::DOUBLED_PAWN + file as usize,
-            doubled_offset
-        );
+        assert_eq!(Offsets::DOUBLED_PAWN + file as usize, doubled_offset);
 
         let double_offset_2 =
             Offsets::offset_for_doubled_pawn(sq.to_square_index() as usize, Side::Black);
-        assert_eq!(
-            Offsets::DOUBLED_PAWN + file as usize,
-            double_offset_2
-        );
+        assert_eq!(Offsets::DOUBLED_PAWN + file as usize, double_offset_2);
 
         let isolated_offset =
             Offsets::offset_for_isolated_pawn(sq.to_square_index() as usize, Side::White);
-        assert_eq!(
-            Offsets::ISOLATED_PAWN + file as usize,
-            isolated_offset
-        );
+        assert_eq!(Offsets::ISOLATED_PAWN + file as usize, isolated_offset);
         let isolated_offset_2 =
             Offsets::offset_for_isolated_pawn(sq.to_square_index() as usize, Side::Black);
-        assert_eq!(
-            Offsets::ISOLATED_PAWN + file as usize,
-            isolated_offset_2
-        );
+        assert_eq!(Offsets::ISOLATED_PAWN + file as usize, isolated_offset_2);
 
         let bishop_pair_offset = Offsets::offset_for_bishop_pair();
         assert_eq!(Offsets::BISHOP_PAIR, bishop_pair_offset);
@@ -157,21 +145,12 @@ mod tests {
     #[test]
     fn offsets_for_threats() {
         let offset = Offsets::offset_for_threat(Piece::Pawn, Piece::Queen);
-        assert_eq!(
-            offset,
-            Offsets::PAWN_THREAT + Piece::Queen as usize
-        );
+        assert_eq!(offset, Offsets::PAWN_THREAT + Piece::Queen as usize);
 
         let offset = Offsets::offset_for_threat(Piece::Knight, Piece::Rook);
-        assert_eq!(
-            offset,
-            Offsets::KNIGHT_THREAT + Piece::Rook as usize
-        );
+        assert_eq!(offset, Offsets::KNIGHT_THREAT + Piece::Rook as usize);
 
         let offset = Offsets::offset_for_threat(Piece::Bishop, Piece::Knight);
-        assert_eq!(
-            offset,
-            Offsets::BISHOP_THREAT + Piece::Knight as usize
-        );
+        assert_eq!(offset, Offsets::BISHOP_THREAT + Piece::Knight as usize);
     }
 }

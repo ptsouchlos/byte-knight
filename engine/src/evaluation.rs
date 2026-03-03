@@ -92,7 +92,9 @@ impl<Values: EvalValues> Evaluation<Values> {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
             let count = (knight_attacks & piece_bb).number_of_occupied_squares();
             for _ in 0..count {
-                score += self.values().threat_value(Piece::Knight, piece_attacked, us);
+                score += self
+                    .values()
+                    .threat_value(Piece::Knight, piece_attacked, us);
             }
         }
 
@@ -101,7 +103,9 @@ impl<Values: EvalValues> Evaluation<Values> {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
             let count = (bishop_attacks & piece_bb).number_of_occupied_squares();
             for _ in 0..count {
-                score += self.values().threat_value(Piece::Bishop, piece_attacked, us);
+                score += self
+                    .values()
+                    .threat_value(Piece::Bishop, piece_attacked, us);
             }
         }
 
