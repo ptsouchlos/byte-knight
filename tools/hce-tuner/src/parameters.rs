@@ -9,10 +9,7 @@ use chess::{
     side::Side,
     square,
 };
-use engine::hce_values::{
-    BISHOP_PAIR_BONUS, BISHOP_THREAT, DOUBLED_PAWN_VALUES, ISOLATED_PAWN_VALUES, KING_SAFETY,
-    KNIGHT_THREAT, PASSED_PAWN_BONUS, PAWN_THREAT, PSQTS,
-};
+use engine::hce_values::PASSED_PAWN_BONUS;
 
 use crate::{
     math,
@@ -48,51 +45,52 @@ impl Parameters {
 
     #[allow(dead_code)]
     pub(crate) fn create_from_engine_values() -> Parameters {
+        use engine::{evaluation::ByteKnightEvaluation, traits::EvalValues};
+
         let mut params = Parameters::default();
+        let values = ByteKnightEvaluation::default().into_values();
+
+        // PSQTs: enumerate all (piece, square) in Black's perspective (no flip)
         for &piece in ALL_PIECES.iter() {
-            for sq in 0..NumberOf::SQUARES {
-                // seed from our PSQTS table
-                let s = PSQTS[piece as usize][sq].into();
-                params[64 * piece as usize + sq] = s;
+            for sq in 0..NumberOf::SQUARES as u8 {
+                let idx = Offsets::offset_for_piece_and_square(sq as usize, piece, Side::Black);
+                params[idx] = values.psqt(sq, piece, Side::Black).into();
             }
         }
 
-        // Add passed pawn bonuses
-        for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
-            params[Offsets::PASSED_PAWN + idx] = (*val).into();
+        // Passed pawn: 6 entries, one per rank 1-6
+        for rank in 1..=NumberOf::PASSED_PAWN_RANKS as u8 {
+            let sq = rank * 8; // a-file square on this rank; file is irrelevant
+            let idx = Offsets::offset_for_passed_pawn(sq as usize, Side::Black);
+            params[idx] = values.passed_pawn_bonus(sq, Side::Black).into();
         }
 
-        // Add doubled pawn values
-        for (idx, val) in DOUBLED_PAWN_VALUES.iter().enumerate() {
-            params[Offsets::DOUBLED_PAWN + idx] = (*val).into();
+        // Doubled/isolated pawn: 8 entries each, one per file
+        for file in 0..8u8 {
+            let sq = file; // rank 0; rank is irrelevant for file-indexed features
+            params[Offsets::offset_for_doubled_pawn(sq as usize, Side::White)] =
+                values.doubled_pawn_value(sq, Side::White).into();
+            params[Offsets::offset_for_isolated_pawn(sq as usize, Side::White)] =
+                values.isolated_pawn_value(sq, Side::White).into();
         }
 
-        // Add isolated pawn values
-        for (idx, val) in ISOLATED_PAWN_VALUES.iter().enumerate() {
-            params[Offsets::ISOLATED_PAWN + idx] = (*val).into();
+        // Bishop pair: single value
+        params[Offsets::offset_for_bishop_pair()] =
+            values.bishop_pair_bonus_value(Side::White).into();
+
+        // King safety: one per non-King attacker piece
+        for &piece in ALL_PIECES.iter().filter(|&&p| p != Piece::King) {
+            let idx = Offsets::offset_for_king_safety(piece);
+            params[idx] = values.king_safety_value(piece, Side::White).into();
         }
 
-        // Bishop pair
-        params[Offsets::BISHOP_PAIR] = BISHOP_PAIR_BONUS.into();
-
-        // King safety
-        for (idx, val) in KING_SAFETY.iter().enumerate() {
-            params[Offsets::KING_SAFETY + idx] = (*val).into();
-        }
-
-        // Pawn threats
-        for (idx, val) in PAWN_THREAT.iter().enumerate() {
-            params[Offsets::PAWN_THREAT + idx] = (*val).into();
-        }
-
-        // Knight threats
-        for (idx, val) in KNIGHT_THREAT.iter().enumerate() {
-            params[Offsets::KNIGHT_THREAT + idx] = (*val).into();
-        }
-
-        // Bishop threats
-        for (idx, val) in BISHOP_THREAT.iter().enumerate() {
-            params[Offsets::BISHOP_THREAT + idx] = (*val).into();
+        // Threats (pawn/knight/bishop can threaten non-King pieces)
+        // King slot stays TuningScore::default() = 0, matching S(0,0) in the engine arrays
+        for &attacker in &[Piece::Pawn, Piece::Knight, Piece::Bishop] {
+            for &attacked in ALL_PIECES.iter().filter(|&&p| p != Piece::King) {
+                let idx = Offsets::offset_for_threat(attacker, attacked);
+                params[idx] = values.threat_value(attacker, attacked, Side::White).into();
+            }
         }
 
         params
@@ -170,10 +168,11 @@ impl Add<Parameters> for Parameters {
 
 #[cfg(test)]
 mod tests {
-    use chess::{definitions::NumberOf, pieces::ALL_PIECES, side::Side};
+    use chess::{definitions::NumberOf, pieces::{ALL_PIECES, Piece}, side::Side};
     use engine::{evaluation::ByteKnightEvaluation, traits::EvalValues};
 
     use super::Parameters;
+    use crate::offsets::Offsets;
 
     #[test]
     fn parameter_access() {
@@ -185,6 +184,76 @@ mod tests {
                 let side = Side::White;
                 let value = params.value(piece, square, side);
                 assert_eq!(value, eval.values().psqt(square, piece, side).into());
+            }
+        }
+    }
+
+    #[test]
+    fn create_from_engine_values_all_params() {
+        let params = Parameters::create_from_engine_values();
+        let eval = ByteKnightEvaluation::default();
+
+        // PSQTs
+        for &piece in ALL_PIECES.iter() {
+            for sq in 0..NumberOf::SQUARES as u8 {
+                let idx = Offsets::offset_for_piece_and_square(sq as usize, piece, Side::Black);
+                assert_eq!(
+                    params[idx],
+                    eval.values().psqt(sq, piece, Side::Black).into(),
+                    "PSQT mismatch for {piece:?} sq={sq}"
+                );
+            }
+        }
+
+        // Passed pawn bonuses (ranks 1-6)
+        for rank in 1..=NumberOf::PASSED_PAWN_RANKS as u8 {
+            let sq = rank * 8;
+            let idx = Offsets::offset_for_passed_pawn(sq as usize, Side::Black);
+            assert_eq!(
+                params[idx],
+                eval.values().passed_pawn_bonus(sq, Side::Black).into(),
+                "Passed pawn mismatch at rank={rank}"
+            );
+        }
+
+        // Doubled / isolated pawn (by file)
+        for file in 0..8u8 {
+            let sq = file;
+            assert_eq!(
+                params[Offsets::offset_for_doubled_pawn(sq as usize, Side::White)],
+                eval.values().doubled_pawn_value(sq, Side::White).into(),
+                "Doubled pawn mismatch at file={file}"
+            );
+            assert_eq!(
+                params[Offsets::offset_for_isolated_pawn(sq as usize, Side::White)],
+                eval.values().isolated_pawn_value(sq, Side::White).into(),
+                "Isolated pawn mismatch at file={file}"
+            );
+        }
+
+        // Bishop pair
+        assert_eq!(
+            params[Offsets::offset_for_bishop_pair()],
+            eval.values().bishop_pair_bonus_value(Side::White).into()
+        );
+
+        // King safety
+        for &piece in ALL_PIECES.iter().filter(|&&p| p != Piece::King) {
+            assert_eq!(
+                params[Offsets::offset_for_king_safety(piece)],
+                eval.values().king_safety_value(piece, Side::White).into(),
+                "King safety mismatch for {piece:?}"
+            );
+        }
+
+        // Threats
+        for &attacker in &[Piece::Pawn, Piece::Knight, Piece::Bishop] {
+            for &attacked in ALL_PIECES.iter().filter(|&&p| p != Piece::King) {
+                assert_eq!(
+                    params[Offsets::offset_for_threat(attacker, attacked)],
+                    eval.values().threat_value(attacker, attacked, Side::White).into(),
+                    "Threat mismatch for {attacker:?} -> {attacked:?}"
+                );
             }
         }
     }
