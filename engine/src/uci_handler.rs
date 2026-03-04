@@ -86,8 +86,7 @@ impl UciHandler {
                         writeln!(stdout, "{}", UciResponse::<String>::ReadyOk).unwrap();
                     }
                     UciCommand::Uci => {
-                        let name =
-                            UciResponse::Name(format!("{} {}", About::NAME, About::VERSION));
+                        let name = UciResponse::Name(format!("{} {}", About::NAME, About::VERSION));
                         let authors = UciResponse::Author(About::AUTHORS.to_string());
 
                         let options = vec![
