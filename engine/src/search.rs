@@ -454,7 +454,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         ) {
             ttable::ProbeResult::CutOff(entry) => {
                 // we have a cutoff, so return the score, but only in a non-PV node
-                self.nodes += 1;
                 if !Node::PV {
                     return entry.score.ply_relative(ply);
                 }
