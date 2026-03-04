@@ -779,6 +779,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return Score::DRAW;
         }
 
+        let in_check = board.is_in_check(&self.move_gen);
         let standing_eval = self.eval.eval(board);
 
         // Have we exceeded max ply?
@@ -786,10 +787,16 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return standing_eval;
         }
 
-        if standing_eval >= beta {
-            return beta;
-        }
-        let mut alpha_use: Score = alpha.max(standing_eval);
+        // Stand-pat: when not in check we can always choose not to capture.
+        // When in check we are forced to move, so stand-pat does not apply.
+        let mut alpha_use: Score = if !in_check {
+            if standing_eval >= beta {
+                return beta;
+            }
+            alpha.max(standing_eval)
+        } else {
+            alpha
+        };
 
         let mut move_list = MoveList::new();
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
@@ -799,15 +806,23 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // clear the current PV because this is a new position
         pv.clear();
 
-        // we only want captures here
-        let mut captures = move_list
-            .iter()
-            .filter(|mv| mv.captured_piece().is_some())
-            .copied()
-            .collect::<Vec<_>>();
+        // When in check we must consider all moves; otherwise captures only.
+        let mut moves: Vec<Move> = if in_check {
+            move_list.iter().copied().collect()
+        } else {
+            move_list
+                .iter()
+                .filter(|mv| mv.captured_piece().is_some())
+                .copied()
+                .collect()
+        };
 
-        // no captures
-        if captures.is_empty() {
+        if moves.is_empty() {
+            // In check with no legal moves: checkmate
+            if in_check {
+                return Score::new_mated() + ply;
+            }
+            // Quiet position with no captures: stand pat
             return standing_eval;
         }
 
@@ -834,7 +849,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // sort moves by MVV/LVA
         let classify_res = MoveOrder::classify_all(
             board.side_to_move(),
-            captures.as_slice(),
+            moves.as_slice(),
             &tt_move,
             self.history_table,
             &mut move_order_list,
@@ -843,10 +858,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // TODO(PT): Should we log a message to the CLI or a log?
         assert!(classify_res.is_ok());
 
-        let captures_slice = captures.as_mut_slice();
-        let move_iter = InplaceIncrementalSort::new(captures_slice, &mut move_order_list);
+        let moves_slice = moves.as_mut_slice();
+        let move_iter = InplaceIncrementalSort::new(moves_slice, &mut move_order_list);
 
-        let mut best = standing_eval;
+        // When in check there is no stand-pat floor, so begin from -INF.
+        let mut best = if in_check { -Score::INF } else { standing_eval };
         let mut best_move = tt_move;
         let original_alpha = alpha_use;
 
