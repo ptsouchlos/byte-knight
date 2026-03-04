@@ -437,12 +437,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return self.quiescence::<Node>(board, ply, alpha, beta, pv);
         }
 
-        // Mate Distance Pruning
-        // If we have already found a mate, prune nodes where no shorter mate is possible
-        alpha = alpha.max(Score::mated_in(ply));
-        beta = beta.min(Score::mate_in(ply + 1));
-        if alpha >= beta {
-            return alpha;
+        if !Node::ROOT {
+            // Mate Distance Pruning
+            // If we have already found a mate, prune nodes where no shorter mate is possible
+            alpha = alpha.max(Score::mated_in(ply));
+            beta = beta.min(Score::mate_in(ply) + 1);
+            if alpha >= beta {
+                return alpha;
+            }
         }
 
         let alpha_original = alpha;
