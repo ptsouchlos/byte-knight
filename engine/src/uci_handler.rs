@@ -27,19 +27,12 @@ fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
 }
 
 fn move_to_uci_move(mv: &Move) -> UciMove {
-    let promotion = mv.promotion_piece().map(|p| p.as_char());
-
-    match promotion {
-        Some(promotion) => UciMove {
-            src: square_index_to_uci_square(mv.from()),
-            dst: square_index_to_uci_square(mv.to()),
-            promote: Some(uci_parser::Piece::from_str(&promotion.to_string()).unwrap()),
-        },
-        None => UciMove {
-            src: square_index_to_uci_square(mv.from()),
-            dst: square_index_to_uci_square(mv.to()),
-            promote: None,
-        },
+    UciMove {
+        src: square_index_to_uci_square(mv.from()),
+        dst: square_index_to_uci_square(mv.to()),
+        promote: mv
+            .promotion_piece()
+            .map(|p| uci_parser::Piece::from_str(&p.as_char().to_string()).unwrap()),
     }
 }
 
