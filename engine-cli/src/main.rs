@@ -72,7 +72,6 @@ fn run_uci() {
             let result = handler.run();
             if let Err(e) = result {
                 eprintln!("Error running engine: {e}");
-                exit(1);
             }
         })
         .unwrap();
