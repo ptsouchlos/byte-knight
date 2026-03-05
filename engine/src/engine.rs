@@ -134,3 +134,31 @@ impl Default for Engine {
         Engine::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_game_resets_board() {
+        let mut engine = Engine::new();
+        engine.set_position(None, &["e2e4".to_string()]).unwrap();
+        engine.new_game();
+        assert_eq!(engine.board().to_fen(), chess::definitions::DEFAULT_FEN);
+    }
+
+    #[test]
+    fn set_position_applies_moves() {
+        let mut engine = Engine::new();
+        engine.set_position(None, &["e2e4".to_string()]).unwrap();
+        assert_ne!(engine.board().to_fen(), chess::definitions::DEFAULT_FEN);
+    }
+
+    #[test]
+    fn set_hash_size_rejects_out_of_bounds() {
+        let mut e = Engine::new();
+        assert!(e.set_hash_size(0).is_err());
+        assert!(e.set_hash_size(99999).is_err());
+        assert!(e.set_hash_size(64).is_ok());
+    }
+}
