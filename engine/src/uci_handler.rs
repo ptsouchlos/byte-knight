@@ -9,6 +9,7 @@ use std::{
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
+        mpsc::Receiver,
     },
 };
 
@@ -36,47 +37,60 @@ fn move_to_uci_move(mv: &Move) -> UciMove {
     }
 }
 
-pub struct UciHandler {
+pub struct UciHandler<Writable: Write> {
     engine: Engine,
     stop_flag: Arc<AtomicBool>,
+    output: Writable,
 }
 
-impl UciHandler {
+impl UciHandler<io::Stdout> {
     pub fn new() -> Self {
+        Self::with_output(io::stdout())
+    }
+}
+
+impl<W: Write> UciHandler<W> {
+    pub fn with_output(output: W) -> Self {
         Self {
             engine: Engine::new(),
             stop_flag: Arc::new(AtomicBool::new(false)),
+            output,
         }
     }
 
     /// Run the UCI protocol loop. This blocks until a `quit` command is received.
     pub fn run(&mut self) -> anyhow::Result<()> {
-        println!("{}", About::BANNER);
-        println!(
+        writeln!(self.output, "{}", About::BANNER)?;
+        writeln!(
+            self.output,
             "{} {} by {} <{}>",
             About::NAME,
             About::VERSION,
             About::AUTHORS,
             About::EMAIL
-        );
+        )?;
 
         let mut input_handler = InputHandler::new(Arc::clone(&self.stop_flag));
-        let stdout_handle = io::stdout();
+        self.dispatch_loop(input_handler.receiver())?;
+        input_handler.stop();
+        Ok(())
+    }
 
-        'engine_loop: while let Ok(command) = input_handler.receiver().recv() {
-            let mut stdout = stdout_handle.lock();
-
+    pub(crate) fn dispatch_loop(
+        &mut self,
+        receiver: &Receiver<CommandProxy>,
+    ) -> anyhow::Result<()> {
+        'engine_loop: while let Ok(command) = receiver.recv() {
             match command {
                 CommandProxy::Uci(uci_command) => match uci_command {
                     UciCommand::Debug(debug) => {
                         self.engine.set_debug(debug);
                     }
                     UciCommand::Quit => {
-                        input_handler.stop();
                         break 'engine_loop;
                     }
                     UciCommand::IsReady => {
-                        writeln!(stdout, "{}", UciResponse::<String>::ReadyOk).unwrap();
+                        writeln!(self.output, "{}", UciResponse::<String>::ReadyOk)?;
                     }
                     UciCommand::Uci => {
                         let name = UciResponse::Name(format!("{} {}", About::NAME, About::VERSION));
@@ -87,12 +101,12 @@ impl UciHandler {
                             UciOption::<&str, i32>::spin("Threads", 1, 1, 1),
                         ];
 
+                        writeln!(self.output, "{name}")?;
+                        writeln!(self.output, "{authors}")?;
                         for option in options {
-                            writeln!(stdout, "{}", UciResponse::Option(option)).unwrap();
+                            writeln!(self.output, "{}", UciResponse::Option(option))?;
                         }
-                        writeln!(stdout, "{name}").unwrap();
-                        writeln!(stdout, "{authors}").unwrap();
-                        writeln!(stdout, "{}", UciResponse::<String>::UciOk).unwrap();
+                        writeln!(self.output, "{}", UciResponse::<String>::UciOk)?;
                     }
                     UciCommand::UciNewGame => {
                         self.engine.new_game();
@@ -101,16 +115,14 @@ impl UciHandler {
                         let move_strings: Vec<String> =
                             moves.iter().map(|m| m.to_string()).collect();
                         let result = self.engine.set_position(fen.as_deref(), &move_strings);
-                        if let Some(failure) = result.err() {
-                            eprintln!("Failed to set engine position: {}", failure.to_string());
+                        if let Err(e) = result {
+                            eprintln!("Failed to set engine position: {e}");
                         }
                     }
                     UciCommand::Go(search_options) => {
                         let info = UciInfo::default()
                             .string(format!("searching {}", self.engine.board().to_fen()));
-                        writeln!(stdout, "{}", UciResponse::info(info)).unwrap();
-                        // Drop stdout lock before search — search prints UCI info lines directly
-                        drop(stdout);
+                        writeln!(self.output, "{}", UciResponse::info(info))?;
 
                         let search_params =
                             SearchParameters::new(&search_options, self.engine.board());
@@ -119,15 +131,13 @@ impl UciHandler {
                         let result = self
                             .engine
                             .search(search_params, Arc::clone(&self.stop_flag));
-
                         let best_move = result.best_move;
                         let move_output = UciResponse::BestMove {
                             bestmove: best_move
                                 .map(|bot_move| move_to_uci_move(&bot_move).to_string()),
                             ponder: None,
                         };
-                        let mut stdout = stdout_handle.lock();
-                        writeln!(stdout, "{move_output}").unwrap();
+                        writeln!(self.output, "{move_output}")?;
                     }
                     UciCommand::SetOption { name, value } => {
                         if name.to_lowercase() == "hash"
@@ -146,15 +156,14 @@ impl UciHandler {
                 CommandProxy::Engine(engine_command) => match engine_command {
                     EngineCommand::HashInfo => {
                         writeln!(
-                            stdout,
+                            self.output,
                             "full: {:.2}% hits: {} access: {} collisions: {} cap: {}",
                             self.engine.tt_fullness(),
                             self.engine.tt_hits(),
                             self.engine.tt_accesses(),
                             self.engine.tt_collisions(),
                             self.engine.tt_size(),
-                        )
-                        .unwrap();
+                        )?;
                     }
                     EngineCommand::History => {
                         self.engine
@@ -163,7 +172,7 @@ impl UciHandler {
                     }
                     EngineCommand::Perft(depth) => {
                         let nodes = self.engine.perft(depth);
-                        writeln!(stdout, "info nodes {}", nodes).unwrap();
+                        writeln!(self.output, "info nodes {}", nodes)?;
                     }
                 },
             }
@@ -173,7 +182,7 @@ impl UciHandler {
     }
 }
 
-impl Default for UciHandler {
+impl Default for UciHandler<io::Stdout> {
     fn default() -> Self {
         UciHandler::new()
     }
