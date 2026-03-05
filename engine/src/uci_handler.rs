@@ -107,7 +107,10 @@ impl UciHandler {
                     UciCommand::Position { fen, moves } => {
                         let move_strings: Vec<String> =
                             moves.iter().map(|m| m.to_string()).collect();
-                        self.engine.set_position(fen.as_deref(), &move_strings);
+                        let result = self.engine.set_position(fen.as_deref(), &move_strings);
+                        if let Some(failure) = result.err() {
+                            eprintln!("Failed to set engine position: {}", failure.to_string());
+                        }
                     }
                     UciCommand::Go(search_options) => {
                         let info = UciInfo::default()

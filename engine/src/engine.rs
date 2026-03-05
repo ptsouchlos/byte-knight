@@ -40,10 +40,10 @@ impl Engine {
         self.history_table.clear();
     }
 
-    pub fn set_position(&mut self, fen: Option<&str>, moves: &[String]) {
+    pub fn set_position(&mut self, fen: Option<&str>, moves: &[String]) -> anyhow::Result<()> {
         match fen {
             Some(fen) => {
-                self.board = Board::from_fen(fen).unwrap();
+                self.board = Board::from_fen(fen)?;
             }
             None => {
                 self.board = Board::default_board();
@@ -51,8 +51,10 @@ impl Engine {
         }
 
         for mv in moves {
-            self.board.make_uci_move(mv).unwrap();
+            self.board.make_uci_move(mv)?;
         }
+
+        Ok(())
     }
 
     pub fn set_hash_size(&mut self, mb: usize) -> Result<(), String> {
