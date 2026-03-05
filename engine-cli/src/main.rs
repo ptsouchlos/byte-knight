@@ -11,7 +11,6 @@ use chess::move_generation::MoveGenerator;
 use clap::{Parser, Subcommand};
 use engine::defs::About;
 use engine::uci_handler::UciHandler;
-use std::process::exit;
 
 shadow_rs::shadow!(build);
 
