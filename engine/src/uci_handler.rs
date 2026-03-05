@@ -188,3 +188,50 @@ impl Default for UciHandler<io::Stdout> {
         UciHandler::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::mpsc;
+
+    fn send_and_run(commands: Vec<UciCommand>) -> String {
+        let (tx, rx) = mpsc::channel::<CommandProxy>();
+        for cmd in commands {
+            tx.send(CommandProxy::Uci(cmd)).unwrap();
+        }
+        tx.send(CommandProxy::Uci(UciCommand::Quit)).unwrap();
+        drop(tx);
+
+        let mut handler = UciHandler::with_output(Vec::<u8>::new());
+        handler.dispatch_loop(&rx).unwrap();
+        String::from_utf8(handler.output).unwrap()
+    }
+
+    #[test]
+    fn uci_handshake() {
+        let out = send_and_run(vec![UciCommand::Uci]);
+        assert!(out.contains("uciok"));
+        assert!(out.contains("id name"));
+        assert!(out.contains("id author"));
+    }
+
+    #[test]
+    fn isready_responds_readyok() {
+        let out = send_and_run(vec![UciCommand::IsReady]);
+        assert!(out.contains("readyok"));
+    }
+
+    #[test]
+    fn go_depth1_outputs_bestmove() {
+        let go_cmd = UciCommand::from_str("go depth 1").unwrap();
+        let out = send_and_run(vec![
+            UciCommand::UciNewGame,
+            UciCommand::Position {
+                fen: None,
+                moves: vec![],
+            },
+            go_cmd,
+        ]);
+        assert!(out.contains("bestmove"));
+    }
+}
