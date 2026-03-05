@@ -57,18 +57,18 @@ impl Engine {
         Ok(())
     }
 
-    pub fn set_hash_size(&mut self, mb: usize) -> Result<(), String> {
+    pub fn set_hash_size(&mut self, mb: usize) -> anyhow::Result<()> {
         if mb < ttable::MIN_TABLE_SIZE_MB {
-            return Err(format!(
+            anyhow::bail!(
                 "Hash size too small. Must be at least {} MB",
                 ttable::MIN_TABLE_SIZE_MB
-            ));
+            );
         }
         if mb > ttable::MAX_TABLE_SIZE_MB {
-            return Err(format!(
+            anyhow::bail!(
                 "Hash size too large. Must be at most {} MB",
                 ttable::MAX_TABLE_SIZE_MB
-            ));
+            );
         }
         self.transposition_table = TranspositionTable::from_size_in_mb(mb);
         Ok(())
@@ -102,10 +102,6 @@ impl Engine {
 
     pub fn board(&self) -> &Board {
         &self.board
-    }
-
-    pub fn debug(&self) -> bool {
-        self.debug
     }
 
     pub fn tt_fullness(&self) -> f64 {
