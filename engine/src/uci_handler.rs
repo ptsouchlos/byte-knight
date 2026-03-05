@@ -149,7 +149,8 @@ impl<W: Write> UciHandler<W> {
                         }
                     }
                     UciCommand::Stop => {
-                        // Stop flag already set by input handler; search already returned.
+                        // The input handler thread set stop_flag when it read "stop"; the synchronous
+                        // search already polled the flag and returned. Nothing to do here.
                     }
                     _ => {}
                 },
