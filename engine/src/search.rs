@@ -5,6 +5,7 @@
 
 use std::{
     fmt::Display,
+    io::Write,
     marker::PhantomData,
     sync::{
         Arc,
@@ -157,6 +158,7 @@ pub struct Search<'search_lifetime, Log> {
     eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
     lmr_table: Table<f64, 32_000>,
+    output: &'search_lifetime mut dyn Write,
     /// Marker for the level of logging to print.
     log: PhantomData<Log>,
 }
@@ -166,6 +168,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         parameters: &SearchParameters,
         ttable: &'a mut TranspositionTable,
         history_table: &'a mut HistoryTable,
+        output: &'a mut dyn Write,
     ) -> Self {
         // Initialize our LMR table as a 2D array of our LMR formula for depth and moves played
         let mut table = Table::<f64, 32_000>::new(MAX_DEPTH as usize, MAX_MOVE_LIST_SIZE);
@@ -180,6 +183,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             eval: ByteKnightEvaluation::default(),
             stop_flag: None,
             lmr_table: table,
+            output,
             log: PhantomData,
         }
     }
@@ -264,7 +268,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     }
 
     fn send_info(
-        &self,
+        &mut self,
         depth: u8,
         nodes: u64,
         score: Score,
@@ -281,13 +285,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             .time(time)
             .pv(pv.iter().map(|m| m.to_long_algebraic()));
         let message = UciResponse::info(info);
-        println!("{message}");
+        let _unused = writeln!(self.output, "{message}");
     }
 
-    fn send_message(&self, message: String) {
+    fn send_message(&mut self, message: String) {
         let info = UciInfo::default().string(message);
         let message = UciResponse::info(info);
-        println!("{message}");
+        let _unused = writeln!(self.output, "{message}");
     }
 
     /// Verify that a given [PrincipleVariation] is valid. This is expensive and should only be used for debugging.
@@ -961,7 +965,7 @@ fn assert_pv_is_legal(
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{io, time::Duration};
 
     use chess::{board::Board, pieces::ALL_PIECES};
 
@@ -978,7 +982,9 @@ mod tests {
     fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchParameters) {
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut sink = io::sink();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
 
         for (fen, expected_move) in test_pairs {
             let mut board = Board::from_fen(fen).unwrap();
@@ -1001,7 +1007,9 @@ mod tests {
 
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut sink = io::sink();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -1021,7 +1029,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut sink = io::sink();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -1074,7 +1084,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut sink = io::sink();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -1092,7 +1104,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut sink = io::sink();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -1109,7 +1123,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut sink = io::sink();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -1126,7 +1142,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut sink = io::sink();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -1186,8 +1204,11 @@ mod tests {
 
             let mut ttable = Default::default();
             let mut history_table = Default::default();
-            let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+            let mut sink = io::sink();
+            let mut search =
+                Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
             let res = search.search(&mut board, None);
+            drop(search);
 
             assert!(res.best_move.is_some());
 
@@ -1235,7 +1256,9 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+        let mut sink = io::sink();
+        let mut search =
+            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
