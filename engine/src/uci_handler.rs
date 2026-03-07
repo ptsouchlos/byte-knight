@@ -124,13 +124,14 @@ impl<W: Write> UciHandler<W> {
                             .string(format!("searching {}", self.engine.board().to_fen()));
                         writeln!(self.output, "{}", UciResponse::info(info))?;
 
+                        // Reset stop flag before building search parameters
+                        self.stop_flag.store(false, Ordering::Relaxed);
                         let search_params =
                             SearchParameters::new(&search_options, self.engine.board());
-                        // Reset the stop flag before starting a new search
-                        self.stop_flag.store(false, Ordering::Relaxed);
-                        let result = self
-                            .engine
-                            .search(search_params, Arc::clone(&self.stop_flag));
+                        let stop_flag = Arc::clone(&self.stop_flag);
+                        // Split borrow because UciHandler owns the engine and the output, but seach need mutable output to the output.
+                        let output: &mut dyn Write = &mut self.output;
+                        let result = self.engine.search(search_params, stop_flag, output);
                         let best_move = result.best_move;
                         let move_output = UciResponse::BestMove {
                             bestmove: best_move
@@ -149,8 +150,8 @@ impl<W: Write> UciHandler<W> {
                         }
                     }
                     UciCommand::Stop => {
-                        // The input handler thread set stop_flag when it read "stop"; the synchronous
-                        // search already polled the flag and returned. Nothing to do here.
+                        // The input handler thread sets stop_flag when it read "stop".
+                        // Search polls for that flag and stops when it's set, so we don't need to do anything here.
                     }
                     _ => {}
                 },
@@ -167,9 +168,11 @@ impl<W: Write> UciHandler<W> {
                         )?;
                     }
                     EngineCommand::History => {
+                        // Make a copy of the side before passing to printing history table
+                        let side = self.engine.board().side_to_move();
                         self.engine
                             .history_table()
-                            .print_for_side(self.engine.board().side_to_move());
+                            .print_for_side(side, &mut self.output)?;
                     }
                     EngineCommand::Perft(depth) => {
                         let nodes = self.engine.perft(depth);
