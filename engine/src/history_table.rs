@@ -62,6 +62,7 @@ impl HistoryTable {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn print_for_side(&self, side: Side, output: &mut impl Write) -> io::Result<()> {
         for (piece_type, piece_name) in PIECE_NAMES.iter().enumerate() {
             writeln!(output, "{piece_name} - {side}")?;
