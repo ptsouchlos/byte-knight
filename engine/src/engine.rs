@@ -3,7 +3,10 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::sync::{Arc, atomic::AtomicBool};
+use std::{
+    io::Write,
+    sync::{Arc, atomic::AtomicBool},
+};
 
 use chess::board::Board;
 use chess::move_generation::MoveGenerator;
@@ -78,12 +81,18 @@ impl Engine {
         self.debug = debug;
     }
 
-    pub fn search(&mut self, params: SearchParameters, stop_flag: Arc<AtomicBool>) -> SearchResult {
+    pub fn search(
+        &mut self,
+        params: SearchParameters,
+        stop_flag: Arc<AtomicBool>,
+        output: &mut dyn Write,
+    ) -> SearchResult {
         if self.debug {
             Search::<LogDebug>::new(
                 &params,
                 &mut self.transposition_table,
                 &mut self.history_table,
+                output,
             )
             .search(&mut self.board, Some(stop_flag))
         } else {
@@ -91,6 +100,7 @@ impl Engine {
                 &params,
                 &mut self.transposition_table,
                 &mut self.history_table,
+                output,
             )
             .search(&mut self.board, Some(stop_flag))
         }
