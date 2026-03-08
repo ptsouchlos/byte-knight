@@ -19,6 +19,7 @@ pub trait EvalValues {
     fn passed_pawn_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn doubled_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn isolated_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;
+    // The following terms usually don't need a [`Side`] input, but this is necessary for the [`TracingValues`].
     fn bishop_pair_bonus_value(&self, side: Side) -> Self::ReturnScore;
     fn king_safety_value(&self, piece: Piece, side: Side) -> Self::ReturnScore;
     fn threat_value(&self, piece: Piece, attacked_piece: Piece, side: Side) -> Self::ReturnScore;
