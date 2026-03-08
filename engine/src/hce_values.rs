@@ -158,6 +158,88 @@ pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
     S(0, 0),   //Pawn
 ];
 
+// Mobility bonuses for knights, ordered by the number of moves available (0-8)
+pub const KNIGHT_MOBILITY: [PhasedScore; NumberOf::KNIGHT_MOVES + 1] = [
+    S(0, 0),
+    S(1, 1),
+    S(2, 2),
+    S(3, 3),
+    S(4, 4),
+    S(5, 5),
+    S(6, 6),
+    S(7, 7),
+    S(8, 8),
+];
+
+// Mobility bonuses for bishops, ordered by the number of moves available (0-13)
+pub const BISHOP_MOBILITY: [PhasedScore; NumberOf::BISHOP_MOVES + 1] = [
+    S(0, 0),
+    S(1, 1),
+    S(2, 2),
+    S(3, 3),
+    S(4, 4),
+    S(5, 5),
+    S(6, 6),
+    S(7, 7),
+    S(8, 8),
+    S(9, 9),
+    S(10, 10),
+    S(11, 11),
+    S(12, 12),
+    S(13, 13),
+];
+
+// Mobility bonuses for rooks, ordered by the number of moves available (0-14)
+pub const ROOK_MOBILITY: [PhasedScore; NumberOf::ROOK_MOVES + 1] = [
+    S(0, 0),
+    S(1, 1),
+    S(2, 2),
+    S(3, 3),
+    S(4, 4),
+    S(5, 5),
+    S(6, 6),
+    S(7, 7),
+    S(8, 8),
+    S(9, 9),
+    S(10, 10),
+    S(11, 11),
+    S(12, 12),
+    S(13, 13),
+    S(14, 14),
+];
+
+// Mobility bonuses for queens, ordered by the number of moves available (0-27)
+pub const QUEEN_MOBILITY: [PhasedScore; NumberOf::QUEEN_MOVES + 1] = [
+    S(0, 0),
+    S(1, 1),
+    S(2, 2),
+    S(3, 3),
+    S(4, 4),
+    S(5, 5),
+    S(6, 6),
+    S(7, 7),
+    S(8, 8),
+    S(9, 9),
+    S(10, 10),
+    S(11, 11),
+    S(12, 12),
+    S(13, 13),
+    S(14, 14),
+    S(15, 15),
+    S(16, 16),
+    S(17, 17),
+    S(18, 18),
+    S(19, 19),
+    S(20, 20),
+    S(21, 21),
+    S(22, 22),
+    S(23, 23),
+    S(24, 24),
+    S(25, 25),
+    S(26, 26),
+    S(27, 27),
+];
+
 const RANK_1: u8 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -183,6 +265,16 @@ impl EvalValues for ByteKnightValues {
     fn isolated_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore {
         let (file, _rank) = square::from_square(square::flip_if(side == Side::White, square));
         ISOLATED_PAWN_VALUES[file as usize]
+    }
+
+    fn mobility_value(&self, piece: Piece, count: usize, _side: Side) -> Self::ReturnScore {
+        match piece {
+            Piece::Knight => KNIGHT_MOBILITY[count],
+            Piece::Bishop => BISHOP_MOBILITY[count],
+            Piece::Rook => ROOK_MOBILITY[count],
+            Piece::Queen => QUEEN_MOBILITY[count],
+            _ => S(0, 0),
+        }
     }
 
     fn bishop_pair_bonus_value(&self, _side: Side) -> Self::ReturnScore {
