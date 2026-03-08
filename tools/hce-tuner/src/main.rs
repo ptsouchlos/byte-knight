@@ -199,7 +199,6 @@ fn plot_k(tuner: &Tuner) {
 fn parse_data(input_data: &str) -> Vec<TuningPosition> {
     println!("Reading data from: {input_data}");
     let positions = epd_parser::parse_epd_file(input_data);
-    // let positions = get_positions();
     println!("Read {} positions", positions.len());
     positions
 }
