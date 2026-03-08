@@ -77,6 +77,12 @@ impl EvalValues for TracingValues {
         PhasedScore::default()
     }
 
+    fn mobility_value(&self, piece: Piece, count: usize, side: Side) -> Self::ReturnScore {
+        let idx = Offsets::offset_for_mobility(piece, count);
+        self.record(side, idx);
+        PhasedScore::default()
+    }
+
     fn bishop_pair_bonus_value(&self, side: Side) -> PhasedScore {
         let idx = Offsets::offset_for_bishop_pair();
         self.record(side, idx);
