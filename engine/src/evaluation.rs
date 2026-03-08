@@ -111,6 +111,29 @@ impl<Values: EvalValues> Evaluation<Values> {
 
         score
     }
+
+    fn evaluate_mobility(&self, board: &Board, side: Side) -> PhasedScore
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let mut score = PhasedScore::default();
+        let us = side;
+        let them = us.opposite();
+        let occ = board.all_pieces();
+        let our_pieces = board.pieces(us);
+        let enemy_pawn_attacks = attacks::for_piece(Piece::Pawn, board, them);
+
+        for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
+            let piece_bb = board.piece_bitboard(piece, side);
+            for piece_sq in piece_bb.iter() {
+                let attacks = attacks::for_piece_on_square(piece, piece_sq, occ, side);
+                let mobility =
+                    (attacks & !enemy_pawn_attacks & !our_pieces).number_of_occupied_squares();
+                score += self.values().mobility_value(piece, mobility as usize, side);
+            }
+        }
+        score
+    }
 }
 
 impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<Values> {
@@ -223,6 +246,16 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         mg[opp_idx] += their_threats_val.mg() as i32;
         eg[opp_idx] += their_threats_val.eg() as i32;
+
+        // Evaluate mobility
+        let our_mobility_val = self.evaluate_mobility(board, side_to_move);
+        let their_mobility_val = self.evaluate_mobility(board, opposite);
+
+        mg[stm_idx] += our_mobility_val.mg() as i32;
+        eg[stm_idx] += our_mobility_val.eg() as i32;
+
+        mg[opp_idx] += their_mobility_val.mg() as i32;
+        eg[opp_idx] += their_mobility_val.eg() as i32;
 
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
