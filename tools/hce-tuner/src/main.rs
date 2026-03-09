@@ -19,6 +19,7 @@ mod epd_parser;
 mod math;
 mod offsets;
 mod parameters;
+mod tracing_values;
 mod tuner;
 mod tuner_score;
 mod tuning_position;
@@ -100,7 +101,7 @@ fn print_params(params: &Parameters) {
     println!("pub const PASSED_PAWN_BONUS: [PhasedScore; NumberOf::PASSED_PAWN_RANKS] = [",);
 
     for rank in 0..NumberOf::PASSED_PAWN_RANKS {
-        let idx = Offsets::PASSED_PAWN as usize + rank;
+        let idx = Offsets::PASSED_PAWN + rank;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
     }
@@ -113,7 +114,7 @@ fn print_params(params: &Parameters) {
     println!("pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
 
     for file in 0..NumberOf::FILES {
-        let idx = Offsets::DOUBLED_PAWN as usize + file;
+        let idx = Offsets::DOUBLED_PAWN + file;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
     }
@@ -125,7 +126,7 @@ fn print_params(params: &Parameters) {
     println!("pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
 
     for file in 0..NumberOf::FILES {
-        let idx = Offsets::ISOLATED_PAWN as usize + file;
+        let idx = Offsets::ISOLATED_PAWN + file;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
     }
@@ -134,14 +135,14 @@ fn print_params(params: &Parameters) {
     println!();
     println!(
         "pub const BISHOP_PAIR_BONUS: PhasedScore = {:?};",
-        params.as_slice()[Offsets::BISHOP_PAIR as usize]
+        params.as_slice()[Offsets::BISHOP_PAIR]
     );
 
     println!();
     println!("pub const KING_SAFETY: [PhasedScore; NumberOf::PIECE_TYPES - 1] =");
     print!("    [");
     for piece_idx in Piece::iter().filter(|&p| p != Piece::King) {
-        let idx = Offsets::KING_SAFETY as usize + piece_idx as usize - 1;
+        let idx = Offsets::KING_SAFETY + piece_idx as usize - 1;
         let val = params.as_slice()[idx];
         print!("{val:?}, ");
     }
@@ -150,7 +151,7 @@ fn print_params(params: &Parameters) {
     println!();
     println!("pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
     for piece_idx in Piece::iter() {
-        let idx = Offsets::PAWN_THREAT as usize + piece_idx as usize;
+        let idx = Offsets::PAWN_THREAT + piece_idx as usize;
         let val = params.as_slice()[idx];
         println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
     }
@@ -159,7 +160,7 @@ fn print_params(params: &Parameters) {
     println!();
     println!("pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
     for piece_idx in Piece::iter() {
-        let idx = Offsets::KNIGHT_THREAT as usize + piece_idx as usize;
+        let idx = Offsets::KNIGHT_THREAT + piece_idx as usize;
         let val = params.as_slice()[idx];
         println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
     }
@@ -168,7 +169,7 @@ fn print_params(params: &Parameters) {
     println!();
     println!("pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
     for piece_idx in Piece::iter() {
-        let idx = Offsets::BISHOP_THREAT as usize + piece_idx as usize;
+        let idx = Offsets::BISHOP_THREAT + piece_idx as usize;
         let val = params.as_slice()[idx];
         println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
     }
@@ -198,7 +199,6 @@ fn plot_k(tuner: &Tuner) {
 fn parse_data(input_data: &str) -> Vec<TuningPosition> {
     println!("Reading data from: {input_data}");
     let positions = epd_parser::parse_epd_file(input_data);
-    // let positions = get_positions();
     println!("Read {} positions", positions.len());
     positions
 }
