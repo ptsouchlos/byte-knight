@@ -1,7 +1,13 @@
 // Part of the byte-knight project.
 // Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
 
-use crate::{offsets::PARAMETER_COUNT, parameters::Parameters, tuning_position::TuningPosition};
+use chess::side::Side;
+use rayon::prelude::*;
+
+use crate::{
+    math, offsets::PARAMETER_COUNT, parameters::Parameters, tuner_score::TuningScore,
+    tuning_position::TuningPosition,
+};
 
 pub(crate) struct Tuner<'a> {
     positions: &'a Vec<TuningPosition>,
@@ -50,7 +56,7 @@ impl<'a> Tuner<'a> {
         &self.weights
     }
 
-    fn run_epoch(&mut self, k: f64) {
+    pub(crate) fn run_epoch(&mut self, k: f64) {
         let gradients = self.gradients(k);
 
         for i in 0..PARAMETER_COUNT {
@@ -62,44 +68,55 @@ impl<'a> Tuner<'a> {
         }
     }
 
-    fn gradients(&self, k: f64) -> Parameters {
+    pub(crate) fn gradients(&self, k: f64) -> Parameters {
         let chunk_size = self
             .positions
             .len()
-            .div_ceil(std::thread::available_parallelism().unwrap().into());
-        std::thread::scope(|s| {
-            self.positions
-                .chunks(chunk_size)
-                .map(|chunk| s.spawn(|| self.weights.gradient_batch(k, chunk)))
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|p| p.join().unwrap_or_default())
-                .fold(Parameters::default(), |a, b| a + b)
-        })
+            .div_ceil(rayon::current_num_threads());
+        self.positions
+            .par_chunks(chunk_size)
+            .map(|chunk| {
+                let mut gradient = Parameters::default();
+                for point in chunk {
+                    // Inline evaluate
+                    let mut score = TuningScore::default();
+                    for &idx in &point.parameter_indexes[Side::White as usize] {
+                        score += self.weights[idx];
+                    }
+                    for &idx in &point.parameter_indexes[Side::Black as usize] {
+                        score -= self.weights[idx];
+                    }
+                    let eval = score.taper(point.phase);
+
+                    // Gradient coefficient
+                    let sigmoid_result = math::sigmoid(k * eval);
+                    let term = (point.game_result - sigmoid_result)
+                        * (1.0 - sigmoid_result)
+                        * sigmoid_result;
+                    let phase_adj = term * point.phase_score;
+
+                    // Accumulate
+                    for &idx in &point.parameter_indexes[Side::White as usize] {
+                        gradient[idx] += phase_adj;
+                    }
+                    for &idx in &point.parameter_indexes[Side::Black as usize] {
+                        gradient[idx] -= phase_adj;
+                    }
+                }
+                gradient
+            })
+            .reduce(Parameters::default, |mut a, b| {
+                a += b;
+                a
+            })
     }
 
     pub(crate) fn mean_square_error(&self, k: f64) -> f64 {
-        let chunk_size = self
+        let total_error: f64 = self
             .positions
-            .len()
-            .div_ceil(std::thread::available_parallelism().unwrap().into());
-        let total_error = std::thread::scope(|s| {
-            self.positions
-                .chunks(chunk_size)
-                .map(|chunk| {
-                    s.spawn(|| {
-                        chunk
-                            .iter()
-                            .map(|point| point.error(k, &self.weights))
-                            .sum::<f64>()
-                    })
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|p| p.join().unwrap_or_default())
-                .sum::<f64>()
-        });
-
+            .par_iter()
+            .map(|point| point.error(k, &self.weights))
+            .sum();
         total_error / self.positions.len() as f64
     }
 
@@ -140,5 +157,27 @@ mod tests {
         let positions = vec![]; // Add appropriate Board instances here
         let params = Parameters::create_from_engine_values();
         let _ = Tuner::new(params, &positions, 5000);
+    }
+
+    #[test]
+    fn tuner_reduces_error() {
+        let positions = crate::epd_parser::parse_epd_file("../../data/lichess-test.book");
+        assert!(!positions.is_empty(), "Test book should have positions");
+
+        let params = Parameters::create_from_engine_values();
+        let mut tuner = Tuner::new(params, &positions, 100);
+
+        let k = tuner.compute_k();
+        let initial_error = tuner.mean_square_error(k);
+
+        for _ in 0..100 {
+            tuner.run_epoch(k);
+        }
+
+        let final_error = tuner.mean_square_error(k);
+        assert!(
+            final_error < initial_error,
+            "Error should decrease: initial={initial_error}, final={final_error}"
+        );
     }
 }
