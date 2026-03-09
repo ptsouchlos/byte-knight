@@ -185,16 +185,16 @@ impl EvalValues for ByteKnightValues {
         ISOLATED_PAWN_VALUES[file as usize]
     }
 
-    fn bishop_pair_bonus_value(&self) -> Self::ReturnScore {
+    fn bishop_pair_bonus_value(&self, _side: Side) -> Self::ReturnScore {
         BISHOP_PAIR_BONUS
     }
 
-    fn king_safety_value(&self, piece: Piece) -> Self::ReturnScore {
+    fn king_safety_value(&self, piece: Piece, _side: Side) -> Self::ReturnScore {
         assert!(piece != Piece::King);
         KING_SAFETY[piece as usize - 1]
     }
 
-    fn threat_value(&self, piece: Piece, attacked_piece: Piece) -> Self::ReturnScore {
+    fn threat_value(&self, piece: Piece, attacked_piece: Piece, _side: Side) -> Self::ReturnScore {
         match piece {
             Piece::Pawn => PAWN_THREAT[attacked_piece as usize],
             Piece::Knight => KNIGHT_THREAT[attacked_piece as usize],

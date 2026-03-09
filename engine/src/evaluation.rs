@@ -36,6 +36,10 @@ impl<Values: EvalValues> Evaluation<Values> {
         &self.values
     }
 
+    pub fn into_values(self) -> Values {
+        self.values
+    }
+
     pub fn mutable_values(&mut self) -> &mut Values {
         &mut self.values
     }
@@ -77,22 +81,32 @@ impl<Values: EvalValues> Evaluation<Values> {
         let pawn_attacks = attacks::for_piece(Piece::Pawn, board, us);
         for piece_attacked in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
-            score += self.values().threat_value(Piece::Pawn, piece_attacked)
-                * (pawn_attacks & piece_bb).number_of_occupied_squares() as i16;
+            let count = (pawn_attacks & piece_bb).number_of_occupied_squares();
+            for _ in 0..count {
+                score += self.values().threat_value(Piece::Pawn, piece_attacked, us);
+            }
         }
 
         let knight_attacks = attacks::for_piece(Piece::Knight, board, us);
         for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
-            score += self.values().threat_value(Piece::Knight, piece_attacked)
-                * (knight_attacks & piece_bb).number_of_occupied_squares() as i16;
+            let count = (knight_attacks & piece_bb).number_of_occupied_squares();
+            for _ in 0..count {
+                score += self
+                    .values()
+                    .threat_value(Piece::Knight, piece_attacked, us);
+            }
         }
 
         let bishop_attacks = attacks::for_piece(Piece::Bishop, board, us);
         for piece_attacked in [Piece::Knight, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
-            score += self.values().threat_value(Piece::Bishop, piece_attacked)
-                * (bishop_attacks & piece_bb).number_of_occupied_squares() as i16;
+            let count = (bishop_attacks & piece_bb).number_of_occupied_squares();
+            for _ in 0..count {
+                score += self
+                    .values()
+                    .threat_value(Piece::Bishop, piece_attacked, us);
+            }
         }
 
         score
@@ -120,21 +134,20 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             let maybe_piece = board.piece_on_square(sq as u8);
             if let Some((piece, side)) = maybe_piece {
                 if piece == Piece::Pawn {
-                    // add passed pawn bonus if applicable
-                    let passed_pawn_bonus = self.values.passed_pawn_bonus(sq as u8, side);
                     if pawn_structure.passed_pawns[side as usize].is_square_occupied(sq as u8) {
+                        let passed_pawn_bonus = self.values.passed_pawn_bonus(sq as u8, side);
                         mg[side as usize] += passed_pawn_bonus.mg() as i32;
                         eg[side as usize] += passed_pawn_bonus.eg() as i32;
                     }
 
-                    let doubled_pawn_value = self.values.doubled_pawn_value(sq as u8, side);
                     if pawn_structure.doubled_pawns[side as usize].is_square_occupied(sq as u8) {
+                        let doubled_pawn_value = self.values.doubled_pawn_value(sq as u8, side);
                         mg[side as usize] += doubled_pawn_value.mg() as i32;
                         eg[side as usize] += doubled_pawn_value.eg() as i32;
                     }
 
-                    let isolated_pawn_value = self.values.isolated_pawn_value(sq as u8, side);
                     if pawn_structure.isolated_pawns[side as usize].is_square_occupied(sq as u8) {
+                        let isolated_pawn_value = self.values.isolated_pawn_value(sq as u8, side);
                         mg[side as usize] += isolated_pawn_value.mg() as i32;
                         eg[side as usize] += isolated_pawn_value.eg() as i32;
                     }
@@ -157,7 +170,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             .number_of_occupied_squares()
             >= 2
         {
-            let bonus = self.values.bishop_pair_bonus_value();
+            let bonus = self.values.bishop_pair_bonus_value(side_to_move);
             mg[stm_idx] += bonus.mg() as i32;
             eg[stm_idx] += bonus.eg() as i32;
         }
@@ -167,7 +180,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             .number_of_occupied_squares()
             >= 2
         {
-            let bonus = self.values.bishop_pair_bonus_value();
+            let bonus = self.values.bishop_pair_bonus_value(opposite);
             mg[opp_idx] += bonus.mg() as i32;
             eg[opp_idx] += bonus.eg() as i32;
         }
@@ -184,9 +197,8 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             for piece in Piece::iter().filter(|&p| p != Piece::King) {
                 // Get opponent piece bb
                 let mut piece_bb = *board.piece_bitboard(piece, them);
-                let val = self.values.king_safety_value(piece);
 
-                // Loop through each sq in the pieace bb and see if that pieace is attacking the king ring
+                // Loop through each sq in the piece bb and see if that piece is attacking the king ring
                 while piece_bb.as_number() > 0 {
                     let sq = bitboard_helpers::next_bit(&mut piece_bb);
                     let piece_attacks = attacks::for_piece_on_square(piece, sq as u8, occ, them);
@@ -194,8 +206,11 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                     let overlap = piece_attacks & king_ring;
                     let overlap_cnt = overlap.number_of_occupied_squares();
 
-                    mg[side as usize] += val.mg() as i32 * overlap_cnt as i32;
-                    eg[side as usize] += val.eg() as i32 * overlap_cnt as i32;
+                    for _ in 0..overlap_cnt {
+                        let val = self.values.king_safety_value(piece, us);
+                        mg[side as usize] += val.mg() as i32;
+                        eg[side as usize] += val.eg() as i32;
+                    }
                 }
             }
         }

@@ -128,11 +128,11 @@ impl<'a> Tuner<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::offsets::Offsets;
+    use crate::offsets::PARAMETER_COUNT;
 
     #[test]
     fn offsets() {
-        assert_eq!(Offsets::END, 430);
+        assert_eq!(PARAMETER_COUNT, 430);
     }
 
     #[test]
