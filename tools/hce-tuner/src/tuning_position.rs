@@ -8,6 +8,7 @@ use crate::{math, parameters::Parameters, tuner_score::TuningScore};
 pub(crate) struct TuningPosition {
     pub(crate) parameter_indexes: [Vec<usize>; NumberOf::SIDES],
     pub(crate) phase: f64,
+    pub(crate) phase_score: TuningScore,
     pub(crate) game_result: f64,
 }
 
@@ -20,9 +21,11 @@ impl TuningPosition {
     ) -> Self {
         // Side::White == 0, Side::Black == 1
         let parameter_indexes = [white_indexes, black_indexes];
+        let phase_score = TuningScore::new(phase, 1.0 - phase);
         Self {
             parameter_indexes,
             phase,
+            phase_score,
             game_result,
         }
     }
