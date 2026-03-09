@@ -257,9 +257,15 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         mg[opp_idx] += their_mobility_val.mg() as i32;
         eg[opp_idx] += their_mobility_val.eg() as i32;
 
+        // Tempo bonus for side to move
+        let tempo_bonus = self.values().tempo_bonus(side_to_move);
+        mg[stm_idx] += tempo_bonus.mg() as i32;
+        eg[stm_idx] += tempo_bonus.eg() as i32;
+
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
         let score = PhasedScore::new(mg_score as ScoreType, eg_score as ScoreType);
+
         // taper the score based on the game phase
         let val = score.taper(game_phase.min(GAME_PHASE_MAX) as PhaseType, GAME_PHASE_MAX);
         Score::new(val)
@@ -442,13 +448,13 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, 4, 720, 736, -720, -736, 1409, -1409, 630, 664, -630, -664, 0, 2, 9, 9, -2, -9, -9,
-            -720, -736, 720, 736, -1409, 1409, -630, -664, 630, 664, 0, -2, -9, -9, 2, 9, 9, 8, 8,
-            0, -447, 547, -8, -8, -4, 447, -547, -32, -38, 878, -909, 76, 38, -878, 909, 0, -2, 0,
-            2, -1333, -1426, -40, 1327, -1426, 40, 219, 252, -219, -252, -23, -219, -252, 219, 252,
-            23, -2, -2, 0, 0, 0, 12, -12, -8, 0, 0, 0, -12, 12, 8, -12, 12, 6, 2, -6, -2, -343, 1,
-            12, -12, -6, -2, 6, 2, 343, -1, -2, -3, 2, 3, 0, 0, 0, 2, 3, -2, -3, 0, 0, 0, -15, 15,
-            27, 66, 15, -15, -27, -66, 1, 44,
+            30, 4, 753, 768, -700, -716, 1446, -1392, 650, 683, -597, -630, 27, 32, 39, 39, 22, 15,
+            15, -700, -716, 753, 768, -1392, 1446, -597, -630, 650, 683, 27, 22, 15, 15, 32, 39,
+            39, 38, 38, 26, -415, 579, 14, 13, 22, 468, -526, -10, -16, 915, -889, 108, 69, -862,
+            942, 27, 22, 27, 32, -1316, -1408, -11, 1353, -1408, 65, 239, 271, -187, -219, 6, -187,
+            -219, 239, 271, 46, 19, 19, 26, 26, 26, 36, 16, 15, 26, 26, 26, 16, 36, 37, 18, 40, 33,
+            28, 19, 24, -319, 25, 34, 12, 19, 24, 33, 28, 371, 27, 25, 23, 27, 29, 27, 25, 26, 27,
+            29, 25, 23, 25, 27, 26, 7, 40, 50, 90, 45, 12, 2, -36, 28, 69,
         ];
 
         let eval = ByteKnightEvaluation::default();
