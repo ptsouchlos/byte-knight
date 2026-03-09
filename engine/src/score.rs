@@ -72,6 +72,14 @@ impl Score {
         -Score::MATE
     }
 
+    pub fn mate_in(ply: ScoreType) -> Score {
+        Score::new_mate() - ply
+    }
+
+    pub fn mated_in(ply: ScoreType) -> Score {
+        Score::new_mated() + ply
+    }
+
     pub fn clamp(&self, min: ScoreType, max: ScoreType) -> Score {
         Score(self.0.clamp(min, max))
     }
@@ -503,5 +511,18 @@ mod tests {
         assert!(!above_neg.mated());
         assert_eq!(above_neg.ply_relative(5), above_neg);
         assert_eq!(above_neg.remove_ply_bias(5), above_neg);
+    }
+
+    #[test]
+    fn mate_in_and_mated_in() {
+        assert_eq!(Score::mate_in(0), Score::MATE);
+        assert_eq!(Score::mate_in(5), Score::new(Score::MATE.0 - 5));
+        assert_eq!(Score::mated_in(0), -Score::MATE);
+        assert_eq!(Score::mated_in(5), Score::new(-Score::MATE.0 + 5));
+        // they are negations of each other
+        assert_eq!(-Score::mated_in(5), Score::mate_in(5));
+        // both return mate scores
+        assert!(Score::mate_in(1).is_mate());
+        assert!(Score::mated_in(1).mated());
     }
 }
