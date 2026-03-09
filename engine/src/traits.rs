@@ -24,4 +24,5 @@ pub trait EvalValues {
     fn bishop_pair_bonus_value(&self, side: Side) -> Self::ReturnScore;
     fn king_safety_value(&self, piece: Piece, side: Side) -> Self::ReturnScore;
     fn threat_value(&self, piece: Piece, attacked_piece: Piece, side: Side) -> Self::ReturnScore;
+    fn tempo_bonus(&self, side: Side) -> Self::ReturnScore;
 }

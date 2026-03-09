@@ -236,6 +236,9 @@ pub const QUEEN_MOBILITY: [PhasedScore; NumberOf::QUEEN_MOVES + 1] = [
     S(60, -58),
 ];
 
+// Small bonus for being the side to move.
+pub const TEMPO_BONUS: PhasedScore = S(1, 2);
+
 const RANK_1: u8 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -289,6 +292,10 @@ impl EvalValues for ByteKnightValues {
             Piece::Bishop => BISHOP_THREAT[attacked_piece as usize],
             _ => S(0, 0),
         }
+    }
+
+    fn tempo_bonus(&self, _side: Side) -> Self::ReturnScore {
+        TEMPO_BONUS
     }
 }
 
