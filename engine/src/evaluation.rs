@@ -111,6 +111,29 @@ impl<Values: EvalValues> Evaluation<Values> {
 
         score
     }
+
+    fn evaluate_mobility(&self, board: &Board, side: Side) -> PhasedScore
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let mut score = PhasedScore::default();
+        let us = side;
+        let them = us.opposite();
+        let occ = board.all_pieces();
+        let our_pieces = board.pieces(us);
+        let enemy_pawn_attacks = attacks::for_piece(Piece::Pawn, board, them);
+
+        for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
+            let piece_bb = board.piece_bitboard(piece, side);
+            for piece_sq in piece_bb.iter() {
+                let attacks = attacks::for_piece_on_square(piece, piece_sq, occ, side);
+                let mobility =
+                    (attacks & !enemy_pawn_attacks & !our_pieces).number_of_occupied_squares();
+                score += self.values().mobility_value(piece, mobility as usize, side);
+            }
+        }
+        score
+    }
 }
 
 impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<Values> {
@@ -223,6 +246,16 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         mg[opp_idx] += their_threats_val.mg() as i32;
         eg[opp_idx] += their_threats_val.eg() as i32;
+
+        // Evaluate mobility
+        let our_mobility_val = self.evaluate_mobility(board, side_to_move);
+        let their_mobility_val = self.evaluate_mobility(board, opposite);
+
+        mg[stm_idx] += our_mobility_val.mg() as i32;
+        eg[stm_idx] += our_mobility_val.eg() as i32;
+
+        mg[opp_idx] += their_mobility_val.mg() as i32;
+        eg[opp_idx] += their_mobility_val.eg() as i32;
 
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
@@ -409,13 +442,13 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, -3, 741, 751, -741, -751, 1436, -1436, 647, 676, -647, -676, 0, 6, 16, 12, -6, -16,
-            -12, -741, -751, 741, 751, -1436, 1436, -647, -676, 647, 676, 0, -6, -16, -12, 6, 16,
-            12, 9, 11, 0, -478, 578, -9, -11, 3, 478, -578, -31, -43, 954, -986, 39, 43, -954, 986,
-            0, -2, 0, 2, -1368, -1462, -40, 1352, -1462, 40, 229, 258, -229, -258, -29, -229, -258,
-            229, 258, 29, -8, -8, 0, 0, 0, 9, -9, -7, 0, 0, 0, -9, 9, 7, -12, 6, 6, 4, -6, -4,
-            -348, 4, 12, -6, -6, -4, 6, 4, 348, -4, -4, -3, 4, 3, -1, 1, 0, 4, 3, -4, -3, 1, -1, 0,
-            -16, 7, 30, 63, 16, -7, -30, -63, 5, 25,
+            0, 4, 720, 736, -720, -736, 1409, -1409, 630, 664, -630, -664, 0, 2, 9, 9, -2, -9, -9,
+            -720, -736, 720, 736, -1409, 1409, -630, -664, 630, 664, 0, -2, -9, -9, 2, 9, 9, 8, 8,
+            0, -447, 547, -8, -8, -4, 447, -547, -32, -38, 878, -909, 76, 38, -878, 909, 0, -2, 0,
+            2, -1333, -1426, -40, 1327, -1426, 40, 219, 252, -219, -252, -23, -219, -252, 219, 252,
+            23, -2, -2, 0, 0, 0, 12, -12, -8, 0, 0, 0, -12, 12, 8, -12, 12, 6, 2, -6, -2, -343, 1,
+            12, -12, -6, -2, 6, 2, 343, -1, -2, -3, 2, 3, 0, 0, 0, 2, 3, -2, -3, 0, 0, 0, -15, 15,
+            27, 66, 15, -15, -27, -66, 1, 44,
         ];
 
         let eval = ByteKnightEvaluation::default();

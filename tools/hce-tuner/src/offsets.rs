@@ -29,6 +29,10 @@ impl Offsets {
         PAWN_THREAT:   NumberOf::PIECE_TYPES,
         KNIGHT_THREAT: NumberOf::PIECE_TYPES,
         BISHOP_THREAT: NumberOf::PIECE_TYPES,
+        KNIGHT_MOBILITY: NumberOf::KNIGHT_MOVES +1,
+        BISHOP_MOBILITY: NumberOf::BISHOP_MOVES +1,
+        ROOK_MOBILITY: NumberOf::ROOK_MOVES +1,
+        QUEEN_MOBILITY: NumberOf::QUEEN_MOVES +1,
     );
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
@@ -51,6 +55,26 @@ impl Offsets {
     pub(crate) fn offset_for_isolated_pawn(square: usize, side: Side) -> usize {
         let (file, _rank) = square::from_square(square::flip_if(side == Side::White, square as u8));
         Self::ISOLATED_PAWN + file as usize
+    }
+
+    pub(crate) fn offset_for_mobility(piece: Piece, mobility: usize) -> usize {
+        assert!(
+            matches!(
+                piece,
+                Piece::Knight | Piece::Bishop | Piece::Rook | Piece::Queen
+            ),
+            "Mobility is only defined for Knight, Bishop, Rook, and Queen"
+        );
+
+        let base_offset = match piece {
+            Piece::Knight => Self::KNIGHT_MOBILITY,
+            Piece::Bishop => Self::BISHOP_MOBILITY,
+            Piece::Rook => Self::ROOK_MOBILITY,
+            Piece::Queen => Self::QUEEN_MOBILITY,
+            _ => unreachable!(),
+        };
+
+        base_offset + mobility
     }
 
     pub(crate) fn offset_for_bishop_pair() -> usize {

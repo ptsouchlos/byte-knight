@@ -174,6 +174,42 @@ fn print_params(params: &Parameters) {
         println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
     }
     println!("];");
+
+    println!();
+    println!("pub const KNIGHT_MOBILITY: [PhasedScore; NumberOf::KNIGHT_MOVES + 1] = [");
+    for mobility in 0..=NumberOf::KNIGHT_MOVES {
+        let idx = Offsets::offset_for_mobility(Piece::Knight, mobility);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
+
+    println!();
+    println!("pub const BISHOP_MOBILITY: [PhasedScore; NumberOf::BISHOP_MOVES + 1] = [");
+    for mobility in 0..=NumberOf::BISHOP_MOVES {
+        let idx = Offsets::offset_for_mobility(Piece::Bishop, mobility);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
+
+    println!();
+    println!("pub const ROOK_MOBILITY: [PhasedScore; NumberOf::ROOK_MOVES + 1] = [");
+    for mobility in 0..=NumberOf::ROOK_MOVES {
+        let idx = Offsets::offset_for_mobility(Piece::Rook, mobility);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
+
+    println!();
+    println!("pub const QUEEN_MOBILITY: [PhasedScore; NumberOf::QUEEN_MOVES + 1] = [");
+    for mobility in 0..=NumberOf::QUEEN_MOVES {
+        let idx = Offsets::offset_for_mobility(Piece::Queen, mobility);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
 }
 
 fn plot_k(tuner: &Tuner) {

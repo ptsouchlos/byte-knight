@@ -74,6 +74,21 @@ impl Parameters {
                 values.isolated_pawn_value(sq, Side::White).into();
         }
 
+        for piece in [Piece::Rook, Piece::Bishop, Piece::Knight, Piece::Queen] {
+            let num_moves = match piece {
+                Piece::Rook => NumberOf::ROOK_MOVES,
+                Piece::Bishop => NumberOf::BISHOP_MOVES,
+                Piece::Knight => NumberOf::KNIGHT_MOVES,
+                Piece::Queen => NumberOf::QUEEN_MOVES,
+                _ => unreachable!(),
+            };
+
+            for mobility in 0..=num_moves {
+                let idx = Offsets::offset_for_mobility(piece, mobility);
+                params[idx] = values.mobility_value(piece, mobility, Side::White).into();
+            }
+        }
+
         // Bishop pair: single value
         params[Offsets::offset_for_bishop_pair()] =
             values.bishop_pair_bonus_value(Side::White).into();
