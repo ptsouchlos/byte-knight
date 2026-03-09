@@ -291,3 +291,15 @@ impl EvalValues for ByteKnightValues {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_mobility() {
+        let values = ByteKnightValues::default();
+        let score = values.mobility_value(Piece::Pawn, 3, Side::White);
+        assert_eq!(score, S(0, 0));
+    }
+}
