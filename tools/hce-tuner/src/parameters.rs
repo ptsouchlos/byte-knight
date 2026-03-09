@@ -198,6 +198,80 @@ mod tests {
     use crate::offsets::Offsets;
 
     #[test]
+    fn gradient_matches_numerical() {
+        use crate::{epd_parser, tuner_score::TuningScore};
+
+        let params = Parameters::create_from_engine_values();
+        let positions: Vec<_> = [
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 [0.5]",
+            "r2q1rk1/3n1p2/2pp3p/1pb1p1p1/p3P3/P1NP1N1P/RPP2PP1/5QK1 b - - 0 2 [0.0]",
+            "8/8/7p/1P2k2P/4p1P1/1p1r4/1R2K3/8 b - - ce 0.7306",
+            "r4rk1/3bppb1/p3q1p1/1p1p3p/2pPn3/P1P1PN1P/1PB1QPPB/1R3RK1 b - - c9 \"1/2-1/2\";",
+            "rn1q2k1/ppp2ppp/3p1n2/2bb4/8/5NP1/PPP1NPBP/R4RK1 w - - 0 1 [0.0]",
+        ]
+        .iter()
+        .map(|line| epd_parser::parse_epd_line(line).unwrap())
+        .collect();
+
+        let k = 0.009;
+        let eps = 1e-6;
+        let n = positions.len() as f64;
+
+        let gradient = params.gradient_batch(k, &positions);
+
+        // Test representative parameter indexes
+        for &test_idx in &[0, Offsets::PASSED_PAWN, Offsets::KNIGHT_MOBILITY] {
+            // Numerical gradient for mg component
+            let mut params_plus = Parameters::create_from_engine_values();
+            let mut params_minus = Parameters::create_from_engine_values();
+            params_plus[test_idx] += TuningScore::new(eps, 0.0);
+            params_minus[test_idx] -= TuningScore::new(eps, 0.0);
+
+            let error_plus: f64 = positions
+                .iter()
+                .map(|p| p.error(k, &params_plus))
+                .sum::<f64>()
+                / n;
+            let error_minus: f64 = positions
+                .iter()
+                .map(|p| p.error(k, &params_minus))
+                .sum::<f64>()
+                / n;
+            let numerical_mg = (error_plus - error_minus) / (2.0 * eps);
+            let analytical_mg = (-2.0 * k / n) * gradient[test_idx].mg();
+
+            assert!(
+                (analytical_mg - numerical_mg).abs() < 1e-4,
+                "Gradient mismatch at idx {test_idx} mg: analytical={analytical_mg}, numerical={numerical_mg}"
+            );
+
+            // Numerical gradient for eg component
+            let mut params_plus = Parameters::create_from_engine_values();
+            let mut params_minus = Parameters::create_from_engine_values();
+            params_plus[test_idx] += TuningScore::new(0.0, eps);
+            params_minus[test_idx] -= TuningScore::new(0.0, eps);
+
+            let error_plus: f64 = positions
+                .iter()
+                .map(|p| p.error(k, &params_plus))
+                .sum::<f64>()
+                / n;
+            let error_minus: f64 = positions
+                .iter()
+                .map(|p| p.error(k, &params_minus))
+                .sum::<f64>()
+                / n;
+            let numerical_eg = (error_plus - error_minus) / (2.0 * eps);
+            let analytical_eg = (-2.0 * k / n) * gradient[test_idx].eg();
+
+            assert!(
+                (analytical_eg - numerical_eg).abs() < 1e-4,
+                "Gradient mismatch at idx {test_idx} eg: analytical={analytical_eg}, numerical={numerical_eg}"
+            );
+        }
+    }
+
+    #[test]
     fn parameter_access() {
         // ensure that we can access parameters correctly at the correct index
         let params = Parameters::create_from_engine_values();
