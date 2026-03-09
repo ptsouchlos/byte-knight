@@ -53,3 +53,46 @@ impl TuningPosition {
         (self.game_result - math::sigmoid(k * self.evaluate(params))).powi(2)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{epd_parser, parameters::Parameters};
+
+    #[test]
+    fn evaluate_snapshot() {
+        let params = Parameters::create_from_engine_values();
+
+        // Starting position (opening, high phase)
+        let pos_start = epd_parser::parse_epd_line(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 [0.5]",
+        )
+        .unwrap();
+        let eval_start = pos_start.evaluate(&params);
+        assert!(
+            (eval_start - 30.0).abs() < 1e-10,
+            "start position snapshot changed: got {eval_start}"
+        );
+
+        // Middlegame position
+        let pos_mid = epd_parser::parse_epd_line(
+            "r2q1rk1/3n1p2/2pp3p/1pb1p1p1/p3P3/P1NP1N1P/RPP2PP1/5QK1 b - - 0 2 [0.0]",
+        )
+        .unwrap();
+        let eval_mid = pos_mid.evaluate(&params);
+        assert!(
+            (eval_mid - (-613.0)).abs() < 1e-10,
+            "middlegame snapshot changed: got {eval_mid}"
+        );
+
+        // Endgame position (low phase)
+        let pos_end = epd_parser::parse_epd_line(
+            "8/8/7p/1P2k2P/4p1P1/1p1r4/1R2K3/8 b - - ce 0.7306",
+        )
+        .unwrap();
+        let eval_end = pos_end.evaluate(&params);
+        assert!(
+            (eval_end - (-177.166_666_666_666_69)).abs() < 1e-6,
+            "endgame snapshot changed: got {eval_end}"
+        );
+    }
+}
