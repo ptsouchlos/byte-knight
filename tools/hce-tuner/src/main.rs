@@ -210,6 +210,13 @@ fn print_params(params: &Parameters) {
         println!("    {val:?},");
     }
     println!("];");
+
+    println!();
+    println!("// Small bonus for being the side to move.");
+    println!(
+        "pub const TEMPO_BONUS: PhasedScore = {:?};",
+        params.as_slice()[Offsets::offset_for_tempo_bonus()]
+    );
 }
 
 fn plot_k(tuner: &Tuner) {
