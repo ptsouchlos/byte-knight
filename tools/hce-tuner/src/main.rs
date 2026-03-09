@@ -63,6 +63,12 @@ enum Command {
         )]
         k: f64,
     },
+    Bench {
+        #[clap(short, long, help = "Number of epochs to run.", default_value_t = 50)]
+        epochs: usize,
+        #[clap(short, long, help = INPUT_DATA_HELP, default_value = "data/lichess-test.book")]
+        input_data: String,
+    },
 }
 
 fn print_table(indent: usize, table: &[TuningScore]) {
@@ -278,6 +284,27 @@ fn main() {
             let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
             let error = tuner.mean_square_error(k);
             println!("Error for k {k:.8}: {error:.8}");
+        }
+        Command::Bench { epochs, input_data } => {
+            let positions = parse_data(&input_data);
+            let parameters = Parameters::create_from_engine_values();
+            let mut tuner = tuner::Tuner::new(parameters, &positions, epochs);
+
+            println!("Computing optimal K value...");
+            let k = tuner.compute_k();
+            println!("Optimal K value: {k:.8}");
+
+            println!("Running {epochs} epochs...");
+            let start = std::time::Instant::now();
+            for _ in 0..epochs {
+                tuner.run_epoch(k);
+            }
+            let elapsed = start.elapsed();
+            println!(
+                "Total: {:.3}s | Per epoch: {:.3}ms",
+                elapsed.as_secs_f64(),
+                elapsed.as_secs_f64() * 1000.0 / epochs as f64
+            );
         }
     }
 }
