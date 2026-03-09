@@ -100,4 +100,10 @@ impl EvalValues for TracingValues {
         self.record(side, idx);
         PhasedScore::default()
     }
+
+    fn tempo_bonus(&self, side: Side) -> Self::ReturnScore {
+        let idx = Offsets::offset_for_tempo_bonus();
+        self.record(side, idx);
+        PhasedScore::default()
+    }
 }

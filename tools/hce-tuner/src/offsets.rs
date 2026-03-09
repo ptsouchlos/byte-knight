@@ -33,6 +33,7 @@ impl Offsets {
         BISHOP_MOBILITY: NumberOf::BISHOP_MOVES +1,
         ROOK_MOBILITY: NumberOf::ROOK_MOVES +1,
         QUEEN_MOBILITY: NumberOf::QUEEN_MOVES +1,
+        TEMPO_BONUS: 1
     );
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
@@ -108,6 +109,10 @@ impl Offsets {
             _ => unreachable!(),
         };
         base_offset + attacked_piece as usize
+    }
+
+    pub(crate) fn offset_for_tempo_bonus() -> usize {
+        Self::TEMPO_BONUS
     }
 }
 

@@ -74,6 +74,7 @@ impl Parameters {
                 values.isolated_pawn_value(sq, Side::White).into();
         }
 
+        // Mobility values for the pieces we care about.
         for piece in [Piece::Rook, Piece::Bishop, Piece::Knight, Piece::Queen] {
             let num_moves = match piece {
                 Piece::Rook => NumberOf::ROOK_MOVES,
@@ -107,6 +108,9 @@ impl Parameters {
                 params[idx] = values.threat_value(attacker, attacked, Side::White).into();
             }
         }
+
+        // Tempo bonus
+        params[Offsets::offset_for_tempo_bonus()] = values.tempo_bonus(Side::White).into();
 
         params
     }
