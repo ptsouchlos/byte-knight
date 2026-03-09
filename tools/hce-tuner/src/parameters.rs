@@ -1,7 +1,7 @@
 // Part of the byte-knight project.
 // Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
 
-use std::ops::{Add, Index, IndexMut};
+use std::ops::{Add, AddAssign, Index, IndexMut};
 
 use chess::{
     definitions::NumberOf,
@@ -11,11 +11,11 @@ use chess::{
 };
 use engine::hce_values::PASSED_PAWN_BONUS;
 
+#[cfg(test)]
+use crate::tuning_position::TuningPosition;
 use crate::{
-    math,
     offsets::{Offsets, PARAMETER_COUNT},
     tuner_score::TuningScore,
-    tuning_position::TuningPosition,
 };
 
 /// Set of parameters that serve as input for tuning.
@@ -133,13 +133,15 @@ impl Parameters {
         params
     }
 
+    #[cfg(test)]
     pub(crate) fn gradient_batch(&self, k: f64, data: &[TuningPosition]) -> Self {
+        use crate::math;
         let mut gradient = Parameters::default();
         for point in data {
             let sigmoid_result = math::sigmoid(k * point.evaluate(self));
             let term =
                 (point.game_result - sigmoid_result) * (1. - sigmoid_result) * sigmoid_result;
-            let phase_adjustment = term * TuningScore::new(point.phase, 1. - point.phase);
+            let phase_adjustment = term * point.phase_score;
 
             for idx in &point.parameter_indexes[Side::White as usize] {
                 gradient[*idx] += phase_adjustment;
@@ -182,6 +184,14 @@ impl Add<Parameters> for Parameters {
             result[i] = self[i] + rhs[i];
         }
         result
+    }
+}
+
+impl AddAssign<Parameters> for Parameters {
+    fn add_assign(&mut self, rhs: Self) {
+        for i in 0..PARAMETER_COUNT {
+            self[i] += rhs[i];
+        }
     }
 }
 
