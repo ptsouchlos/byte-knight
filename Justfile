@@ -131,3 +131,8 @@ format:
 hce-tune book epochs: (build-target-release "hce-tuner")
     echo "Running HCE tuner..."
     ./target/release/hce-tuner tune -i {{ book }} -e {{ epochs }} -p engine-values
+
+[doc('Benchmark the HCE tuner epoch performance')]
+[group('performance')]
+hce-bench: (build-target-release "hce-tuner")
+    ./target/release/hce-tuner bench
