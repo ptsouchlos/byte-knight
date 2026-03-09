@@ -53,7 +53,7 @@ fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     Ok((board, game_result))
 }
 
-fn parse_epd_line(line: &str) -> Result<TuningPosition> {
+pub(crate) fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     let (board, game_result) = process_epd_line(line)?;
 
     let tracing = TracingValues::new();
