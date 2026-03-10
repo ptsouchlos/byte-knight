@@ -239,6 +239,28 @@ pub const QUEEN_MOBILITY: [PhasedScore; NumberOf::QUEEN_MOVES + 1] = [
 // Small bonus for being the side to move.
 pub const TEMPO_BONUS: PhasedScore = S(30, 26);
 
+pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+];
+
+pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+    S(1, 1),
+];
+
 const RANK_1: u8 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -296,6 +318,16 @@ impl EvalValues for ByteKnightValues {
 
     fn tempo_bonus(&self, _side: Side) -> Self::ReturnScore {
         TEMPO_BONUS
+    }
+
+    fn open_file_bonus(&self, square: u8, _side: Side) -> Self::ReturnScore {
+        let (file, _rank) = square::from_square(square);
+        ROOK_OPEN_FILE_BONUS[file as usize]
+    }
+
+    fn semi_open_file_bonus(&self, square: u8, _side: Side) -> Self::ReturnScore {
+        let (file, _rank) = square::from_square(square);
+        ROOK_SEMI_OPEN_FILE_BONUS[file as usize]
     }
 }
 

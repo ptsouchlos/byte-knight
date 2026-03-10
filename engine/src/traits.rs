@@ -25,4 +25,6 @@ pub trait EvalValues {
     fn king_safety_value(&self, piece: Piece, side: Side) -> Self::ReturnScore;
     fn threat_value(&self, piece: Piece, attacked_piece: Piece, side: Side) -> Self::ReturnScore;
     fn tempo_bonus(&self, side: Side) -> Self::ReturnScore;
+    fn open_file_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
+    fn semi_open_file_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
 }

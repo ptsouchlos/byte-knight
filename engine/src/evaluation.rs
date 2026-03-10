@@ -5,7 +5,7 @@
 
 use std::ops::AddAssign;
 
-use chess::{attacks, bitboard_helpers, board::Board, pieces::Piece, side::Side};
+use chess::{attacks, bitboard_helpers, board::Board, file::File, pieces::Piece, side::Side};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_INC, GAME_PHASE_MAX},
@@ -130,6 +130,34 @@ impl<Values: EvalValues> Evaluation<Values> {
                 let mobility =
                     (attacks & !enemy_pawn_attacks & !our_pieces).number_of_occupied_squares();
                 score += self.values().mobility_value(piece, mobility as usize, side);
+            }
+        }
+        score
+    }
+
+    fn evaluate_rook_files(&self, board: &Board, side: Side) -> PhasedScore
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let mut score = PhasedScore::default();
+
+        let our_pawns = *board.piece_bitboard(Piece::Pawn, side);
+        let their_pawns = *board.piece_bitboard(Piece::Pawn, side.opposite());
+
+        let our_rooks = board.piece_bitboard(Piece::Rook, side);
+        for rook_sq in our_rooks.iter() {
+            let file_bb = File::of(rook_sq).to_bitboard();
+
+            // Check if there are any pawns on file
+            let is_open = (file_bb & (our_pawns | their_pawns)).number_of_occupied_squares() == 0;
+            if is_open {
+                score += self.values().open_file_bonus(rook_sq, side);
+            } else {
+                // Check that there are no friendly pawns on file
+                let is_semi_open = (file_bb & our_pawns).number_of_occupied_squares() == 0;
+                if is_semi_open {
+                    score += self.values().semi_open_file_bonus(rook_sq, side);
+                }
             }
         }
         score
@@ -261,6 +289,15 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let tempo_bonus = self.values().tempo_bonus(side_to_move);
         mg[stm_idx] += tempo_bonus.mg() as i32;
         eg[stm_idx] += tempo_bonus.eg() as i32;
+
+        let our_rook_bonus = self.evaluate_rook_files(board, side_to_move);
+        let their_rook_bonus = self.evaluate_rook_files(board, side_to_move.opposite());
+
+        mg[stm_idx] += our_rook_bonus.mg() as i32;
+        eg[stm_idx] += our_rook_bonus.eg() as i32;
+
+        mg[opp_idx] += their_rook_bonus.mg() as i32;
+        eg[opp_idx] += their_rook_bonus.eg() as i32;
 
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
@@ -448,19 +485,18 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            30, 4, 753, 768, -700, -716, 1446, -1392, 650, 683, -597, -630, 27, 32, 39, 39, 22, 15,
-            15, -700, -716, 753, 768, -1392, 1446, -597, -630, 650, 683, 27, 22, 15, 15, 32, 39,
+            30, 4, 754, 769, -701, -717, 1448, -1394, 651, 684, -598, -631, 27, 32, 39, 39, 22, 15,
+            15, -701, -717, 754, 769, -1394, 1448, -598, -631, 651, 684, 27, 22, 15, 15, 32, 39,
             39, 38, 38, 26, -415, 579, 14, 13, 22, 468, -526, -10, -16, 915, -889, 108, 69, -862,
             942, 27, 22, 27, 32, -1316, -1408, -11, 1353, -1408, 65, 239, 271, -187, -219, 6, -187,
             -219, 239, 271, 46, 19, 19, 26, 26, 26, 36, 16, 15, 26, 26, 26, 16, 36, 37, 18, 40, 33,
             28, 19, 24, -319, 25, 34, 12, 19, 24, 33, 28, 371, 27, 25, 23, 27, 29, 27, 25, 26, 27,
-            29, 25, 23, 25, 27, 26, 7, 40, 50, 90, 45, 12, 2, -36, 28, 69,
+            29, 25, 23, 25, 27, 26, 7, 40, 50, 90, 45, 12, 2, -36, 27, 69,
         ];
 
         let eval = ByteKnightEvaluation::default();
 
         for (i, fen) in positions.iter().enumerate() {
-            println!("Position {i}: {fen}");
             let board = Board::from_fen(fen).unwrap();
             let score = eval.eval(&board);
             println!("{},", score.0);
