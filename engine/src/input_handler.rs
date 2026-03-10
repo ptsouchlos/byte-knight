@@ -59,7 +59,6 @@ pub(crate) enum CommandProxy {
 #[derive(Debug)]
 pub(crate) struct InputHandler {
     handle: Option<JoinHandle<()>>,
-    stop_flag: Arc<AtomicBool>,
     receiver: Receiver<CommandProxy>,
 }
 
@@ -67,6 +66,9 @@ impl InputHandler {
     /// Creates a new [`InputHandler`]. The input handler reads from stdin and sends the parsed UCI
     /// commands to the receiver end of the channel via the sender. Creating a new [`InputHandler`]
     /// spawns a new worker thread. The thread starts upon creation.
+    ///
+    /// The `stop_flag` is set by the worker thread when a `stop` or `quit` command is received,
+    /// allowing an in-progress search to be interrupted immediately.
     ///
     /// # Panics
     ///
@@ -76,48 +78,43 @@ impl InputHandler {
     ///
     /// A new [`InputHandler`] instance.
     ///
-    pub(crate) fn new() -> InputHandler {
-        let stop_flag = Arc::new(AtomicBool::new(false));
-        let stop_flag_clone = stop_flag.clone();
+    pub(crate) fn new(stop_flag: Arc<AtomicBool>) -> InputHandler {
         let (sender, receiver) = mpsc::channel();
         let worker = std::thread::spawn(move || {
             let stdin = stdin();
             let mut input = stdin.lock().lines();
-            while !stop_flag.load(std::sync::atomic::Ordering::Relaxed) {
-                if let Some(Ok(line)) = input.next() {
-                    let engine_command = EngineCommand::from_str(line.as_str());
+            while let Some(Ok(line)) = input.next() {
+                let engine_command = EngineCommand::from_str(line.as_str());
 
-                    if let Ok(engine_command) = engine_command {
-                        sender.send(CommandProxy::Engine(engine_command)).unwrap();
-                    } else {
-                        let command = UciCommand::from_str(line.as_str());
-                        if let Ok(command) = command {
-                            let cmd = command.clone();
-                            sender.send(CommandProxy::Uci(cmd)).unwrap();
-                            // manually break the loop if the command is "quit"
-                            if command == UciCommand::Quit {
-                                break;
-                            }
-                        } else {
-                            eprintln!("info error: invalid command: {line}");
-                        }
-                    }
+                if let Ok(engine_command) = engine_command {
+                    sender.send(CommandProxy::Engine(engine_command)).unwrap();
                 } else {
-                    eprintln!("info error: failed to read from stdin");
+                    let command = UciCommand::from_str(line.as_str());
+                    if let Ok(command) = command {
+                        // Set stop flag for stop/quit before sending through channel
+                        if command == UciCommand::Stop || command == UciCommand::Quit {
+                            stop_flag.store(true, Ordering::Relaxed);
+                        }
+                        let cmd = command.clone();
+                        sender.send(CommandProxy::Uci(cmd)).unwrap();
+                        // Break the loop if the command is "quit"
+                        if command == UciCommand::Quit {
+                            break;
+                        }
+                    } else {
+                        eprintln!("info error: invalid command: {line}");
+                    }
                 }
             }
         });
         InputHandler {
             handle: Some(worker),
-            stop_flag: stop_flag_clone,
             receiver,
         }
     }
 
     /// Stops the worker thread. This method blocks until the worker thread has stopped.
     pub fn stop(&mut self) {
-        self.stop_flag.store(true, Ordering::Relaxed);
-
         if let Some(handle) = self.handle.take() {
             handle.join().unwrap();
         }
@@ -125,10 +122,5 @@ impl InputHandler {
 
     pub fn receiver(&self) -> &Receiver<CommandProxy> {
         &self.receiver
-    }
-
-    /// Signal to the worker thread that it should stop.
-    pub(crate) fn exit(&mut self) {
-        self.stop();
     }
 }

@@ -18,4 +18,3 @@ textplots = { workspace = true }
 [[bin]]
 name = "hce-tuner"
 path = "src/main.rs"
-test = false

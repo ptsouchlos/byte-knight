@@ -50,7 +50,7 @@ impl<'a> Tuner<'a> {
         &self.weights
     }
 
-    fn run_epoch(&mut self, k: f64) {
+    pub(crate) fn run_epoch(&mut self, k: f64) {
         let gradients = self.gradients(k);
 
         for i in 0..PARAMETER_COUNT {
@@ -128,11 +128,11 @@ impl<'a> Tuner<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::offsets::Offsets;
+    use crate::offsets::PARAMETER_COUNT;
 
     #[test]
     fn offsets() {
-        assert_eq!(Offsets::END, 430);
+        assert_eq!(PARAMETER_COUNT, 513);
     }
 
     #[test]

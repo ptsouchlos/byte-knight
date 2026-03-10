@@ -19,6 +19,7 @@ mod epd_parser;
 mod math;
 mod offsets;
 mod parameters;
+mod tracing_values;
 mod tuner;
 mod tuner_score;
 mod tuning_position;
@@ -62,6 +63,12 @@ enum Command {
         )]
         k: f64,
     },
+    Bench {
+        #[clap(short, long, help = "Number of epochs to run.", default_value_t = 50)]
+        epochs: usize,
+        #[clap(short, long, help = INPUT_DATA_HELP, default_value = "data/lichess-test.book")]
+        input_data: String,
+    },
 }
 
 fn print_table(indent: usize, table: &[TuningScore]) {
@@ -100,7 +107,7 @@ fn print_params(params: &Parameters) {
     println!("pub const PASSED_PAWN_BONUS: [PhasedScore; NumberOf::PASSED_PAWN_RANKS] = [",);
 
     for rank in 0..NumberOf::PASSED_PAWN_RANKS {
-        let idx = Offsets::PASSED_PAWN as usize + rank;
+        let idx = Offsets::PASSED_PAWN + rank;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
     }
@@ -113,7 +120,7 @@ fn print_params(params: &Parameters) {
     println!("pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
 
     for file in 0..NumberOf::FILES {
-        let idx = Offsets::DOUBLED_PAWN as usize + file;
+        let idx = Offsets::DOUBLED_PAWN + file;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
     }
@@ -125,7 +132,7 @@ fn print_params(params: &Parameters) {
     println!("pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
 
     for file in 0..NumberOf::FILES {
-        let idx = Offsets::ISOLATED_PAWN as usize + file;
+        let idx = Offsets::ISOLATED_PAWN + file;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
     }
@@ -134,14 +141,14 @@ fn print_params(params: &Parameters) {
     println!();
     println!(
         "pub const BISHOP_PAIR_BONUS: PhasedScore = {:?};",
-        params.as_slice()[Offsets::BISHOP_PAIR as usize]
+        params.as_slice()[Offsets::BISHOP_PAIR]
     );
 
     println!();
     println!("pub const KING_SAFETY: [PhasedScore; NumberOf::PIECE_TYPES - 1] =");
     print!("    [");
     for piece_idx in Piece::iter().filter(|&p| p != Piece::King) {
-        let idx = Offsets::KING_SAFETY as usize + piece_idx as usize - 1;
+        let idx = Offsets::KING_SAFETY + piece_idx as usize - 1;
         let val = params.as_slice()[idx];
         print!("{val:?}, ");
     }
@@ -150,7 +157,7 @@ fn print_params(params: &Parameters) {
     println!();
     println!("pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
     for piece_idx in Piece::iter() {
-        let idx = Offsets::PAWN_THREAT as usize + piece_idx as usize;
+        let idx = Offsets::PAWN_THREAT + piece_idx as usize;
         let val = params.as_slice()[idx];
         println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
     }
@@ -159,7 +166,7 @@ fn print_params(params: &Parameters) {
     println!();
     println!("pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
     for piece_idx in Piece::iter() {
-        let idx = Offsets::KNIGHT_THREAT as usize + piece_idx as usize;
+        let idx = Offsets::KNIGHT_THREAT + piece_idx as usize;
         let val = params.as_slice()[idx];
         println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
     }
@@ -168,9 +175,70 @@ fn print_params(params: &Parameters) {
     println!();
     println!("pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
     for piece_idx in Piece::iter() {
-        let idx = Offsets::BISHOP_THREAT as usize + piece_idx as usize;
+        let idx = Offsets::BISHOP_THREAT + piece_idx as usize;
         let val = params.as_slice()[idx];
         println!("    {val:?}, //{}", PIECE_NAMES[piece_idx as usize]);
+    }
+    println!("];");
+
+    println!();
+    println!("pub const KNIGHT_MOBILITY: [PhasedScore; NumberOf::KNIGHT_MOVES + 1] = [");
+    for mobility in 0..=NumberOf::KNIGHT_MOVES {
+        let idx = Offsets::offset_for_mobility(Piece::Knight, mobility);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
+
+    println!();
+    println!("pub const BISHOP_MOBILITY: [PhasedScore; NumberOf::BISHOP_MOVES + 1] = [");
+    for mobility in 0..=NumberOf::BISHOP_MOVES {
+        let idx = Offsets::offset_for_mobility(Piece::Bishop, mobility);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
+
+    println!();
+    println!("pub const ROOK_MOBILITY: [PhasedScore; NumberOf::ROOK_MOVES + 1] = [");
+    for mobility in 0..=NumberOf::ROOK_MOVES {
+        let idx = Offsets::offset_for_mobility(Piece::Rook, mobility);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
+
+    println!();
+    println!("pub const QUEEN_MOBILITY: [PhasedScore; NumberOf::QUEEN_MOVES + 1] = [");
+    for mobility in 0..=NumberOf::QUEEN_MOVES {
+        let idx = Offsets::offset_for_mobility(Piece::Queen, mobility);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
+
+    println!();
+    println!("// Small bonus for being the side to move.");
+    println!(
+        "pub const TEMPO_BONUS: PhasedScore = {:?};",
+        params.as_slice()[Offsets::offset_for_tempo_bonus()]
+    );
+
+    println!();
+    println!("pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [");
+    for file in 0..NumberOf::FILES {
+        let idx = Offsets::offset_for_rook_open_file(file as u8);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
+
+    println!();
+    println!("pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [");
+    for file in 0..NumberOf::FILES {
+        let idx = Offsets::offset_for_rook_semi_open_file(file as u8);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
     }
     println!("];");
 }
@@ -198,7 +266,6 @@ fn plot_k(tuner: &Tuner) {
 fn parse_data(input_data: &str) -> Vec<TuningPosition> {
     println!("Reading data from: {input_data}");
     let positions = epd_parser::parse_epd_file(input_data);
-    // let positions = get_positions();
     println!("Read {} positions", positions.len());
     positions
 }
@@ -235,6 +302,27 @@ fn main() {
             let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
             let error = tuner.mean_square_error(k);
             println!("Error for k {k:.8}: {error:.8}");
+        }
+        Command::Bench { epochs, input_data } => {
+            let positions = parse_data(&input_data);
+            let parameters = Parameters::create_from_engine_values();
+            let mut tuner = tuner::Tuner::new(parameters, &positions, epochs);
+
+            println!("Computing optimal K value...");
+            let k = tuner.compute_k();
+            println!("Optimal K value: {k:.8}");
+
+            println!("Running {epochs} epochs...");
+            let start = std::time::Instant::now();
+            for _ in 0..epochs {
+                tuner.run_epoch(k);
+            }
+            let elapsed = start.elapsed();
+            println!(
+                "Total: {:.3}s | Per epoch: {:.3}ms",
+                elapsed.as_secs_f64(),
+                elapsed.as_secs_f64() * 1000.0 / epochs as f64
+            );
         }
     }
 }

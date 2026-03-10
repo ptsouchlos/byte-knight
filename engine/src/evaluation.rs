@@ -5,7 +5,7 @@
 
 use std::ops::AddAssign;
 
-use chess::{attacks, bitboard_helpers, board::Board, pieces::Piece, side::Side};
+use chess::{attacks, bitboard_helpers, board::Board, file::File, pieces::Piece, side::Side};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_INC, GAME_PHASE_MAX},
@@ -34,6 +34,10 @@ impl<Values: EvalValues> Evaluation<Values> {
 
     pub fn values(&self) -> &Values {
         &self.values
+    }
+
+    pub fn into_values(self) -> Values {
+        self.values
     }
 
     pub fn mutable_values(&mut self) -> &mut Values {
@@ -77,24 +81,85 @@ impl<Values: EvalValues> Evaluation<Values> {
         let pawn_attacks = attacks::for_piece(Piece::Pawn, board, us);
         for piece_attacked in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
-            score += self.values().threat_value(Piece::Pawn, piece_attacked)
-                * (pawn_attacks & piece_bb).number_of_occupied_squares() as i16;
+            let count = (pawn_attacks & piece_bb).number_of_occupied_squares();
+            for _ in 0..count {
+                score += self.values().threat_value(Piece::Pawn, piece_attacked, us);
+            }
         }
 
         let knight_attacks = attacks::for_piece(Piece::Knight, board, us);
         for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
-            score += self.values().threat_value(Piece::Knight, piece_attacked)
-                * (knight_attacks & piece_bb).number_of_occupied_squares() as i16;
+            let count = (knight_attacks & piece_bb).number_of_occupied_squares();
+            for _ in 0..count {
+                score += self
+                    .values()
+                    .threat_value(Piece::Knight, piece_attacked, us);
+            }
         }
 
         let bishop_attacks = attacks::for_piece(Piece::Bishop, board, us);
         for piece_attacked in [Piece::Knight, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
-            score += self.values().threat_value(Piece::Bishop, piece_attacked)
-                * (bishop_attacks & piece_bb).number_of_occupied_squares() as i16;
+            let count = (bishop_attacks & piece_bb).number_of_occupied_squares();
+            for _ in 0..count {
+                score += self
+                    .values()
+                    .threat_value(Piece::Bishop, piece_attacked, us);
+            }
         }
 
+        score
+    }
+
+    fn evaluate_mobility(&self, board: &Board, side: Side) -> PhasedScore
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let mut score = PhasedScore::default();
+        let us = side;
+        let them = us.opposite();
+        let occ = board.all_pieces();
+        let our_pieces = board.pieces(us);
+        let enemy_pawn_attacks = attacks::for_piece(Piece::Pawn, board, them);
+
+        for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
+            let piece_bb = board.piece_bitboard(piece, side);
+            for piece_sq in piece_bb.iter() {
+                let attacks = attacks::for_piece_on_square(piece, piece_sq, occ, side);
+                let mobility =
+                    (attacks & !enemy_pawn_attacks & !our_pieces).number_of_occupied_squares();
+                score += self.values().mobility_value(piece, mobility as usize, side);
+            }
+        }
+        score
+    }
+
+    fn evaluate_rook_files(&self, board: &Board, side: Side) -> PhasedScore
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let mut score = PhasedScore::default();
+
+        let our_pawns = *board.piece_bitboard(Piece::Pawn, side);
+        let their_pawns = *board.piece_bitboard(Piece::Pawn, side.opposite());
+
+        let our_rooks = board.piece_bitboard(Piece::Rook, side);
+        for rook_sq in our_rooks.iter() {
+            let file_bb = File::of(rook_sq).to_bitboard();
+
+            // Check if there are any pawns on file
+            let is_open = (file_bb & (our_pawns | their_pawns)).number_of_occupied_squares() == 0;
+            if is_open {
+                score += self.values().open_file_bonus(rook_sq, side);
+            } else {
+                // Check that there are no friendly pawns on file
+                let is_semi_open = (file_bb & our_pawns).number_of_occupied_squares() == 0;
+                if is_semi_open {
+                    score += self.values().semi_open_file_bonus(rook_sq, side);
+                }
+            }
+        }
         score
     }
 }
@@ -120,21 +185,20 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             let maybe_piece = board.piece_on_square(sq as u8);
             if let Some((piece, side)) = maybe_piece {
                 if piece == Piece::Pawn {
-                    // add passed pawn bonus if applicable
-                    let passed_pawn_bonus = self.values.passed_pawn_bonus(sq as u8, side);
                     if pawn_structure.passed_pawns[side as usize].is_square_occupied(sq as u8) {
+                        let passed_pawn_bonus = self.values.passed_pawn_bonus(sq as u8, side);
                         mg[side as usize] += passed_pawn_bonus.mg() as i32;
                         eg[side as usize] += passed_pawn_bonus.eg() as i32;
                     }
 
-                    let doubled_pawn_value = self.values.doubled_pawn_value(sq as u8, side);
                     if pawn_structure.doubled_pawns[side as usize].is_square_occupied(sq as u8) {
+                        let doubled_pawn_value = self.values.doubled_pawn_value(sq as u8, side);
                         mg[side as usize] += doubled_pawn_value.mg() as i32;
                         eg[side as usize] += doubled_pawn_value.eg() as i32;
                     }
 
-                    let isolated_pawn_value = self.values.isolated_pawn_value(sq as u8, side);
                     if pawn_structure.isolated_pawns[side as usize].is_square_occupied(sq as u8) {
+                        let isolated_pawn_value = self.values.isolated_pawn_value(sq as u8, side);
                         mg[side as usize] += isolated_pawn_value.mg() as i32;
                         eg[side as usize] += isolated_pawn_value.eg() as i32;
                     }
@@ -157,7 +221,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             .number_of_occupied_squares()
             >= 2
         {
-            let bonus = self.values.bishop_pair_bonus_value();
+            let bonus = self.values.bishop_pair_bonus_value(side_to_move);
             mg[stm_idx] += bonus.mg() as i32;
             eg[stm_idx] += bonus.eg() as i32;
         }
@@ -167,7 +231,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             .number_of_occupied_squares()
             >= 2
         {
-            let bonus = self.values.bishop_pair_bonus_value();
+            let bonus = self.values.bishop_pair_bonus_value(opposite);
             mg[opp_idx] += bonus.mg() as i32;
             eg[opp_idx] += bonus.eg() as i32;
         }
@@ -184,9 +248,8 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             for piece in Piece::iter().filter(|&p| p != Piece::King) {
                 // Get opponent piece bb
                 let mut piece_bb = *board.piece_bitboard(piece, them);
-                let val = self.values.king_safety_value(piece);
 
-                // Loop through each sq in the pieace bb and see if that pieace is attacking the king ring
+                // Loop through each sq in the piece bb and see if that piece is attacking the king ring
                 while piece_bb.as_number() > 0 {
                     let sq = bitboard_helpers::next_bit(&mut piece_bb);
                     let piece_attacks = attacks::for_piece_on_square(piece, sq as u8, occ, them);
@@ -194,8 +257,11 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                     let overlap = piece_attacks & king_ring;
                     let overlap_cnt = overlap.number_of_occupied_squares();
 
-                    mg[side as usize] += val.mg() as i32 * overlap_cnt as i32;
-                    eg[side as usize] += val.eg() as i32 * overlap_cnt as i32;
+                    for _ in 0..overlap_cnt {
+                        let val = self.values.king_safety_value(piece, us);
+                        mg[side as usize] += val.mg() as i32;
+                        eg[side as usize] += val.eg() as i32;
+                    }
                 }
             }
         }
@@ -209,9 +275,34 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         mg[opp_idx] += their_threats_val.mg() as i32;
         eg[opp_idx] += their_threats_val.eg() as i32;
 
+        // Evaluate mobility
+        let our_mobility_val = self.evaluate_mobility(board, side_to_move);
+        let their_mobility_val = self.evaluate_mobility(board, opposite);
+
+        mg[stm_idx] += our_mobility_val.mg() as i32;
+        eg[stm_idx] += our_mobility_val.eg() as i32;
+
+        mg[opp_idx] += their_mobility_val.mg() as i32;
+        eg[opp_idx] += their_mobility_val.eg() as i32;
+
+        // Tempo bonus for side to move
+        let tempo_bonus = self.values().tempo_bonus(side_to_move);
+        mg[stm_idx] += tempo_bonus.mg() as i32;
+        eg[stm_idx] += tempo_bonus.eg() as i32;
+
+        let our_rook_bonus = self.evaluate_rook_files(board, side_to_move);
+        let their_rook_bonus = self.evaluate_rook_files(board, side_to_move.opposite());
+
+        mg[stm_idx] += our_rook_bonus.mg() as i32;
+        eg[stm_idx] += our_rook_bonus.eg() as i32;
+
+        mg[opp_idx] += their_rook_bonus.mg() as i32;
+        eg[opp_idx] += their_rook_bonus.eg() as i32;
+
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
         let score = PhasedScore::new(mg_score as ScoreType, eg_score as ScoreType);
+
         // taper the score based on the game phase
         let val = score.taper(game_phase.min(GAME_PHASE_MAX) as PhaseType, GAME_PHASE_MAX);
         Score::new(val)
@@ -394,19 +485,18 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, -3, 741, 751, -741, -751, 1436, -1436, 647, 676, -647, -676, 0, 6, 16, 12, -6, -16,
-            -12, -741, -751, 741, 751, -1436, 1436, -647, -676, 647, 676, 0, -6, -16, -12, 6, 16,
-            12, 9, 11, 0, -478, 578, -9, -11, 3, 478, -578, -31, -43, 954, -986, 39, 43, -954, 986,
-            0, -2, 0, 2, -1368, -1462, -40, 1352, -1462, 40, 229, 258, -229, -258, -29, -229, -258,
-            229, 258, 29, -8, -8, 0, 0, 0, 9, -9, -7, 0, 0, 0, -9, 9, 7, -12, 6, 6, 4, -6, -4,
-            -348, 4, 12, -6, -6, -4, 6, 4, 348, -4, -4, -3, 4, 3, -1, 1, 0, 4, 3, -4, -3, 1, -1, 0,
-            -16, 7, 30, 63, 16, -7, -30, -63, 5, 25,
+            30, 5, 740, 766, -687, -714, 1441, -1388, 642, 687, -589, -635, 27, 25, 34, 27, 29, 20,
+            27, -687, -714, 740, 766, -1388, 1441, -589, -635, 642, 687, 27, 29, 20, 27, 25, 34,
+            27, 38, 36, 26, -410, 572, 14, 16, 22, 463, -519, -9, -12, 907, -883, 105, 65, -853,
+            936, 27, 24, 27, 30, -1302, -1394, -12, 1344, -1394, 66, 247, 268, -195, -216, 7, -195,
+            -216, 247, 268, 45, 19, 19, 26, 26, 26, 36, 16, 17, 26, 26, 26, 16, 36, 35, 18, 36, 32,
+            27, 20, 25, -316, 27, 34, 16, 20, 25, 32, 27, 368, 25, 22, 19, 30, 33, 25, 27, 26, 30,
+            33, 22, 19, 27, 25, 26, 19, 43, 69, 105, 33, 9, -17, -52, 20, 65,
         ];
 
         let eval = ByteKnightEvaluation::default();
 
         for (i, fen) in positions.iter().enumerate() {
-            println!("Position {i}: {fen}");
             let board = Board::from_fen(fen).unwrap();
             let score = eval.eval(&board);
             println!("{},", score.0);
