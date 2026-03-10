@@ -96,169 +96,169 @@ pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES] = [
 ];
 
 pub const PASSED_PAWN_BONUS: [PhasedScore; NumberOf::PASSED_PAWN_RANKS] = [
-    S( -31,   44),
-    S(   4,  140),
-    S(  10,   70),
-    S( -14,   42),
-    S( -16,   14),
-    S( -10,    8),
+    S(-31, 44),
+    S(4, 140),
+    S(10, 70),
+    S(-14, 42),
+    S(-16, 14),
+    S(-10, 8),
 ];
 
 pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
-    S( -25,  -35),
-    S(  -3,  -28),
-    S(  -7,  -22),
-    S(  -7,   -9),
-    S( -18,   -4),
-    S( -20,  -17),
-    S( -12,  -28),
-    S( -29,  -41),
+    S(-25, -35),
+    S(-3, -28),
+    S(-7, -22),
+    S(-7, -9),
+    S(-18, -4),
+    S(-20, -17),
+    S(-12, -28),
+    S(-29, -41),
 ];
 
 pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
-    S(  -3,   -2),
-    S(  -9,  -17),
-    S( -19,  -14),
-    S( -18,  -22),
-    S( -21,  -23),
-    S( -15,  -10),
-    S(  -8,  -18),
-    S( -10,    3),
+    S(-3, -2),
+    S(-9, -17),
+    S(-19, -14),
+    S(-18, -22),
+    S(-21, -23),
+    S(-15, -10),
+    S(-8, -18),
+    S(-10, 3),
 ];
 
-pub const BISHOP_PAIR_BONUS: PhasedScore = S(  20,   70);
+pub const BISHOP_PAIR_BONUS: PhasedScore = S(20, 70);
 
 pub const KING_SAFETY: [PhasedScore; NumberOf::PIECE_TYPES - 1] =
-    [S( -16,  -12), S( -24,    8), S( -25,    7), S( -14,   10), S( -17,   15), ];
+    [S(-16, -12), S(-24, 8), S(-25, 7), S(-14, 10), S(-17, 15)];
 
 pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
-    S(   0,    0), //King
-    S(  84,  -41), //Queen
-    S(  93,    9), //Rook
-    S(  66,   50), //Bishop
-    S(  64,   26), //Knight
-    S(   0,    0), //Pawn
+    S(0, 0),    //King
+    S(84, -41), //Queen
+    S(93, 9),   //Rook
+    S(66, 50),  //Bishop
+    S(64, 26),  //Knight
+    S(0, 0),    //Pawn
 ];
 
 pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
-    S(   0,    0), //King
-    S(  57,  -25), //Queen
-    S(  72,   14), //Rook
-    S(  33,   36), //Bishop
-    S(   0,    0), //Knight
-    S(   0,    0), //Pawn
+    S(0, 0),    //King
+    S(57, -25), //Queen
+    S(72, 14),  //Rook
+    S(33, 36),  //Bishop
+    S(0, 0),    //Knight
+    S(0, 0),    //Pawn
 ];
 
 pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
-    S(   0,    0), //King
-    S(  76,   57), //Queen
-    S(  55,   28), //Rook
-    S(   0,    0), //Bishop
-    S(  24,   24), //Knight
-    S(   0,    0), //Pawn
+    S(0, 0),   //King
+    S(76, 57), //Queen
+    S(55, 28), //Rook
+    S(0, 0),   //Bishop
+    S(24, 24), //Knight
+    S(0, 0),   //Pawn
 ];
 
 pub const KNIGHT_MOBILITY: [PhasedScore; NumberOf::KNIGHT_MOVES + 1] = [
-    S( -42,  -79),
-    S( -21,  -42),
-    S(  -9,  -20),
-    S(  -3,  -10),
-    S(   4,   -1),
-    S(  10,    9),
-    S(  18,    7),
-    S(  25,    3),
-    S(  31,   -8),
+    S(-42, -79),
+    S(-21, -42),
+    S(-9, -20),
+    S(-3, -10),
+    S(4, -1),
+    S(10, 9),
+    S(18, 7),
+    S(25, 3),
+    S(31, -8),
 ];
 
 pub const BISHOP_MOBILITY: [PhasedScore; NumberOf::BISHOP_MOVES + 1] = [
-    S( -29,  -69),
-    S( -17,  -49),
-    S(  -6,  -32),
-    S(   1,  -17),
-    S(   8,   -6),
-    S(  11,    6),
-    S(  14,   10),
-    S(  16,   14),
-    S(  16,   18),
-    S(  21,   15),
-    S(  27,   10),
-    S(  32,   10),
-    S(  29,   19),
-    S(  43,   -6),
+    S(-29, -69),
+    S(-17, -49),
+    S(-6, -32),
+    S(1, -17),
+    S(8, -6),
+    S(11, 6),
+    S(14, 10),
+    S(16, 14),
+    S(16, 18),
+    S(21, 15),
+    S(27, 10),
+    S(32, 10),
+    S(29, 19),
+    S(43, -6),
 ];
 
 pub const ROOK_MOBILITY: [PhasedScore; NumberOf::ROOK_MOVES + 1] = [
-    S( -39,  -68),
-    S( -28,  -46),
-    S( -25,  -43),
-    S( -21,  -39),
-    S( -22,  -32),
-    S( -17,  -27),
-    S( -15,  -21),
-    S( -12,  -19),
-    S(  -9,  -15),
-    S(  -7,  -11),
-    S(  -5,   -9),
-    S(  -7,   -3),
-    S(  -5,   -1),
-    S(  -6,   -4),
-    S( -17,   -1),
+    S(-39, -68),
+    S(-28, -46),
+    S(-25, -43),
+    S(-21, -39),
+    S(-22, -32),
+    S(-17, -27),
+    S(-15, -21),
+    S(-12, -19),
+    S(-9, -15),
+    S(-7, -11),
+    S(-5, -9),
+    S(-7, -3),
+    S(-5, -1),
+    S(-6, -4),
+    S(-17, -1),
 ];
 
 pub const QUEEN_MOBILITY: [PhasedScore; NumberOf::QUEEN_MOVES + 1] = [
-    S( -27, -234),
-    S( -29, -183),
-    S( -39, -110),
-    S( -35,  -86),
-    S( -33,  -72),
-    S( -29,  -67),
-    S( -25,  -51),
-    S( -24,  -39),
-    S( -21,  -31),
-    S( -19,  -27),
-    S( -17,  -20),
-    S( -15,  -14),
-    S( -13,  -13),
-    S( -14,   -7),
-    S( -12,   -6),
-    S(  -9,   -3),
-    S( -10,    5),
-    S(  -8,    3),
-    S(   2,   -2),
-    S(  15,  -11),
-    S(  20,  -11),
-    S(  73,  -45),
-    S(  64,  -41),
-    S(  88,  -66),
-    S( 223, -121),
-    S( 226, -149),
-    S( 148,  -94),
-    S(  89,  -82),
+    S(-27, -234),
+    S(-29, -183),
+    S(-39, -110),
+    S(-35, -86),
+    S(-33, -72),
+    S(-29, -67),
+    S(-25, -51),
+    S(-24, -39),
+    S(-21, -31),
+    S(-19, -27),
+    S(-17, -20),
+    S(-15, -14),
+    S(-13, -13),
+    S(-14, -7),
+    S(-12, -6),
+    S(-9, -3),
+    S(-10, 5),
+    S(-8, 3),
+    S(2, -2),
+    S(15, -11),
+    S(20, -11),
+    S(73, -45),
+    S(64, -41),
+    S(88, -66),
+    S(223, -121),
+    S(226, -149),
+    S(148, -94),
+    S(89, -82),
 ];
 
 // Small bonus for being the side to move.
-pub const TEMPO_BONUS: PhasedScore = S(  30,   26);
+pub const TEMPO_BONUS: PhasedScore = S(30, 26);
 
 pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
-    S(  34,    8),
-    S(  30,    2),
-    S(  25,   12),
-    S(  27,   13),
-    S(  34,   17),
-    S(  41,    2),
-    S(  66,   -4),
-    S( 110,   -9),
+    S(34, 8),
+    S(30, 2),
+    S(25, 12),
+    S(27, 13),
+    S(34, 17),
+    S(41, 2),
+    S(66, -4),
+    S(110, -9),
 ];
 
 pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
-    S(   5,   49),
-    S(   7,   19),
-    S(   6,   19),
-    S(  17,    8),
-    S(  13,   11),
-    S(  17,    1),
-    S(  36,   -0),
-    S(  35,   24),
+    S(5, 49),
+    S(7, 19),
+    S(6, 19),
+    S(17, 8),
+    S(13, 11),
+    S(17, 1),
+    S(36, -0),
+    S(35, 24),
 ];
 
 const RANK_1: u8 = 1;
