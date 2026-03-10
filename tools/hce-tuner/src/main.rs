@@ -47,6 +47,8 @@ enum Command {
         epochs: Option<usize>,
         #[arg(value_enum, short, long, help = "How to start the parameters", default_value_t = ParameterStartType::Zero)]
         param_start_type: ParameterStartType,
+        #[clap(short, long, help = "Mini-batch size.")]
+        batch_size: Option<usize>,
     },
     PlotK {
         #[clap(short, long, help = INPUT_DATA_HELP)]
@@ -68,6 +70,8 @@ enum Command {
         epochs: usize,
         #[clap(short, long, help = INPUT_DATA_HELP, default_value = "data/lichess-test.book")]
         input_data: String,
+        #[clap(long, help = "Mini-batch size (0 = full batch).")]
+        batch_size: Option<usize>,
     },
 }
 
@@ -259,6 +263,7 @@ fn main() {
             input_data,
             epochs,
             param_start_type,
+            batch_size,
         } => {
             let positions = parse_data(&input_data);
             let parameters = match param_start_type {
@@ -268,27 +273,31 @@ fn main() {
             };
             let epchs = epochs.unwrap_or(10_000);
             println!("Tuning parameters from {param_start_type:?} for {epchs} epochs",);
-            let mut tuner = tuner::Tuner::new(parameters, &positions, epchs);
+            let mut tuner = tuner::Tuner::new(parameters, &positions, epchs, batch_size);
             let tuned_results = tuner.tune();
             print_params(tuned_results);
         }
         Command::PlotK { input_data } => {
             let positions = parse_data(&input_data);
             let parameters = Parameters::create_from_engine_values();
-            let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
+            let tuner = tuner::Tuner::new(parameters, &positions, 10_000, None);
             plot_k(&tuner);
         }
         Command::ComputeError { input_data, k } => {
             let positions = parse_data(&input_data);
             let parameters = Parameters::create_from_engine_values();
-            let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
+            let tuner = tuner::Tuner::new(parameters, &positions, 10_000, None);
             let error = tuner.mean_square_error(k);
             println!("Error for k {k:.8}: {error:.8}");
         }
-        Command::Bench { epochs, input_data } => {
+        Command::Bench {
+            epochs,
+            input_data,
+            batch_size,
+        } => {
             let positions = parse_data(&input_data);
             let parameters = Parameters::create_from_engine_values();
-            let mut tuner = tuner::Tuner::new(parameters, &positions, epochs);
+            let mut tuner = tuner::Tuner::new(parameters, &positions, epochs, batch_size);
 
             println!("Computing optimal K value...");
             let k = tuner.compute_k();
@@ -296,7 +305,7 @@ fn main() {
 
             println!("Running {epochs} epochs...");
             let start = std::time::Instant::now();
-            for _ in 0..epochs {
+            for _unused in 0..epochs {
                 tuner.run_epoch(k);
             }
             let elapsed = start.elapsed();
