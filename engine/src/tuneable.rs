@@ -30,4 +30,4 @@ pub(crate) const RAZORING_OFFSET: ScoreType = 500;
 
 pub(crate) const FUTILITY_COEFF: ScoreType = 80;
 pub(crate) const FUTILITY_OFFSET: ScoreType = 100;
-pub(crate) const FUTILITY_MAX_DEPTH: ScoreType = 4;
+pub(crate) const FUTILITY_MAX_DEPTH: ScoreType = 3;
