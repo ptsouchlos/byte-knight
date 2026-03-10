@@ -33,7 +33,9 @@ impl Offsets {
         BISHOP_MOBILITY: NumberOf::BISHOP_MOVES +1,
         ROOK_MOBILITY: NumberOf::ROOK_MOVES +1,
         QUEEN_MOBILITY: NumberOf::QUEEN_MOVES +1,
-        TEMPO_BONUS: 1
+        TEMPO_BONUS: 1,
+        ROOK_OPEN_FILE_BONUS: NumberOf::FILES,
+        ROOK_SEMI_OPEN_FILE_BONUS: NumberOf::FILES,
     );
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
@@ -113,6 +115,16 @@ impl Offsets {
 
     pub(crate) fn offset_for_tempo_bonus() -> usize {
         Self::TEMPO_BONUS
+    }
+
+    pub(crate) fn offset_for_rook_open_file(square: u8) -> usize {
+        let (file, _rank) = square::from_square(square);
+        Self::ROOK_OPEN_FILE_BONUS + file as usize
+    }
+
+    pub(crate) fn offset_for_rook_semi_open_file(square: u8) -> usize {
+        let (file, _rank) = square::from_square(square);
+        Self::ROOK_SEMI_OPEN_FILE_BONUS + file as usize
     }
 }
 
