@@ -116,7 +116,7 @@ impl Parameters {
         for file in 0..NumberOf::FILES as u8 {
             params[Offsets::offset_for_rook_open_file(file)] =
                 values.open_file_bonus(file, Side::White).into();
-            params[Offsets::offset_for_rook_semi_open_file(file as u8)] =
+            params[Offsets::offset_for_rook_semi_open_file(file)] =
                 values.semi_open_file_bonus(file, Side::White).into();
         }
 
