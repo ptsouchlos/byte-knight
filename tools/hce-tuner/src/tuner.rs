@@ -50,7 +50,7 @@ impl<'a> Tuner<'a> {
         &self.weights
     }
 
-    fn run_epoch(&mut self, k: f64) {
+    pub(crate) fn run_epoch(&mut self, k: f64) {
         let gradients = self.gradients(k);
 
         for i in 0..PARAMETER_COUNT {
