@@ -217,6 +217,24 @@ fn print_params(params: &Parameters) {
         "pub const TEMPO_BONUS: PhasedScore = {:?};",
         params.as_slice()[Offsets::offset_for_tempo_bonus()]
     );
+
+    println!();
+    println!("pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [");
+    for file in 0..NumberOf::FILES {
+        let idx = Offsets::offset_for_rook_open_file(file as u8);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
+
+    println!();
+    println!("pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [");
+    for file in 0..NumberOf::FILES {
+        let idx = Offsets::offset_for_rook_semi_open_file(file as u8);
+        let val = params.as_slice()[idx];
+        println!("    {val:?},");
+    }
+    println!("];");
 }
 
 fn plot_k(tuner: &Tuner) {

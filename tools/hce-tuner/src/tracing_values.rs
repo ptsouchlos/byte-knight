@@ -106,4 +106,16 @@ impl EvalValues for TracingValues {
         self.record(side, idx);
         PhasedScore::default()
     }
+
+    fn open_file_bonus(&self, square: u8, side: Side) -> Self::ReturnScore {
+        let idx = Offsets::offset_for_rook_open_file(square);
+        self.record(side, idx);
+        PhasedScore::default()
+    }
+
+    fn semi_open_file_bonus(&self, square: u8, side: Side) -> Self::ReturnScore {
+        let idx = Offsets::offset_for_rook_semi_open_file(square);
+        self.record(side, idx);
+        PhasedScore::default()
+    }
 }
