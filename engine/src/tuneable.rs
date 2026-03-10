@@ -28,6 +28,6 @@ pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 6;
 pub(crate) const RAZORING_SCALING: ScoreType = 400;
 pub(crate) const RAZORING_OFFSET: ScoreType = 500;
 
-pub(crate) const FUTILITY_COEFF: ScoreType = 100;
-pub(crate) const FUTILITY_OFFSET: ScoreType = 200;
+pub(crate) const FUTILITY_COEFF: ScoreType = 80;
+pub(crate) const FUTILITY_OFFSET: ScoreType = 100;
 pub(crate) const FUTILITY_MAX_DEPTH: ScoreType = 4;

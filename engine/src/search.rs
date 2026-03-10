@@ -545,7 +545,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // If we are at a shallow depth and have already found a good score, we start skipping moves
             if !is_root && !is_pv && !is_in_check && !best_score.mated() {
                 let fp_margin = depth * FUTILITY_COEFF + FUTILITY_OFFSET;
-                if mv.is_quiet() && depth < FUTILITY_MAX_DEPTH && static_eval + fp_margin <= alpha {
+                if mv.is_quiet() && depth <= FUTILITY_MAX_DEPTH && static_eval + fp_margin <= alpha
+                {
                     break;
                 }
             }
