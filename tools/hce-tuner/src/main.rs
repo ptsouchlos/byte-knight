@@ -47,7 +47,11 @@ enum Command {
         epochs: Option<usize>,
         #[arg(value_enum, short, long, help = "How to start the parameters", default_value_t = ParameterStartType::Zero)]
         param_start_type: ParameterStartType,
-        #[clap(short, long, help = "Mini-batch size.")]
+        #[clap(
+            short,
+            long,
+            help = "Mini-batch size (Optional, None=full batch size)."
+        )]
         batch_size: Option<usize>,
     },
     PlotK {
@@ -70,7 +74,11 @@ enum Command {
         epochs: usize,
         #[clap(short, long, help = INPUT_DATA_HELP, default_value = "data/lichess-test.book")]
         input_data: String,
-        #[clap(long, help = "Mini-batch size (0 = full batch).")]
+        #[clap(
+            short,
+            long,
+            help = "Mini-batch size (Optional, None=full batch size)."
+        )]
         batch_size: Option<usize>,
     },
 }
@@ -303,16 +311,25 @@ fn main() {
             let k = tuner.compute_k();
             println!("Optimal K value: {k:.8}");
 
+            let initial_error = tuner.mean_square_error(k);
+            println!("Initial MSE: {initial_error:.8}");
+
             println!("Running {epochs} epochs...");
             let start = std::time::Instant::now();
             for _unused in 0..epochs {
                 tuner.run_epoch(k);
             }
             let elapsed = start.elapsed();
+
+            let final_error = tuner.mean_square_error(k);
             println!(
                 "Total: {:.3}s | Per epoch: {:.3}ms",
                 elapsed.as_secs_f64(),
                 elapsed.as_secs_f64() * 1000.0 / epochs as f64
+            );
+            println!(
+                "Final MSE: {final_error:.8} (delta: {:.8})",
+                initial_error - final_error
             );
         }
     }
