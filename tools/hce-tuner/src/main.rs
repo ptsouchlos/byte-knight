@@ -240,6 +240,39 @@ fn print_params(params: &Parameters) {
         println!("    {val:?},");
     }
     println!("];");
+
+    let pawn_shield_storm_row_comments = ["King file", "Left adjacent", "Right adjacent"];
+    println!();
+    println!(
+        "pub const PAWN_SHIELD: [[PhasedScore; NumberOf::PAWN_SHIELD_RANKS]; NumberOf::KING_FLANK_FILES] = ["
+    );
+    for file_idx in 0..NumberOf::KING_FLANK_FILES {
+        println!("    \\\\ {}", pawn_shield_storm_row_comments[file_idx]);
+        print!("    [");
+        for rank_idx in 0..NumberOf::PAWN_SHIELD_RANKS {
+            let idx = Offsets::offset_for_pawn_shield(file_idx, rank_idx);
+            let val = params.as_slice()[idx];
+            print!("{val:?}, ");
+        }
+        println!("],");
+    }
+    println!("];");
+
+    println!();
+    println!(
+        "pub const PAWN_STORM: [[PhasedScore; NumberOf::PAWN_STORM_RANKS]; NumberOf::KING_FLANK_FILES] = ["
+    );
+    for file_idx in 0..NumberOf::KING_FLANK_FILES {
+        println!("    \\\\ {}", pawn_shield_storm_row_comments[file_idx]);
+        print!("    [");
+        for rank_idx in 0..NumberOf::PAWN_SHIELD_RANKS {
+            let idx = Offsets::offset_for_pawn_shield(file_idx, rank_idx);
+            let val = params.as_slice()[idx];
+            print!("{val:?}, ");
+        }
+        println!("],")
+    }
+    println!("];");
 }
 
 fn plot_k(tuner: &Tuner) {

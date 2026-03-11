@@ -36,6 +36,8 @@ impl Offsets {
         TEMPO_BONUS: 1,
         ROOK_OPEN_FILE_BONUS: NumberOf::FILES,
         ROOK_SEMI_OPEN_FILE_BONUS: NumberOf::FILES,
+        PAWN_SHIELD: NumberOf::KING_FLANK_FILES * NumberOf::PAWN_SHIELD_RANKS,
+        PAWN_STORM:  NumberOf::KING_FLANK_FILES * NumberOf::PAWN_STORM_RANKS,
     );
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
@@ -125,6 +127,14 @@ impl Offsets {
     pub(crate) fn offset_for_rook_semi_open_file(square: u8) -> usize {
         let (file, _rank) = square::from_square(square);
         Self::ROOK_SEMI_OPEN_FILE_BONUS + file as usize
+    }
+
+    pub(crate) fn offset_for_pawn_shield(file_index: usize, rank_index: usize) -> usize {
+        Self::PAWN_SHIELD + file_index * NumberOf::PAWN_SHIELD_RANKS + rank_index
+    }
+
+    pub(crate) fn offset_for_pawn_storm(file_index: usize, rank_index: usize) -> usize {
+        Self::PAWN_STORM + file_index * NumberOf::PAWN_STORM_RANKS + rank_index
     }
 }
 
