@@ -177,11 +177,16 @@ impl<Values: EvalValues> Evaluation<Values> {
             };
 
             let file_diff = king_file as i8 - file as i8;
-            let file_index = match file_diff {
-                -1 => 0,
-                1 => 2,
-                _ => 0,
+            // Map index so that on the king file = 0, left adjacent = 1, and right adjacent = 2
+            // This is irrespective of stm.
+            let file_index = if file_diff == 0 {
+                0 as usize
+            } else {
+                file_diff.abs() as usize + (file_diff > 0) as usize
             };
+
+            debug_assert!(file_index == 0 || file_index == 1 || file_index == 2);
+
             if (0..4).contains(&rank_index) {
                 score += self
                     .values()
@@ -207,11 +212,16 @@ impl<Values: EvalValues> Evaluation<Values> {
             };
 
             let file_diff = king_file as i8 - file as i8;
-            let file_index = match file_diff {
-                -1 => 0,
-                1 => 2,
-                _ => 1,
+            // Map index so that on the king file = 0, left adjacent = 1, and right adjacent = 2
+            // This is irrespective of stm.
+            let file_index = if file_diff == 0 {
+                0 as usize
+            } else {
+                file_diff.abs() as usize + (file_diff > 0) as usize
             };
+
+            debug_assert!(file_index == 0 || file_index == 1 || file_index == 2);
+
             if (0..4).contains(&rank_index) {
                 score += self
                     .values()
