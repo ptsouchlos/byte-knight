@@ -10,24 +10,24 @@ use crate::{
 };
 
 pub(crate) struct Tuner<'a> {
-    positions: &'a Vec<TuningPosition>,
+    positions: &'a [TuningPosition],
     weights: Parameters,
     momentum: Parameters,
     velocity: Parameters,
-    initial_learning_rate: f64,
+    maximum_learning_rate: f64,
     minimum_learning_rate: f64,
     beta1: f64,
     beta2: f64,
     max_epochs: usize,
     batch_size: usize,
     epoch: usize,
-    step: usize,
+    step: f64,
 }
 
 impl<'a> Tuner<'a> {
     pub(crate) fn new(
         initial_params: Parameters,
-        positions: &'a Vec<TuningPosition>,
+        positions: &'a [TuningPosition],
         max_epochs: usize,
         batch_size: Option<usize>,
     ) -> Self {
@@ -49,14 +49,14 @@ impl<'a> Tuner<'a> {
             weights: initial_params,
             momentum: Parameters::default(),
             velocity: Parameters::default(),
-            initial_learning_rate: 0.05,
+            maximum_learning_rate: 0.05,
             minimum_learning_rate: 0.001,
             beta1: 0.9,
             beta2: 0.999,
             max_epochs,
             batch_size: effective_batch_size,
             epoch: 0,
-            step: 0,
+            step: 0.0,
         }
     }
 
@@ -81,22 +81,26 @@ impl<'a> Tuner<'a> {
     pub(crate) fn run_epoch(&mut self, k: f64) {
         self.epoch += 1;
 
-        // Cosine learning rate annealing: learning rate decays from initial to ~0 over max_epochs
+        // Cosine learning rate annealing: learning rate decays from initial to eta_min over max_epochs
+        // See https://docs.pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html
+        // See also https://arxiv.org/pdf/1608.03983 (section 3, formula 5)
         let progress = self.epoch as f64 / self.max_epochs as f64;
         let lr = self.minimum_learning_rate
             + 0.5
-                * (self.initial_learning_rate - self.minimum_learning_rate)
+                * (self.maximum_learning_rate - self.minimum_learning_rate)
                 * (1.0 + (std::f64::consts::PI * progress).cos());
 
         // Mini-batch: iterate through chunks of positions
         for batch in self.positions.chunks(self.batch_size) {
-            self.step += 1;
+            self.step += 1.0;
             let gradients = Self::compute_gradients(k, batch, &self.weights);
             let n = batch.len() as f64;
 
             // ADAM bias correction
-            let bc1 = 1.0 - self.beta1.powi(self.step as i32);
-            let bc2 = 1.0 - self.beta2.powi(self.step as i32);
+            // See https://arxiv.org/pdf/1412.6980 (Kingma and Ba et. al)
+            // See also https://docs.pytorch.org/docs/stable/generated/torch.optim.Adam.html
+            let bc1 = 1.0 - self.beta1.powf(self.step);
+            let bc2 = 1.0 - self.beta2.powf(self.step);
 
             for i in 0..PARAMETER_COUNT {
                 let adj = (-2.0 * k / n) * gradients[i];
@@ -196,6 +200,39 @@ mod tests {
         let positions = vec![]; // Add appropriate Board instances here
         let params = Parameters::create_from_engine_values();
         let _unused = Tuner::new(params, &positions, 5000, None);
+    }
+
+    #[test]
+    fn compute_gradients_matches_gradient_batch() {
+        let params = Parameters::create_from_engine_values();
+        let positions: Vec<_> = [
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 [0.5]",
+            "r2q1rk1/3n1p2/2pp3p/1pb1p1p1/p3P3/P1NP1N1P/RPP2PP1/5QK1 b - - 0 2 [0.0]",
+            "8/8/7p/1P2k2P/4p1P1/1p1r4/1R2K3/8 b - - ce 0.7306",
+            "rn1q2k1/ppp2ppp/3p1n2/2bb4/8/5NP1/PPP1NPBP/R4RK1 w - - 0 1 [0.0]",
+        ]
+        .iter()
+        .map(|line| crate::epd_parser::parse_epd_line(line).unwrap())
+        .collect();
+
+        let k = 0.009;
+        let from_batch = params.gradient_batch(k, &positions);
+        let from_compute = Tuner::compute_gradients(k, &positions, &params);
+
+        for i in 0..PARAMETER_COUNT {
+            assert!(
+                (from_batch[i].mg() - from_compute[i].mg()).abs() < 1e-10,
+                "mg mismatch at idx {i}: batch={}, compute={}",
+                from_batch[i].mg(),
+                from_compute[i].mg()
+            );
+            assert!(
+                (from_batch[i].eg() - from_compute[i].eg()).abs() < 1e-10,
+                "eg mismatch at idx {i}: batch={}, compute={}",
+                from_batch[i].eg(),
+                from_compute[i].eg()
+            );
+        }
     }
 
     #[test]
