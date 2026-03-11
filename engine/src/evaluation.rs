@@ -5,7 +5,10 @@
 
 use std::ops::AddAssign;
 
-use chess::{attacks, bitboard_helpers, board::Board, file::File, pieces::Piece, side::Side};
+use chess::{
+    attacks, bitboard::Bitboard, bitboard_helpers, board::Board, file::File, pieces::Piece,
+    rank::Rank, side::Side, square,
+};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_INC, GAME_PHASE_MAX},
@@ -130,6 +133,89 @@ impl<Values: EvalValues> Evaluation<Values> {
                 let mobility =
                     (attacks & !enemy_pawn_attacks & !our_pieces).number_of_occupied_squares();
                 score += self.values().mobility_value(piece, mobility as usize, side);
+            }
+        }
+        score
+    }
+
+    fn evaluate_king_pawn_shield_storm(&self, board: &Board, side: Side) -> PhasedScore
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let mut score = PhasedScore::default();
+
+        let king_sq = board.king_square(side);
+        let king_file = File::of(king_sq);
+        let our_pawns = *board.piece_bitboard(Piece::Pawn, side);
+        let their_pawns = *board.piece_bitboard(Piece::Pawn, side.opposite());
+
+        let king_sq_bb = Bitboard::from_square(king_sq);
+        let king_sq_adjacent_bb = king_sq_bb
+            | (bitboard_helpers::west(king_sq_bb) & !File::H.to_bitboard())
+            | (bitboard_helpers::east(king_sq_bb) & !File::A.to_bitboard());
+
+        let king_files_bb = match side {
+            Side::White => bitboard_helpers::north_fill(king_sq_adjacent_bb),
+            Side::Black => bitboard_helpers::south_fill(king_sq_adjacent_bb),
+        };
+
+        // This fill let's us filter out all but the closest friendly pawns.
+        let friendly_pawn_fill = match side {
+            Side::White => bitboard_helpers::north_fill(bitboard_helpers::north(our_pawns)),
+            Side::Black => bitboard_helpers::south_fill(bitboard_helpers::south(our_pawns)),
+        };
+
+        // Pawn shield: Closest pawns to our king on it's file and adjacent ones.
+        let friendly_on_file = (our_pawns & !friendly_pawn_fill) & king_files_bb;
+        for friendly_sq in friendly_on_file.iter() {
+            let (file, rank) = square::from_square(friendly_sq);
+            // Get the rank index.
+            // The starting rank for white is R2
+            let rank_index = match side {
+                Side::White => rank as i8 - Rank::R2 as i8,
+                Side::Black => Rank::R7 as i8 - rank as i8,
+            };
+
+            let file_diff = king_file as i8 - file as i8;
+            let file_index = match file_diff {
+                -1 => 0,
+                1 => 2,
+                _ => 0,
+            };
+            if (0..4).contains(&rank_index) {
+                score += self
+                    .values()
+                    .pawn_shield_value(file_index, rank_index as usize, side);
+            }
+        }
+
+        // This fill lets us filter out all but the closest enemy pawns.
+        let enemy_pawn_fill = match side {
+            Side::White => bitboard_helpers::north_fill(bitboard_helpers::north(their_pawns)),
+            Side::Black => bitboard_helpers::south_fill(bitboard_helpers::south(their_pawns)),
+        };
+
+        // Pawn Storm: Closest enemy pawns on our king's file and adjacent ones.
+        let enemy_on_file = (their_pawns & !enemy_pawn_fill) & king_files_bb;
+        for enemy_sq in enemy_on_file.iter() {
+            let (file, rank) = square::from_square(enemy_sq);
+            // Get the rank index.
+            // The starting rank for white is R2
+            let rank_index = match side {
+                Side::White => rank as i8 - Rank::R2 as i8,
+                Side::Black => Rank::R7 as i8 - rank as i8,
+            };
+
+            let file_diff = king_file as i8 - file as i8;
+            let file_index = match file_diff {
+                -1 => 0,
+                1 => 2,
+                _ => 1,
+            };
+            if (0..4).contains(&rank_index) {
+                score += self
+                    .values()
+                    .pawn_storm_value(file_index, rank_index as usize, side);
             }
         }
         score
@@ -289,6 +375,13 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let tempo_bonus = self.values().tempo_bonus(side_to_move);
         mg[stm_idx] += tempo_bonus.mg() as i32;
         eg[stm_idx] += tempo_bonus.eg() as i32;
+
+        // King pawn shield & storm
+        for side in Side::iter() {
+            let shield_storm = self.evaluate_king_pawn_shield_storm(board, side);
+            mg[side as usize] += shield_storm.mg() as i32;
+            eg[side as usize] += shield_storm.eg() as i32;
+        }
 
         let our_rook_bonus = self.evaluate_rook_files(board, side_to_move);
         let their_rook_bonus = self.evaluate_rook_files(board, side_to_move.opposite());
