@@ -261,6 +261,24 @@ pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
     S(35, 24),
 ];
 
+pub const PAWN_SHIELD: [[PhasedScore; NumberOf::PAWN_SHIELD_RANKS]; NumberOf::KING_FLANK_FILES] = [
+    // King file
+    [S(25, 0), S(12, 0), S(5, 0), S(-5, 0)],
+    // Left adjacent
+    [S(20, 0), S(10, 0), S(3, 0), S(-5, 0)],
+    // Right adjacent
+    [S(20, 0), S(10, 0), S(3, 0), S(-5, 0)],
+];
+
+pub const PAWN_STORM: [[PhasedScore; NumberOf::PAWN_STORM_RANKS]; NumberOf::KING_FLANK_FILES] = [
+    // King file
+    [S(0, 0), S(-10, 0), S(-25, 0), S(-40, 0)],
+    // Left adjacent
+    [S(0, 0), S(-5, 0), S(-15, 0), S(-30, 0)],
+    // Right adjacent
+    [S(0, 0), S(-5, 0), S(-15, 0), S(-30, 0)],
+];
+
 const RANK_1: u8 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -328,6 +346,24 @@ impl EvalValues for ByteKnightValues {
     fn semi_open_file_bonus(&self, square: u8, _side: Side) -> Self::ReturnScore {
         let (file, _rank) = square::from_square(square);
         ROOK_SEMI_OPEN_FILE_BONUS[file as usize]
+    }
+
+    fn pawn_shield_value(
+        &self,
+        file_index: usize,
+        rank_index: usize,
+        _side: Side,
+    ) -> Self::ReturnScore {
+        PAWN_SHIELD[file_index][rank_index]
+    }
+
+    fn pawn_storm_value(
+        &self,
+        file_index: usize,
+        rank_index: usize,
+        _side: Side,
+    ) -> Self::ReturnScore {
+        PAWN_STORM[file_index][rank_index]
     }
 }
 
