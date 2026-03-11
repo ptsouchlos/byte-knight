@@ -751,4 +751,81 @@ mod tests {
             assert_eq!(score.0, flipped_score.0);
         }
     }
+
+    #[test]
+    fn eval_king_shield_storm() {
+        let eval = ByteKnightEvaluation::default();
+
+        // Bonus with shield versus without shield
+        let with_shield = Board::from_fen("4k3/8/8/8/8/8/5PPP/6K1 w - - 0 1").unwrap();
+        let no_shield = Board::from_fen("4k3/8/8/8/8/8/8/6K1 w - - 0 1").unwrap();
+        println!("w/shield\n{}", with_shield);
+        println!("w/o shield\n{}", no_shield);
+        let score_with = eval.eval(&with_shield).0;
+        let score_without = eval.eval(&no_shield).0;
+        println!("w/ shield: {score_with}, w/o shield: {score_without}");
+        assert!(
+            score_with > score_without,
+            "Intact pawn shield should score higher than no pawns"
+        );
+
+        // Close versus far storm
+        let storm_close = Board::from_fen("4k3/8/8/8/5ppp/8/5PPP/6K1 w - - 0 1").unwrap();
+        let storm_far = Board::from_fen("4k3/5ppp/8/8/8/8/5PPP/6K1 w - - 0 1").unwrap();
+        println!("storm_close\n{}", storm_close);
+        println!("storm_far\n{}", storm_far);
+        let close_score = eval.eval(&storm_close).0;
+        let far_score = eval.eval(&storm_far).0;
+        println!("storm_close (rank 4): {close_score}, storm_far (rank 7): {far_score}");
+        assert!(
+            close_score < far_score,
+            "Close enemy pawns should penalize more than far ones"
+        );
+
+        // Symmetry test
+        let white_pos = Board::from_fen("4k3/8/8/8/8/8/5PPP/6K1 w - - 0 1").unwrap();
+        println!("white_pos\n{}", white_pos);
+        let flipped = white_pos.flip();
+        let white_score = eval.eval(&white_pos).0;
+        let flipped_score = eval.eval(&flipped).0;
+        println!("white_pos: {white_score}, flipped: {flipped_score}");
+        assert_eq!(
+            white_score, flipped_score,
+            "Shield eval should be symmetric"
+        );
+
+        // Pawn on king file vs on adjacent file
+        let king_file_pawn = Board::from_fen("4k3/8/8/8/8/8/4P3/4K3 w - - 0 1").unwrap();
+        let adj_file_pawn = Board::from_fen("4k3/8/8/8/8/8/3P4/4K3 w - - 0 1").unwrap();
+        println!("king file pawn\n{}", king_file_pawn);
+        println!("adj file pawn\n{}", adj_file_pawn);
+        let king_file_score = eval.eval(&king_file_pawn).0;
+        let adj_file_score = eval.eval(&adj_file_pawn).0;
+        println!("king_file_pawn: {king_file_score}, adj_file_pawn: {adj_file_score}");
+        // All we can do is assert they're not equal.
+        assert_ne!(king_file_score, adj_file_score);
+
+        // Overlapped pawns (pawns one behind the other). We should only score the front most ones
+        let overlapped_pawns = Board::from_fen("4k3/5pp1/6p1/8/8/5PP1/6P1/6K1 w - - 0 1").unwrap();
+        println!("overlapped pawn\n{}", overlapped_pawns);
+        let no_overlapped_pawns = Board::from_fen("4k3/5p2/6p1/8/8/5P2/6P1/6K1 w - - 0 1").unwrap();
+        println!("no pawn\n{}", no_overlapped_pawns);
+        let overlapped_score = eval.eval(&overlapped_pawns).0;
+        let no_overlapped_score = eval.eval(&no_overlapped_pawns).0;
+        println!("overlapped pawns: {overlapped_score}, no overlapped: {no_overlapped_score}");
+        assert_eq!(overlapped_score, no_overlapped_score);
+
+        // Triple storm (3 pawns) worse than single storm
+        let triple_storm = Board::from_fen("4k3/8/8/8/5ppp/8/8/6K1 w - - 0 1").unwrap();
+        let single_storm = Board::from_fen("4k3/8/8/8/6p1/8/8/6K1 w - - 0 1").unwrap();
+        println!("triple storm\n{}", triple_storm);
+        println!("single storm\n{}", single_storm);
+        let triple_score = eval.eval(&triple_storm).0;
+        let single_score = eval.eval(&single_storm).0;
+        println!("triple storm: {triple_score}, single storm: {single_score}");
+        assert!(
+            triple_score < single_score,
+            "Three storming pawns should be worse than one"
+        );
+    }
 }
