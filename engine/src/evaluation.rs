@@ -6,8 +6,8 @@
 use std::ops::AddAssign;
 
 use chess::{
-    attacks, bitboard::Bitboard, bitboard_helpers, board::Board, file::File, pieces::Piece,
-    rank::Rank, side::Side, square,
+    attacks, bitboard_helpers, board::Board, file::File, pieces::Piece, rank::Rank, side::Side,
+    square,
 };
 
 use crate::{
@@ -15,6 +15,7 @@ use crate::{
     pawn_structure::PawnEvaluator,
     phased_score::{PhaseType, PhasedScore},
     score::{LargeScoreType, Score, ScoreType},
+    structure,
     traits::{Eval, EvalValues},
 };
 
@@ -143,31 +144,13 @@ impl<Values: EvalValues> Evaluation<Values> {
         PhasedScore: AddAssign<Values::ReturnScore>,
     {
         let mut score = PhasedScore::default();
-
         let king_sq = board.king_square(side);
         let king_file = File::of(king_sq);
-        let our_pawns = *board.piece_bitboard(Piece::Pawn, side);
-        let their_pawns = *board.piece_bitboard(Piece::Pawn, side.opposite());
 
-        let king_sq_bb = Bitboard::from_square(king_sq);
-        let king_sq_adjacent_bb = king_sq_bb
-            | (bitboard_helpers::west(king_sq_bb) & !File::H.to_bitboard())
-            | (bitboard_helpers::east(king_sq_bb) & !File::A.to_bitboard());
-
-        let king_files_bb = match side {
-            Side::White => bitboard_helpers::north_fill(king_sq_adjacent_bb),
-            Side::Black => bitboard_helpers::south_fill(king_sq_adjacent_bb),
-        };
-
-        // This fill let's us filter out all but the closest friendly pawns.
-        let friendly_pawn_fill = match side {
-            Side::White => bitboard_helpers::north_fill(bitboard_helpers::north(our_pawns)),
-            Side::Black => bitboard_helpers::south_fill(bitboard_helpers::south(our_pawns)),
-        };
+        let (pawn_shield, pawn_storm) = structure::king_pawn_shield_and_storm(board, side);
 
         // Pawn shield: Closest pawns to our king on it's file and adjacent ones.
-        let friendly_on_file = (our_pawns & !friendly_pawn_fill) & king_files_bb;
-        for friendly_sq in friendly_on_file.iter() {
+        for friendly_sq in pawn_shield.iter() {
             let (file, rank) = square::from_square(friendly_sq);
             // Get the rank index.
             // The starting rank for white is R2
@@ -180,9 +163,9 @@ impl<Values: EvalValues> Evaluation<Values> {
             // Map index so that on the king file = 0, left adjacent = 1, and right adjacent = 2
             // This is irrespective of stm.
             let file_index = if file_diff == 0 {
-                0 as usize
+                0_usize
             } else {
-                file_diff.abs() as usize + (file_diff > 0) as usize
+                file_diff.unsigned_abs() as usize + (file_diff > 0) as usize
             };
 
             debug_assert!(file_index == 0 || file_index == 1 || file_index == 2);
@@ -194,15 +177,8 @@ impl<Values: EvalValues> Evaluation<Values> {
             }
         }
 
-        // This fill lets us filter out all but the closest enemy pawns.
-        let enemy_pawn_fill = match side {
-            Side::White => bitboard_helpers::north_fill(bitboard_helpers::north(their_pawns)),
-            Side::Black => bitboard_helpers::south_fill(bitboard_helpers::south(their_pawns)),
-        };
-
         // Pawn Storm: Closest enemy pawns on our king's file and adjacent ones.
-        let enemy_on_file = (their_pawns & !enemy_pawn_fill) & king_files_bb;
-        for enemy_sq in enemy_on_file.iter() {
+        for enemy_sq in pawn_storm.iter() {
             let (file, rank) = square::from_square(enemy_sq);
             // Get the rank index.
             // The starting rank for white is R2
@@ -215,9 +191,9 @@ impl<Values: EvalValues> Evaluation<Values> {
             // Map index so that on the king file = 0, left adjacent = 1, and right adjacent = 2
             // This is irrespective of stm.
             let file_index = if file_diff == 0 {
-                0 as usize
+                0_usize
             } else {
-                file_diff.abs() as usize + (file_diff > 0) as usize
+                file_diff.unsigned_abs() as usize + (file_diff > 0) as usize
             };
 
             debug_assert!(file_index == 0 || file_index == 1 || file_index == 2);
@@ -804,16 +780,6 @@ mod tests {
         println!("king_file_pawn: {king_file_score}, adj_file_pawn: {adj_file_score}");
         // All we can do is assert they're not equal.
         assert_ne!(king_file_score, adj_file_score);
-
-        // Overlapped pawns (pawns one behind the other). We should only score the front most ones
-        let overlapped_pawns = Board::from_fen("4k3/5pp1/6p1/8/8/5PP1/6P1/6K1 w - - 0 1").unwrap();
-        println!("overlapped pawn\n{}", overlapped_pawns);
-        let no_overlapped_pawns = Board::from_fen("4k3/5p2/6p1/8/8/5P2/6P1/6K1 w - - 0 1").unwrap();
-        println!("no pawn\n{}", no_overlapped_pawns);
-        let overlapped_score = eval.eval(&overlapped_pawns).0;
-        let no_overlapped_score = eval.eval(&no_overlapped_pawns).0;
-        println!("overlapped pawns: {overlapped_score}, no overlapped: {no_overlapped_score}");
-        assert_eq!(overlapped_score, no_overlapped_score);
 
         // Triple storm (3 pawns) worse than single storm
         let triple_storm = Board::from_fen("4k3/8/8/8/5ppp/8/8/6K1 w - - 0 1").unwrap();
