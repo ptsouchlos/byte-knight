@@ -109,6 +109,7 @@ impl Parameters {
         params
     }
 
+    #[inline(always)]
     pub(crate) fn gradient_batch(&self, k: f64, data: &[TuningPosition]) -> Self {
         use crate::math;
         let mut gradient = Parameters::default();
