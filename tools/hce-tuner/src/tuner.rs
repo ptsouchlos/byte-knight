@@ -68,10 +68,7 @@ impl<'a> Tuner<'a> {
     }
 
     fn gradients(&self, k: f64) -> Parameters {
-        let chunk_size = self
-            .positions
-            .len()
-            .div_ceil(rayon::current_num_threads());
+        let chunk_size = self.positions.len().div_ceil(rayon::current_num_threads());
         self.positions
             .par_chunks(chunk_size)
             .map(|chunk| self.weights.gradient_batch(k, chunk))
