@@ -302,7 +302,15 @@ fn main() {
             println!("Error for k {k:.8}: {error:.8}");
         }
         Command::Bench { epochs, input_data } => {
+            let read_start = std::time::Instant::now();
             let positions = parse_data(&input_data);
+            let read_elapsed = read_start.elapsed();
+            println!(
+                "Read {} in {:.3}s",
+                positions.len(),
+                read_elapsed.as_secs_f64()
+            );
+
             let parameters = Parameters::create_from_engine_values();
             let mut tuner = tuner::Tuner::new(parameters, &positions, epochs);
 
