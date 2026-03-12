@@ -251,7 +251,7 @@ fn print_params(params: &Parameters) {
         .enumerate()
         .take(NumberOf::KING_FLANK_FILES)
     {
-        println!("    \\\\ {}", comment);
+        println!("    // {}", comment);
         print!("    [");
         for rank_idx in 0..NumberOf::PAWN_SHIELD_RANKS {
             let idx = Offsets::offset_for_pawn_shield(file_idx, rank_idx);
@@ -271,7 +271,7 @@ fn print_params(params: &Parameters) {
         .enumerate()
         .take(NumberOf::KING_FLANK_FILES)
     {
-        println!("    \\\\ {}", comment);
+        println!("    // {}", comment);
         print!("    [");
         for rank_idx in 0..NumberOf::PAWN_SHIELD_RANKS {
             let idx = Offsets::offset_for_pawn_shield(file_idx, rank_idx);
