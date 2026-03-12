@@ -56,43 +56,59 @@ impl TuningPosition {
 
 #[cfg(test)]
 mod tests {
+    use chess::side::Side;
+    use engine::{evaluation::ByteKnightEvaluation, traits::Eval};
+
     use crate::{epd_parser, parameters::Parameters};
 
     #[test]
-    fn evaluate_snapshot() {
+    fn tuning_position_eval_matches_engine() {
         let params = Parameters::create_from_engine_values();
-
+        let eval = ByteKnightEvaluation::default();
+        let line = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 [0.5]";
         // Starting position (opening, high phase)
-        let pos_start = epd_parser::parse_epd_line(
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 [0.5]",
-        )
-        .unwrap();
+        let pos_start = epd_parser::parse_epd_line(line).unwrap();
         let eval_start = pos_start.evaluate(&params);
+        let (board, _) = epd_parser::process_epd_line(line).unwrap();
+
+        let engine_eval_start = match board.side_to_move() {
+            Side::White => eval.eval(&board).0 as f64,
+            Side::Black => -eval.eval(&board).0 as f64,
+        };
+
         assert!(
-            (eval_start - 30.0).abs() < 1e-10,
-            "start position snapshot changed: got {eval_start}"
+            (eval_start - engine_eval_start).abs() < 1.0,
+            "start position snapshot changed: got {eval_start}, expected {engine_eval_start}"
         );
 
         // Middlegame position
-        let pos_mid = epd_parser::parse_epd_line(
-            "r2q1rk1/3n1p2/2pp3p/1pb1p1p1/p3P3/P1NP1N1P/RPP2PP1/5QK1 b - - 0 2 [0.0]",
-        )
-        .unwrap();
+        let line_mid = "r2q1rk1/3n1p2/2pp3p/1pb1p1p1/p3P3/P1NP1N1P/RPP2PP1/5QK1 b - - 0 2 [0.0]";
+        let pos_mid = epd_parser::parse_epd_line(line_mid).unwrap();
+        let (board_mid, _) = epd_parser::process_epd_line(line_mid).unwrap();
+
         let eval_mid = pos_mid.evaluate(&params);
+        let engine_eval_mid = match board_mid.side_to_move() {
+            Side::White => eval.eval(&board_mid).0 as f64,
+            Side::Black => -eval.eval(&board_mid).0 as f64,
+        };
+
         assert!(
-            (eval_mid - (-613.0)).abs() < 1e-10,
-            "middlegame snapshot changed: got {eval_mid}"
+            (eval_mid - engine_eval_mid).abs() < 1.0,
+            "middlegame snapshot changed: got {eval_mid}, expected {engine_eval_mid}"
         );
 
         // Endgame position (low phase)
-        let pos_end = epd_parser::parse_epd_line(
-            "8/8/7p/1P2k2P/4p1P1/1p1r4/1R2K3/8 b - - ce 0.7306",
-        )
-        .unwrap();
+        let line_end = "8/8/7p/1P2k2P/4p1P1/1p1r4/1R2K3/8 b - - ce 0.7306";
+        let pos_end = epd_parser::parse_epd_line(line_end).unwrap();
+        let (board_end, _) = epd_parser::process_epd_line(line_end).unwrap();
         let eval_end = pos_end.evaluate(&params);
+        let engine_eval_end = match board_end.side_to_move() {
+            Side::White => eval.eval(&board_end).0 as f64,
+            Side::Black => -eval.eval(&board_end).0 as f64,
+        };
         assert!(
-            (eval_end - (-177.166_666_666_666_69)).abs() < 1e-6,
-            "endgame snapshot changed: got {eval_end}"
+            (eval_end - engine_eval_end).abs() < 1.0,
+            "endgame snapshot changed: got {eval_end}, expected {engine_eval_end}"
         );
     }
 }
