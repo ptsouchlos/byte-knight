@@ -9,9 +9,7 @@ use chess::{
     side::Side,
     square,
 };
-use engine::hce_values::PASSED_PAWN_BONUS;
 
-#[cfg(test)]
 use crate::tuning_position::TuningPosition;
 use crate::{
     offsets::{Offsets, PARAMETER_COUNT},
@@ -20,18 +18,6 @@ use crate::{
 
 /// Set of parameters that serve as input for tuning.
 pub struct Parameters([TuningScore; PARAMETER_COUNT]);
-
-#[allow(dead_code)]
-fn piece_value(piece: Piece) -> f64 {
-    match piece {
-        Piece::King => 10.,
-        Piece::Queen => 900.,
-        Piece::Rook => 400.,
-        Piece::Bishop => 300.,
-        Piece::Knight => 200.,
-        Piece::Pawn => 100.,
-    }
-}
 
 impl Parameters {
     pub(crate) fn as_slice(&self) -> &[TuningScore] {
@@ -123,25 +109,6 @@ impl Parameters {
         params
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn create_from_piece_values() -> Parameters {
-        let mut params = Parameters::default();
-        for piece in ALL_PIECES {
-            for sq in 0..NumberOf::SQUARES {
-                let val = piece_value(piece);
-                params[64 * piece as usize + sq] = TuningScore::new(val, val);
-            }
-        }
-
-        // Add passed pawn bonuses
-        for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
-            params[Offsets::PASSED_PAWN + idx] = (*val).into();
-        }
-
-        params
-    }
-
-    #[cfg(test)]
     pub(crate) fn gradient_batch(&self, k: f64, data: &[TuningPosition]) -> Self {
         use crate::math;
         let mut gradient = Parameters::default();
