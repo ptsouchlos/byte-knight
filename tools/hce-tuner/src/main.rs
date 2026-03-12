@@ -323,12 +323,15 @@ fn main() {
             let k = tuner.compute_k();
             println!("Optimal K value: {k:.8}");
 
+            let mse_start = tuner.mean_square_error(k);
             println!("Running {epochs} epochs...");
             let start = std::time::Instant::now();
             for _ in 0..epochs {
                 tuner.run_epoch(k);
             }
             let elapsed = start.elapsed();
+            let mse_end = tuner.mean_square_error(k);
+            println!("MSE Diff: {:.5}", mse_start - mse_end);
             println!(
                 "Total: {:.3}s | Per epoch: {:.3}ms",
                 elapsed.as_secs_f64(),
