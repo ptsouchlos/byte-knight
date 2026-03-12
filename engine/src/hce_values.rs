@@ -263,20 +263,20 @@ pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
 
 pub const PAWN_SHIELD: [[PhasedScore; NumberOf::PAWN_SHIELD_RANKS]; NumberOf::KING_FLANK_FILES] = [
     // King file
-    [S(25, 0), S(12, 0), S(5, 0), S(-5, 0)],
+    [S(1, 1), S(1, 1), S(1, 1), S(1, 1)],
     // Left adjacent
-    [S(20, 0), S(10, 0), S(3, 0), S(-5, 0)],
+    [S(1, 1), S(1, 1), S(1, 1), S(1, 1)],
     // Right adjacent
-    [S(20, 0), S(10, 0), S(3, 0), S(-5, 0)],
+    [S(1, 1), S(1, 1), S(1, 1), S(1, 1)],
 ];
 
 pub const PAWN_STORM: [[PhasedScore; NumberOf::PAWN_STORM_RANKS]; NumberOf::KING_FLANK_FILES] = [
     // King file
-    [S(0, 0), S(-10, 0), S(-25, 0), S(-40, 0)],
+    [S(1, 1), S(1, 1), S(1, 1), S(1, 1)],
     // Left adjacent
-    [S(0, 0), S(-5, 0), S(-15, 0), S(-30, 0)],
+    [S(1, 1), S(1, 1), S(1, 1), S(1, 1)],
     // Right adjacent
-    [S(0, 0), S(-5, 0), S(-15, 0), S(-30, 0)],
+    [S(1, 1), S(1, 1), S(1, 1), S(1, 1)],
 ];
 
 const RANK_1: u8 = 1;
