@@ -1,6 +1,11 @@
 // Part of the byte-knight project.
 // Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
 
+use rayon::{
+    iter::{IntoParallelRefIterator, ParallelIterator},
+    slice::ParallelSlice,
+};
+
 use crate::{offsets::PARAMETER_COUNT, parameters::Parameters, tuning_position::TuningPosition};
 
 pub(crate) struct Tuner<'a> {
@@ -66,40 +71,19 @@ impl<'a> Tuner<'a> {
         let chunk_size = self
             .positions
             .len()
-            .div_ceil(std::thread::available_parallelism().unwrap().into());
-        std::thread::scope(|s| {
-            self.positions
-                .chunks(chunk_size)
-                .map(|chunk| s.spawn(|| self.weights.gradient_batch(k, chunk)))
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|p| p.join().unwrap_or_default())
-                .fold(Parameters::default(), |a, b| a + b)
-        })
+            .div_ceil(rayon::current_num_threads());
+        self.positions
+            .par_chunks(chunk_size)
+            .map(|chunk| self.weights.gradient_batch(k, chunk))
+            .reduce(Parameters::default, |a, b| a + b)
     }
 
     pub(crate) fn mean_square_error(&self, k: f64) -> f64 {
-        let chunk_size = self
+        let total_error: f64 = self
             .positions
-            .len()
-            .div_ceil(std::thread::available_parallelism().unwrap().into());
-        let total_error = std::thread::scope(|s| {
-            self.positions
-                .chunks(chunk_size)
-                .map(|chunk| {
-                    s.spawn(|| {
-                        chunk
-                            .iter()
-                            .map(|point| point.error(k, &self.weights))
-                            .sum::<f64>()
-                    })
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|p| p.join().unwrap_or_default())
-                .sum::<f64>()
-        });
-
+            .par_iter()
+            .map(|point| point.error(k, &self.weights))
+            .sum();
         total_error / self.positions.len() as f64
     }
 

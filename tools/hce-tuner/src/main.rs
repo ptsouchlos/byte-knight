@@ -270,6 +270,11 @@ fn parse_data(input_data: &str) -> Vec<TuningPosition> {
 }
 
 fn main() {
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(std::thread::available_parallelism().unwrap().get())
+        .build_global()
+        .unwrap();
+
     let options = Options::parse();
     match options.command {
         Command::Tune {
