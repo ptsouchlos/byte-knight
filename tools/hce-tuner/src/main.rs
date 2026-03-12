@@ -34,7 +34,6 @@ struct Options {
 enum ParameterStartType {
     Zero,
     EngineValues,
-    PieceValues,
 }
 
 const INPUT_DATA_HELP: &str = "Filtered, marked EPD or 'book' input data.";
@@ -271,6 +270,11 @@ fn parse_data(input_data: &str) -> Vec<TuningPosition> {
 }
 
 fn main() {
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(std::thread::available_parallelism().unwrap().get())
+        .build_global()
+        .unwrap();
+
     let options = Options::parse();
     match options.command {
         Command::Tune {
@@ -282,7 +286,6 @@ fn main() {
             let parameters = match param_start_type {
                 ParameterStartType::Zero => Parameters::default(),
                 ParameterStartType::EngineValues => Parameters::create_from_engine_values(),
-                ParameterStartType::PieceValues => Parameters::create_from_piece_values(),
             };
             let epchs = epochs.unwrap_or(10_000);
             println!("Tuning parameters from {param_start_type:?} for {epchs} epochs",);
@@ -304,7 +307,15 @@ fn main() {
             println!("Error for k {k:.8}: {error:.8}");
         }
         Command::Bench { epochs, input_data } => {
+            let read_start = std::time::Instant::now();
             let positions = parse_data(&input_data);
+            let read_elapsed = read_start.elapsed();
+            println!(
+                "Read {} in {:.3}s",
+                positions.len(),
+                read_elapsed.as_secs_f64()
+            );
+
             let parameters = Parameters::create_from_engine_values();
             let mut tuner = tuner::Tuner::new(parameters, &positions, epochs);
 
@@ -312,12 +323,15 @@ fn main() {
             let k = tuner.compute_k();
             println!("Optimal K value: {k:.8}");
 
+            let mse_start = tuner.mean_square_error(k);
             println!("Running {epochs} epochs...");
             let start = std::time::Instant::now();
             for _ in 0..epochs {
                 tuner.run_epoch(k);
             }
             let elapsed = start.elapsed();
+            let mse_end = tuner.mean_square_error(k);
+            println!("MSE Diff: {:.5}", mse_start - mse_end);
             println!(
                 "Total: {:.3}s | Per epoch: {:.3}ms",
                 elapsed.as_secs_f64(),

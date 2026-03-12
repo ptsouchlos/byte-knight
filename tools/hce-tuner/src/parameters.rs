@@ -1,7 +1,7 @@
 // Part of the byte-knight project.
 // Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
 
-use std::ops::{Add, Index, IndexMut};
+use std::ops::{Add, AddAssign, Index, IndexMut};
 
 use chess::{
     definitions::NumberOf,
@@ -9,29 +9,15 @@ use chess::{
     side::Side,
     square,
 };
-use engine::hce_values::PASSED_PAWN_BONUS;
 
+use crate::tuning_position::TuningPosition;
 use crate::{
-    math,
     offsets::{Offsets, PARAMETER_COUNT},
     tuner_score::TuningScore,
-    tuning_position::TuningPosition,
 };
 
 /// Set of parameters that serve as input for tuning.
 pub struct Parameters([TuningScore; PARAMETER_COUNT]);
-
-#[allow(dead_code)]
-fn piece_value(piece: Piece) -> f64 {
-    match piece {
-        Piece::King => 10.,
-        Piece::Queen => 900.,
-        Piece::Rook => 400.,
-        Piece::Bishop => 300.,
-        Piece::Knight => 200.,
-        Piece::Pawn => 100.,
-    }
-}
 
 impl Parameters {
     pub(crate) fn as_slice(&self) -> &[TuningScore] {
@@ -123,31 +109,15 @@ impl Parameters {
         params
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn create_from_piece_values() -> Parameters {
-        let mut params = Parameters::default();
-        for piece in ALL_PIECES {
-            for sq in 0..NumberOf::SQUARES {
-                let val = piece_value(piece);
-                params[64 * piece as usize + sq] = TuningScore::new(val, val);
-            }
-        }
-
-        // Add passed pawn bonuses
-        for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
-            params[Offsets::PASSED_PAWN + idx] = (*val).into();
-        }
-
-        params
-    }
-
+    #[inline(always)]
     pub(crate) fn gradient_batch(&self, k: f64, data: &[TuningPosition]) -> Self {
+        use crate::math;
         let mut gradient = Parameters::default();
         for point in data {
             let sigmoid_result = math::sigmoid(k * point.evaluate(self));
             let term =
                 (point.game_result - sigmoid_result) * (1. - sigmoid_result) * sigmoid_result;
-            let phase_adjustment = term * TuningScore::new(point.phase, 1. - point.phase);
+            let phase_adjustment = term * point.phase_score;
 
             for idx in &point.parameter_indexes[Side::White as usize] {
                 gradient[*idx] += phase_adjustment;
@@ -190,6 +160,14 @@ impl Add<Parameters> for Parameters {
             result[i] = self[i] + rhs[i];
         }
         result
+    }
+}
+
+impl AddAssign<Parameters> for Parameters {
+    fn add_assign(&mut self, rhs: Self) {
+        for i in 0..PARAMETER_COUNT {
+            self[i] += rhs[i];
+        }
     }
 }
 
