@@ -34,7 +34,6 @@ struct Options {
 enum ParameterStartType {
     Zero,
     EngineValues,
-    PieceValues,
 }
 
 const INPUT_DATA_HELP: &str = "Filtered, marked EPD or 'book' input data.";
@@ -282,7 +281,6 @@ fn main() {
             let parameters = match param_start_type {
                 ParameterStartType::Zero => Parameters::default(),
                 ParameterStartType::EngineValues => Parameters::create_from_engine_values(),
-                ParameterStartType::PieceValues => Parameters::create_from_piece_values(),
             };
             let epchs = epochs.unwrap_or(10_000);
             println!("Tuning parameters from {param_start_type:?} for {epchs} epochs",);
