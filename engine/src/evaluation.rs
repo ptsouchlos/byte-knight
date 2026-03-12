@@ -149,59 +149,37 @@ impl<Values: EvalValues> Evaluation<Values> {
 
         let (pawn_shield, pawn_storm) = structure::king_pawn_shield_and_storm(board, side);
 
-        // Pawn shield: Closest pawns to our king on it's file and adjacent ones.
-        for friendly_sq in pawn_shield.iter() {
-            let (file, rank) = square::from_square(friendly_sq);
-            // Get the rank index.
-            // The starting rank for white is R2
-            let rank_index = match side {
-                Side::White => rank as i8 - Rank::R2 as i8,
-                Side::Black => Rank::R7 as i8 - rank as i8,
-            };
+        for (bb, is_shield) in [(pawn_shield, true), (pawn_storm, false)] {
+            for sq in bb.iter() {
+                let (file, rank) = square::from_square(sq);
+                let rank_index = match side {
+                    Side::White => rank as i8 - Rank::R2 as i8,
+                    Side::Black => Rank::R7 as i8 - rank as i8,
+                };
 
-            let file_diff = king_file as i8 - file as i8;
-            // Map index so that on the king file = 0, left adjacent = 1, and right adjacent = 2
-            // This is irrespective of stm.
-            let file_index = if file_diff == 0 {
-                0_usize
-            } else {
-                file_diff.unsigned_abs() as usize + (file_diff > 0) as usize
-            };
+                let file_diff = king_file as i8 - file as i8;
+                // Map: king file = 0, left adjacent = 1, right adjacent = 2.
+                // See hce_values.rs for the corresponding indexing.
+                let file_index = if file_diff == 0 {
+                    0_usize
+                } else {
+                    // Diffs are always [-1, 0, +1].
+                    // If the diff is positive, that means the pawn is left adjacent.
+                    // If the diff is negative, that means the pawn is right adjacent.
+                    file_diff.unsigned_abs() as usize + (file_diff < 0) as usize
+                };
 
-            debug_assert!(file_index == 0 || file_index == 1 || file_index == 2);
+                debug_assert!(file_index == 0 || file_index == 1 || file_index == 2);
 
-            if (0..4).contains(&rank_index) {
-                score += self
-                    .values()
-                    .pawn_shield_value(file_index, rank_index as usize, side);
-            }
-        }
-
-        // Pawn Storm: Closest enemy pawns on our king's file and adjacent ones.
-        for enemy_sq in pawn_storm.iter() {
-            let (file, rank) = square::from_square(enemy_sq);
-            // Get the rank index.
-            // The starting rank for white is R2
-            let rank_index = match side {
-                Side::White => rank as i8 - Rank::R2 as i8,
-                Side::Black => Rank::R7 as i8 - rank as i8,
-            };
-
-            let file_diff = king_file as i8 - file as i8;
-            // Map index so that on the king file = 0, left adjacent = 1, and right adjacent = 2
-            // This is irrespective of stm.
-            let file_index = if file_diff == 0 {
-                0_usize
-            } else {
-                file_diff.unsigned_abs() as usize + (file_diff > 0) as usize
-            };
-
-            debug_assert!(file_index == 0 || file_index == 1 || file_index == 2);
-
-            if (0..4).contains(&rank_index) {
-                score += self
-                    .values()
-                    .pawn_storm_value(file_index, rank_index as usize, side);
+                if (0..4).contains(&rank_index) {
+                    score += if is_shield {
+                        self.values()
+                            .pawn_shield_value(file_index, rank_index as usize, side)
+                    } else {
+                        self.values()
+                            .pawn_storm_value(file_index, rank_index as usize, side)
+                    };
+                }
             }
         }
         score
