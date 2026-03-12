@@ -26,6 +26,7 @@ serde = "1.0.228"
 textplots = "0.8.7"
 thiserror = "2.0.18"
 uci-parser = "1.1.0"
+ctrlc = "3.5.2"
 
 [profile.dev]
 opt-level = 1
