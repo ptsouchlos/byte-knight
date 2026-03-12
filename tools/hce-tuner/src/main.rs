@@ -246,8 +246,12 @@ fn print_params(params: &Parameters) {
     println!(
         "pub const PAWN_SHIELD: [[PhasedScore; NumberOf::PAWN_SHIELD_RANKS]; NumberOf::KING_FLANK_FILES] = ["
     );
-    for file_idx in 0..NumberOf::KING_FLANK_FILES {
-        println!("    \\\\ {}", pawn_shield_storm_row_comments[file_idx]);
+    for (file_idx, comment) in pawn_shield_storm_row_comments
+        .iter()
+        .enumerate()
+        .take(NumberOf::KING_FLANK_FILES)
+    {
+        println!("    \\\\ {}", comment);
         print!("    [");
         for rank_idx in 0..NumberOf::PAWN_SHIELD_RANKS {
             let idx = Offsets::offset_for_pawn_shield(file_idx, rank_idx);
@@ -262,8 +266,12 @@ fn print_params(params: &Parameters) {
     println!(
         "pub const PAWN_STORM: [[PhasedScore; NumberOf::PAWN_STORM_RANKS]; NumberOf::KING_FLANK_FILES] = ["
     );
-    for file_idx in 0..NumberOf::KING_FLANK_FILES {
-        println!("    \\\\ {}", pawn_shield_storm_row_comments[file_idx]);
+    for (file_idx, comment) in pawn_shield_storm_row_comments
+        .iter()
+        .enumerate()
+        .take(NumberOf::KING_FLANK_FILES)
+    {
+        println!("    \\\\ {}", comment);
         print!("    [");
         for rank_idx in 0..NumberOf::PAWN_SHIELD_RANKS {
             let idx = Offsets::offset_for_pawn_shield(file_idx, rank_idx);
