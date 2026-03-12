@@ -1,6 +1,4 @@
-use chess::{
-    bitboard::Bitboard, bitboard_helpers, board::Board, file::File, pieces::Piece, side::Side,
-};
+use chess::{bitboard::Bitboard, bitboard_helpers, board::Board, pieces::Piece, side::Side};
 
 /// Calculate the kings pawn shield and storm for the given side.
 ///
@@ -16,9 +14,8 @@ pub(crate) fn king_pawn_shield_and_storm(board: &Board, side: Side) -> (Bitboard
     let their_pawns = *board.piece_bitboard(Piece::Pawn, side.opposite());
 
     let king_sq_bb = Bitboard::from_square(king_sq);
-    let king_sq_adjacent_bb = king_sq_bb
-        | (bitboard_helpers::west(king_sq_bb) & !File::H.to_bitboard())
-        | (bitboard_helpers::east(king_sq_bb) & !File::A.to_bitboard());
+    let king_sq_adjacent_bb =
+        king_sq_bb | bitboard_helpers::west(king_sq_bb) | bitboard_helpers::east(king_sq_bb);
 
     let king_files_bb = match side {
         Side::White => bitboard_helpers::north_fill(king_sq_adjacent_bb),
