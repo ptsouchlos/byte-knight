@@ -273,8 +273,8 @@ fn print_params(params: &Parameters) {
     {
         println!("    // {}", comment);
         print!("    [");
-        for rank_idx in 0..NumberOf::PAWN_SHIELD_RANKS {
-            let idx = Offsets::offset_for_pawn_shield(file_idx, rank_idx);
+        for rank_idx in 0..NumberOf::PAWN_STORM_RANKS {
+            let idx = Offsets::offset_for_pawn_storm(file_idx, rank_idx);
             let val = params.as_slice()[idx];
             print!("{val:?}, ");
         }
