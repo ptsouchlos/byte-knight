@@ -74,7 +74,7 @@ impl PawnEvaluator {
             }
         }
 
-        // Loop through the white pawns
+        // Loop through the black pawns
         for sq in black_pawns.iter() {
             // Add the passed pawn mask for this square
             black_passed_pawns_mask |= self.passed_pawn_mask(Side::Black, sq);
