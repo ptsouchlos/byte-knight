@@ -856,9 +856,11 @@ mod tests {
     fn check_is_square_attacked() {
         let board = Board::default_board();
         let move_gen = MoveGenerator::new();
-        // loop through all the occupied squares and check if they are attacked
-        let occupancy = board.all_pieces();
-        for sq in occupancy.iter() {
+        let us = Side::White;
+        let them = us.opposite();
+        // loop through all enemy squares and check if they are attacked
+        let black_pieces = board.pieces(them);
+        for sq in black_pieces.iter() {
             let square = Square::from_square_index(sq);
             let is_attacked = move_gen.is_square_attacked(&board, &square, Side::White);
             assert!(!is_attacked);
