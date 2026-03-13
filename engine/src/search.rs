@@ -177,6 +177,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut table = Table::<f64, 32_000>::new(MAX_DEPTH as usize, MAX_MOVE_LIST_SIZE);
         table.fill(lmr::formula);
 
+        // Clear killers as this is a new position.
+        killers_table.clear();
+
         Self {
             transposition_table: ttable,
             history_table,
