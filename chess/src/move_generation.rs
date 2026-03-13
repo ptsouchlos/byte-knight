@@ -862,7 +862,7 @@ mod tests {
         let black_pieces = board.pieces(them);
         for sq in black_pieces.iter() {
             let square = Square::from_square_index(sq);
-            let is_attacked = move_gen.is_square_attacked(&board, &square, Side::White);
+            let is_attacked = move_gen.is_square_attacked(&board, &square, us);
             assert!(!is_attacked);
         }
 
