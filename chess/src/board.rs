@@ -511,12 +511,12 @@ impl Board {
         let mut occupancy = self.all_pieces();
         let us = self.side_to_move();
 
-        let king_attacks = move_gen.get_piece_attacks(Piece::King, king_sq as u8, us, &occupancy);
+        let king_attacks = move_gen.get_piece_attacks(Piece::King, king_sq, us, &occupancy);
         let our_pieces = self.pieces(self.side_to_move());
         let king_attacks = king_attacks & !our_pieces;
 
         // modify occupancy to exclude the king square
-        occupancy.clear_square(king_sq as u8);
+        occupancy.clear_square(king_sq);
 
         // check if the king can move to any of the squares it's attacking
         for sq in king_attacks.iter() {

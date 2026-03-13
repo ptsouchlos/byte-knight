@@ -80,7 +80,7 @@ impl MoveGenerator {
             );
 
             let (king_file, king_rank) = square::from_square(king_sq);
-            let (attacker_file, attacker_rank) = square::from_square(next_attacker_sq as u8);
+            let (attacker_file, attacker_rank) = square::from_square(next_attacker_sq);
             // check if the ray is orthogonal or diagonal
             let is_orthogonal = king_file == attacker_file || king_rank == attacker_rank;
             let is_diagonal = (king_sq as i16 - next_attacker_sq as i16).abs() % 9 == 0
@@ -90,7 +90,7 @@ impl MoveGenerator {
             match (ray & occupancy).number_of_occupied_squares() {
                 // not blocked so the attacker is checking our king
                 0 => {
-                    checkers |= Bitboard::from_square(next_attacker_sq as u8);
+                    checkers |= Bitboard::from_square(next_attacker_sq);
                 }
                 // exactly 1 blockers, so this piece is pinned
                 1 => {

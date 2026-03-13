@@ -5,10 +5,7 @@
 
 use std::ops::AddAssign;
 
-use chess::{
-    attacks, bitboard_helpers, board::Board, file::File, pieces::Piece, rank::Rank, side::Side,
-    square,
-};
+use chess::{attacks, board::Board, file::File, pieces::Piece, rank::Rank, side::Side, square};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_INC, GAME_PHASE_MAX},
@@ -231,28 +228,28 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let occupancy = board.all_pieces();
         // loop through occupied squares
         for sq in occupancy.iter() {
-            let maybe_piece = board.piece_on_square(sq as u8);
+            let maybe_piece = board.piece_on_square(sq);
             if let Some((piece, side)) = maybe_piece {
                 if piece == Piece::Pawn {
-                    if pawn_structure.passed_pawns[side as usize].is_square_occupied(sq as u8) {
-                        let passed_pawn_bonus = self.values.passed_pawn_bonus(sq as u8, side);
+                    if pawn_structure.passed_pawns[side as usize].is_square_occupied(sq) {
+                        let passed_pawn_bonus = self.values.passed_pawn_bonus(sq, side);
                         mg[side as usize] += passed_pawn_bonus.mg() as i32;
                         eg[side as usize] += passed_pawn_bonus.eg() as i32;
                     }
 
-                    if pawn_structure.doubled_pawns[side as usize].is_square_occupied(sq as u8) {
-                        let doubled_pawn_value = self.values.doubled_pawn_value(sq as u8, side);
+                    if pawn_structure.doubled_pawns[side as usize].is_square_occupied(sq) {
+                        let doubled_pawn_value = self.values.doubled_pawn_value(sq, side);
                         mg[side as usize] += doubled_pawn_value.mg() as i32;
                         eg[side as usize] += doubled_pawn_value.eg() as i32;
                     }
 
-                    if pawn_structure.isolated_pawns[side as usize].is_square_occupied(sq as u8) {
-                        let isolated_pawn_value = self.values.isolated_pawn_value(sq as u8, side);
+                    if pawn_structure.isolated_pawns[side as usize].is_square_occupied(sq) {
+                        let isolated_pawn_value = self.values.isolated_pawn_value(sq, side);
                         mg[side as usize] += isolated_pawn_value.mg() as i32;
                         eg[side as usize] += isolated_pawn_value.eg() as i32;
                     }
                 }
-                let phased_score: PhasedScore = self.values.psqt(sq as u8, piece, side);
+                let phased_score: PhasedScore = self.values.psqt(sq, piece, side);
                 mg[side as usize] += phased_score.mg() as i32;
                 eg[side as usize] += phased_score.eg() as i32;
 
@@ -300,7 +297,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
                 // Loop through each sq in the piece bb and see if that piece is attacking the king ring
                 for sq in piece_bb.iter() {
-                    let piece_attacks = attacks::for_piece_on_square(piece, sq as u8, occ, them);
+                    let piece_attacks = attacks::for_piece_on_square(piece, sq, occ, them);
 
                     let overlap = piece_attacks & king_ring;
                     let overlap_cnt = overlap.number_of_occupied_squares();

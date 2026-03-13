@@ -6,7 +6,6 @@
 use crate::{
     attacks,
     bitboard::Bitboard,
-    bitboard_helpers,
     board::Board,
     definitions::{FILE_BITBOARDS, RANK_BITBOARDS, Squares},
     file::File,
@@ -702,7 +701,7 @@ impl MoveGenerator {
         let enemy_pieces = board.pieces(them);
         let promotion_rank = Rank::promotion_rank(us);
         for to_square in bitboard.iter() {
-            let (file, rank) = square::from_square(to_square as u8);
+            let (file, rank) = square::from_square(to_square);
             let (from_file, _) = square::from_square(from.to_square_index());
 
             let en_passant = match board.en_passant_square() {
@@ -860,7 +859,7 @@ mod tests {
         // loop through all the occupied squares and check if they are attacked
         let occupancy = board.all_pieces();
         for sq in occupancy.iter() {
-            let square = Square::from_square_index(sq as u8);
+            let square = Square::from_square_index(sq);
             let is_attacked = move_gen.is_square_attacked(&board, &square, Side::White);
             assert!(!is_attacked);
         }
