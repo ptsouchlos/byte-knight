@@ -106,6 +106,20 @@ impl Parameters {
                 values.semi_open_file_bonus(file, Side::White).into();
         }
 
+        // Pawn shield & storm
+        for file_idx in 0..NumberOf::KING_FLANK_FILES {
+            for rank_idx in 0..NumberOf::PAWN_SHIELD_RANKS {
+                params[Offsets::offset_for_pawn_shield(file_idx, rank_idx)] = values
+                    .pawn_shield_value(file_idx, rank_idx, Side::White)
+                    .into();
+            }
+            for rank_idx in 0..NumberOf::PAWN_STORM_RANKS {
+                params[Offsets::offset_for_pawn_storm(file_idx, rank_idx)] = values
+                    .pawn_storm_value(file_idx, rank_idx, Side::White)
+                    .into();
+            }
+        }
+
         params
     }
 

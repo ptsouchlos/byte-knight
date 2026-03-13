@@ -118,4 +118,26 @@ impl EvalValues for TracingValues {
         self.record(side, idx);
         PhasedScore::default()
     }
+
+    fn pawn_shield_value(
+        &self,
+        file_index: usize,
+        rank_index: usize,
+        side: Side,
+    ) -> Self::ReturnScore {
+        let idx = Offsets::offset_for_pawn_shield(file_index, rank_index);
+        self.record(side, idx);
+        PhasedScore::default()
+    }
+
+    fn pawn_storm_value(
+        &self,
+        file_index: usize,
+        rank_index: usize,
+        side: Side,
+    ) -> Self::ReturnScore {
+        let idx = Offsets::offset_for_pawn_storm(file_index, rank_index);
+        self.record(side, idx);
+        PhasedScore::default()
+    }
 }

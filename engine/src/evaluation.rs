@@ -5,13 +5,17 @@
 
 use std::ops::AddAssign;
 
-use chess::{attacks, bitboard_helpers, board::Board, file::File, pieces::Piece, side::Side};
+use chess::{
+    attacks, bitboard_helpers, board::Board, file::File, pieces::Piece, rank::Rank, side::Side,
+    square,
+};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_INC, GAME_PHASE_MAX},
     pawn_structure::PawnEvaluator,
     phased_score::{PhaseType, PhasedScore},
     score::{LargeScoreType, Score, ScoreType},
+    structure,
     traits::{Eval, EvalValues},
 };
 
@@ -130,6 +134,52 @@ impl<Values: EvalValues> Evaluation<Values> {
                 let mobility =
                     (attacks & !enemy_pawn_attacks & !our_pieces).number_of_occupied_squares();
                 score += self.values().mobility_value(piece, mobility as usize, side);
+            }
+        }
+        score
+    }
+
+    fn evaluate_king_pawn_shield_storm(&self, board: &Board, side: Side) -> PhasedScore
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let mut score = PhasedScore::default();
+        let king_sq = board.king_square(side);
+        let king_file = File::of(king_sq);
+
+        let (pawn_shield, pawn_storm) = structure::king_pawn_shield_and_storm(board, side);
+
+        for (bb, is_shield) in [(pawn_shield, true), (pawn_storm, false)] {
+            for sq in bb.iter() {
+                let (file, rank) = square::from_square(sq);
+                let rank_index = match side {
+                    Side::White => rank as i8 - Rank::R2 as i8,
+                    Side::Black => Rank::R7 as i8 - rank as i8,
+                };
+
+                let file_diff = king_file as i8 - file as i8;
+                // Map: king file = 0, left adjacent = 1, right adjacent = 2.
+                // See hce_values.rs for the corresponding indexing.
+                let file_index = if file_diff == 0 {
+                    0_usize
+                } else {
+                    // Diffs are always [-1, 0, +1].
+                    // If the diff is positive, that means the pawn is left adjacent.
+                    // If the diff is negative, that means the pawn is right adjacent.
+                    file_diff.unsigned_abs() as usize + (file_diff < 0) as usize
+                };
+
+                debug_assert!(file_index == 0 || file_index == 1 || file_index == 2);
+
+                if (0..4).contains(&rank_index) {
+                    score += if is_shield {
+                        self.values()
+                            .pawn_shield_value(file_index, rank_index as usize, side)
+                    } else {
+                        self.values()
+                            .pawn_storm_value(file_index, rank_index as usize, side)
+                    };
+                }
             }
         }
         score
@@ -289,6 +339,13 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let tempo_bonus = self.values().tempo_bonus(side_to_move);
         mg[stm_idx] += tempo_bonus.mg() as i32;
         eg[stm_idx] += tempo_bonus.eg() as i32;
+
+        // King pawn shield & storm
+        for side in Side::iter() {
+            let shield_storm = self.evaluate_king_pawn_shield_storm(board, side);
+            mg[side as usize] += shield_storm.mg() as i32;
+            eg[side as usize] += shield_storm.eg() as i32;
+        }
 
         let our_rook_bonus = self.evaluate_rook_files(board, side_to_move);
         let their_rook_bonus = self.evaluate_rook_files(board, side_to_move.opposite());
@@ -485,13 +542,13 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            30, 5, 740, 766, -687, -714, 1441, -1388, 642, 687, -589, -635, 27, 25, 34, 27, 29, 20,
-            27, -687, -714, 740, 766, -1388, 1441, -589, -635, 642, 687, 27, 29, 20, 27, 25, 34,
-            27, 38, 36, 26, -410, 572, 14, 16, 22, 463, -519, -9, -12, 907, -883, 105, 65, -853,
-            936, 27, 24, 27, 30, -1302, -1394, -12, 1344, -1394, 66, 247, 268, -195, -216, 7, -195,
-            -216, 247, 268, 45, 19, 19, 26, 26, 26, 36, 16, 17, 26, 26, 26, 16, 36, 35, 18, 36, 32,
-            27, 20, 25, -316, 27, 34, 16, 20, 25, 32, 27, 368, 25, 22, 19, 30, 33, 25, 27, 26, 30,
-            33, 22, 19, 27, 25, 26, 19, 43, 69, 105, 33, 9, -17, -52, 20, 65,
+            30, -2, 738, 760, -684, -706, 1432, -1377, 628, 666, -574, -611, 28, 26, 36, 28, 29,
+            20, 27, -684, -706, 738, 760, -1377, 1432, -574, -611, 628, 666, 28, 29, 20, 27, 26,
+            36, 28, 37, 30, 27, -405, 568, 17, 23, 24, 459, -513, -10, -29, 902, -877, 109, 84,
+            -847, 932, 28, 20, 28, 35, -1296, -1375, -5, 1338, -1375, 61, 240, 273, -186, -219, 52,
+            -186, -219, 240, 273, 2, -1, -1, 27, 27, 27, 45, 9, 14, 27, 27, 27, 9, 45, 40, 15, 47,
+            26, 23, 28, 31, -313, 25, 39, 7, 28, 31, 26, 23, 367, 29, 21, 19, 33, 35, 22, 32, 27,
+            33, 35, 21, 19, 32, 22, 27, 32, 32, 23, 36, 22, 22, 31, 18, 27, 29,
         ];
 
         let eval = ByteKnightEvaluation::default();
@@ -647,5 +704,59 @@ mod tests {
             let flipped_score = eval.eval(&flipped_board);
             assert_eq!(score.0, flipped_score.0);
         }
+    }
+
+    #[test]
+    fn eval_king_shield_storm() {
+        let eval = ByteKnightEvaluation::default();
+
+        // Bonus with shield versus without shield
+        let with_shield = Board::from_fen("4k3/8/8/8/8/8/5PPP/6K1 w - - 0 1").unwrap();
+        let no_shield = Board::from_fen("4k3/8/8/8/8/8/8/6K1 w - - 0 1").unwrap();
+        println!("w/shield\n{}", with_shield);
+        println!("w/o shield\n{}", no_shield);
+        let score_with = eval.eval(&with_shield).0;
+        let score_without = eval.eval(&no_shield).0;
+        println!("w/ shield: {score_with}, w/o shield: {score_without}");
+        assert!(
+            score_with > score_without,
+            "Intact pawn shield should score higher than no pawns"
+        );
+
+        // Symmetry test
+        let white_pos = Board::from_fen("4k3/8/8/8/8/8/5PPP/6K1 w - - 0 1").unwrap();
+        println!("white_pos\n{}", white_pos);
+        let flipped = white_pos.flip();
+        let white_score = eval.eval(&white_pos).0;
+        let flipped_score = eval.eval(&flipped).0;
+        println!("white_pos: {white_score}, flipped: {flipped_score}");
+        assert_eq!(
+            white_score, flipped_score,
+            "Shield eval should be symmetric"
+        );
+
+        // Pawn on king file vs on adjacent file
+        let king_file_pawn = Board::from_fen("4k3/8/8/8/8/8/4P3/4K3 w - - 0 1").unwrap();
+        let adj_file_pawn = Board::from_fen("4k3/8/8/8/8/8/3P4/4K3 w - - 0 1").unwrap();
+        println!("king file pawn\n{}", king_file_pawn);
+        println!("adj file pawn\n{}", adj_file_pawn);
+        let king_file_score = eval.eval(&king_file_pawn).0;
+        let adj_file_score = eval.eval(&adj_file_pawn).0;
+        println!("king_file_pawn: {king_file_score}, adj_file_pawn: {adj_file_score}");
+        // All we can do is assert they're not equal.
+        assert_ne!(king_file_score, adj_file_score);
+
+        // Triple storm (3 pawns) worse than single storm
+        let triple_storm = Board::from_fen("4k3/8/8/8/5ppp/8/8/6K1 w - - 0 1").unwrap();
+        let single_storm = Board::from_fen("4k3/8/8/8/6p1/8/8/6K1 w - - 0 1").unwrap();
+        println!("triple storm\n{}", triple_storm);
+        println!("single storm\n{}", single_storm);
+        let triple_score = eval.eval(&triple_storm).0;
+        let single_score = eval.eval(&single_storm).0;
+        println!("triple storm: {triple_score}, single storm: {single_score}");
+        assert!(
+            triple_score < single_score,
+            "Three storming pawns should be worse than one"
+        );
     }
 }
