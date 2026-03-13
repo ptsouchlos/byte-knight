@@ -122,11 +122,12 @@ impl Board {
         // XOR the zobrist values for each piece on the board
         for side in 0..NumberOf::SIDES {
             for piece in 0..NumberOf::PIECE_TYPES {
-                let mut bitboard = self.piece_bitboards[side][piece];
+                let bitboard = self.piece_bitboards[side][piece];
 
-                while bitboard != 0 {
-                    let square = bitboard_helpers::next_bit(&mut bitboard);
-                    zobrist_hash ^= self.zobrist_values.get_piece_value(piece, side, square);
+                for sq in bitboard.iter() {
+                    zobrist_hash ^= self
+                        .zobrist_values
+                        .get_piece_value(piece, side, sq as usize);
                 }
             }
         }
@@ -487,8 +488,7 @@ impl Board {
         // pseudo legal check
         // check if we are in check
         // get the kings location and check if that square is attacked by the opponent
-        let mut king_bb = *self.piece_bitboard(Piece::King, self.side_to_move());
-        let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+        let king_square = self.king_square(self.side_to_move());
         move_gen.is_square_attacked(
             self,
             &Square::from_square_index(king_square),
@@ -503,8 +503,7 @@ impl Board {
             return false;
         }
 
-        let king_bb = self.piece_bitboard(Piece::King, self.side_to_move());
-        let king_sq = bitboard_helpers::next_bit(&mut king_bb.clone());
+        let king_sq = self.king_square(self.side_to_move());
 
         // check mate happens when we're in check and all the legal moves are illegal but we
         // don't want to try all the moves to check their legality
@@ -514,17 +513,16 @@ impl Board {
 
         let king_attacks = move_gen.get_piece_attacks(Piece::King, king_sq as u8, us, &occupancy);
         let our_pieces = self.pieces(self.side_to_move());
-        let mut king_attacks = king_attacks & !our_pieces;
+        let king_attacks = king_attacks & !our_pieces;
 
         // modify occupancy to exclude the king square
         occupancy.clear_square(king_sq as u8);
 
         // check if the king can move to any of the squares it's attacking
-        while king_attacks > 0 {
-            let square = bitboard_helpers::next_bit(&mut king_attacks);
+        for sq in king_attacks.iter() {
             if move_gen.is_square_attacked_with_occupancy(
                 self,
-                &Square::from_square_index(square as u8),
+                &Square::from_square_index(sq),
                 self.side_to_move().opposite(),
                 &occupancy,
             ) {

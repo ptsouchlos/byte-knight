@@ -228,10 +228,9 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         let pawn_structure = self.pawn_evaluator.detect_pawn_structure(board);
 
-        let mut occupancy = board.all_pieces();
+        let occupancy = board.all_pieces();
         // loop through occupied squares
-        while occupancy.as_number() > 0 {
-            let sq = bitboard_helpers::next_bit(&mut occupancy);
+        for sq in occupancy.iter() {
             let maybe_piece = board.piece_on_square(sq as u8);
             if let Some((piece, side)) = maybe_piece {
                 if piece == Piece::Pawn {
@@ -297,11 +296,10 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             // Loop through enemy pieces (except king) and check overlap with king ring
             for piece in Piece::iter().filter(|&p| p != Piece::King) {
                 // Get opponent piece bb
-                let mut piece_bb = *board.piece_bitboard(piece, them);
+                let piece_bb = *board.piece_bitboard(piece, them);
 
                 // Loop through each sq in the piece bb and see if that piece is attacking the king ring
-                while piece_bb.as_number() > 0 {
-                    let sq = bitboard_helpers::next_bit(&mut piece_bb);
+                for sq in piece_bb.iter() {
                     let piece_attacks = attacks::for_piece_on_square(piece, sq as u8, occ, them);
 
                     let overlap = piece_attacks & king_ring;

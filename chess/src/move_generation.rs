@@ -331,19 +331,18 @@ impl MoveGenerator {
         ]
         .iter()
         {
-            let mut piece_bb = *board.piece_bitboard(*piece, side);
+            let piece_bb = *board.piece_bitboard(*piece, side);
             if piece_bb.as_number() == 0 {
                 continue;
             }
 
-            while piece_bb.as_number() > 0 {
-                let from = bitboard_helpers::next_bit(&mut piece_bb) as u8;
+            for from_sq in piece_bb.iter() {
                 let attacks_bb = match PieceCategory::from(*piece) {
                     PieceCategory::NonSlider(non_slider) => {
-                        self.get_non_slider_attacks(side, non_slider, from)
+                        self.get_non_slider_attacks(side, non_slider, from_sq)
                     }
                     PieceCategory::Slider(slider) => {
-                        self.get_slider_attacks(slider, from, occupancy)
+                        self.get_slider_attacks(slider, from_sq, occupancy)
                     }
                 };
 
@@ -528,16 +527,15 @@ impl MoveGenerator {
         let occupancy = board.all_pieces();
         let empty = !occupancy;
 
-        let mut piece_bb = *board.piece_bitboard(piece, us);
+        let piece_bb = *board.piece_bitboard(piece, us);
         // loop through all the pieces of the given type
-        while piece_bb.as_number() > 0 {
-            let from_square = bitboard_helpers::next_bit(&mut piece_bb) as u8;
+        for from_sq in piece_bb.iter() {
             let attack_bb = match PieceCategory::from(piece) {
                 PieceCategory::Slider(slider) => {
-                    self.get_slider_attacks(slider, from_square, &occupancy)
+                    self.get_slider_attacks(slider, from_sq, &occupancy)
                 }
                 PieceCategory::NonSlider(non_slider) => {
-                    self.get_non_slider_attacks(us, non_slider, from_square)
+                    self.get_non_slider_attacks(us, non_slider, from_sq)
                 }
             };
 
@@ -549,7 +547,7 @@ impl MoveGenerator {
 
             self.enumerate_moves(
                 &bb_moves,
-                &Square::from_square_index(from_square),
+                &Square::from_square_index(from_sq),
                 piece,
                 board,
                 move_list,
@@ -594,11 +592,8 @@ impl MoveGenerator {
         let direction = if us == Side::White { NORTH } else { SOUTH };
         let pawns_bb = board.piece_bitboard(Piece::Pawn, us);
 
-        let mut bb = *pawns_bb;
-
         // loop through all the pawns for us
-        while bb > 0 {
-            let from_square = bitboard_helpers::next_bit(&mut bb) as u8;
+        for from_square in pawns_bb.iter() {
             let attack_bb = attacks::pawn(from_square, us);
 
             let mut bb_moves = Bitboard::default();
@@ -702,13 +697,11 @@ impl MoveGenerator {
             return;
         }
 
-        let mut bb = *bitboard;
         let us = board.side_to_move();
         let them = us.opposite();
         let enemy_pieces = board.pieces(them);
         let promotion_rank = Rank::promotion_rank(us);
-        while bb > 0 {
-            let to_square = bitboard_helpers::next_bit(&mut bb) as u8;
+        for to_square in bitboard.iter() {
             let (file, rank) = square::from_square(to_square as u8);
             let (from_file, _) = square::from_square(from.to_square_index());
 
@@ -865,13 +858,11 @@ mod tests {
         let board = Board::default_board();
         let move_gen = MoveGenerator::new();
         // loop through all the occupied squares and check if they are attacked
-        let mut occupancy = board.all_pieces();
-        let mut sq = bitboard_helpers::next_bit(&mut occupancy);
-        while sq > 0 {
+        let occupancy = board.all_pieces();
+        for sq in occupancy.iter() {
             let square = Square::from_square_index(sq as u8);
             let is_attacked = move_gen.is_square_attacked(&board, &square, Side::White);
             assert!(!is_attacked);
-            sq = bitboard_helpers::next_bit(&mut occupancy);
         }
 
         // now generate moves and check if the squares that pieces can move to are attacked
@@ -888,12 +879,11 @@ mod tests {
 
         {
             let board = Board::from_fen("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2").unwrap();
-            let mut king_bb = *board.piece_bitboard(Piece::King, board.side_to_move());
-            let square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+            let king_sq = board.king_square(board.side_to_move());
             assert_eq!(board.side_to_move(), Side::Black);
             assert!(move_gen.is_square_attacked(
                 &board,
-                &Square::from_square_index(square),
+                &Square::from_square_index(king_sq),
                 board.side_to_move().opposite()
             ));
         }
@@ -910,13 +900,12 @@ mod tests {
             assert!(board.make_move(mv, &move_gen).is_ok());
 
             // did we leave the king in check?
-            let mut king_bb = *board.piece_bitboard(Piece::King, Side::White);
-            let square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+            let king_sq = board.king_square(Side::White);
             assert_eq!(board.side_to_move(), Side::Black);
             // there should be no attacks on the king
             assert!(!move_gen.is_square_attacked(
                 &board,
-                &Square::from_square_index(square),
+                &Square::from_square_index(king_sq),
                 Side::Black
             ));
         }

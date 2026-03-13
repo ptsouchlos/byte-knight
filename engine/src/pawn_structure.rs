@@ -60,16 +60,11 @@ impl PawnEvaluator {
         let mut white_passed_pawns_mask = white_pawns;
         let mut black_passed_pawns_mask = black_pawns;
 
-        // Mutable copies to iterate through
-        let mut wp_mut = white_pawns;
-        let mut bp_mut = black_pawns;
-
         let mut white_isolated_pawns = Bitboard::default();
         let mut black_isolated_pawns = Bitboard::default();
 
         // Loop through white pawns
-        while wp_mut.as_number() > 0 {
-            let sq = bitboard_helpers::next_bit(&mut wp_mut);
+        for sq in white_pawns.iter() {
             // Add the passed pawn mask for this square
             white_passed_pawns_mask |= self.passed_pawn_mask(Side::White, sq as u8);
 
@@ -80,8 +75,7 @@ impl PawnEvaluator {
         }
 
         // Loop through the white pawns
-        while bp_mut.as_number() > 0 {
-            let sq = bitboard_helpers::next_bit(&mut bp_mut);
+        for sq in black_pawns.iter() {
             // Add the passed pawn mask for this square
             black_passed_pawns_mask |= self.passed_pawn_mask(Side::Black, sq as u8);
 
