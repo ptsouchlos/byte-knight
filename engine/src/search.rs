@@ -576,8 +576,15 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if moves_seen == 0 {
                     -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
                 } else {
+                    let is_killer = self.killers_table.get(ply as u8).iter().any(|maybe_mv|maybe_mv.is_some_and(|klr|klr == mv));
+                    // No LMR reduction for killer moves
                     let reduction = if mv.is_quiet() && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
-                        lmr_reduction
+                        if is_killer {
+                            // Reduce less if the move is a killer
+                            (lmr_reduction-1).max(1)
+                        } else {
+                            lmr_reduction
+                        }
                     } else {
                         1
                     };
