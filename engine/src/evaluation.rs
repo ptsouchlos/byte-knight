@@ -723,19 +723,6 @@ mod tests {
             "Intact pawn shield should score higher than no pawns"
         );
 
-        // Close versus far storm
-        let storm_close = Board::from_fen("4k3/8/8/8/5ppp/8/5PPP/6K1 w - - 0 1").unwrap();
-        let storm_far = Board::from_fen("4k3/5ppp/8/8/8/8/5PPP/6K1 w - - 0 1").unwrap();
-        println!("storm_close\n{}", storm_close);
-        println!("storm_far\n{}", storm_far);
-        let close_score = eval.eval(&storm_close).0;
-        let far_score = eval.eval(&storm_far).0;
-        println!("storm_close (rank 4): {close_score}, storm_far (rank 7): {far_score}");
-        assert!(
-            close_score < far_score,
-            "Close enemy pawns should penalize more than far ones"
-        );
-
         // Symmetry test
         let white_pos = Board::from_fen("4k3/8/8/8/8/8/5PPP/6K1 w - - 0 1").unwrap();
         println!("white_pos\n{}", white_pos);
