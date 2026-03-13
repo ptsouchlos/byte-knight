@@ -50,13 +50,11 @@ impl Default for KillerMovesTable {
 
 #[cfg(test)]
 mod tests {
-
-    use crate::defs::{MAX_DEPTH, MAX_KILLERS_PER_PLY};
-
     use super::KillerMovesTable;
+    use crate::defs::{MAX_DEPTH, MAX_KILLERS_PER_PLY};
+    use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList};
 
     #[test]
-
     fn initialize_killers_table() {
         let killers_table: KillerMovesTable = Default::default();
         for i in 0..MAX_DEPTH {
@@ -64,5 +62,49 @@ mod tests {
             assert_eq!(killers, &[None, None]);
             assert_eq!(killers.len(), MAX_KILLERS_PER_PLY);
         }
+    }
+
+    #[test]
+    fn killer_update_no_duplicate_in_slot0() {
+        let mut kt = KillerMovesTable::new();
+        let board = Board::default_board();
+        let move_gen = MoveGenerator::default();
+        let mut move_list = MoveList::default();
+        move_gen.generate_legal_moves(&board, &mut move_list);
+
+        let mv_a = *move_list.at(0).unwrap();
+        let mv_b = *move_list.at(1).unwrap();
+
+        kt.update(0, mv_a);
+        kt.update(0, mv_b);
+        kt.update(0, mv_b); // duplicate — should NOT evict A from slot 1
+
+        assert_eq!(kt.get(0)[0], Some(mv_b));
+        assert_eq!(kt.get(0)[1], Some(mv_a)); // A should still be here
+    }
+
+    #[test]
+    fn killer_update_rotates_slots() {
+        let mut kt = KillerMovesTable::new();
+        let board = Board::default_board();
+        let move_gen = MoveGenerator::default();
+        let mut move_list = MoveList::default();
+        move_gen.generate_legal_moves(&board, &mut move_list);
+
+        let mv_a = *move_list.at(0).unwrap();
+        let mv_b = *move_list.at(1).unwrap();
+        let mv_c = *move_list.at(2).unwrap();
+
+        kt.update(0, mv_a);
+        assert_eq!(kt.get(0)[0], Some(mv_a));
+        assert_eq!(kt.get(0)[1], None);
+
+        kt.update(0, mv_b);
+        assert_eq!(kt.get(0)[0], Some(mv_b));
+        assert_eq!(kt.get(0)[1], Some(mv_a)); // A rotated to slot 1
+
+        kt.update(0, mv_c);
+        assert_eq!(kt.get(0)[0], Some(mv_c));
+        assert_eq!(kt.get(0)[1], Some(mv_b)); // B rotated, A evicted
     }
 }
