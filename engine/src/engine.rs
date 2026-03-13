@@ -13,6 +13,7 @@ use chess::move_generation::MoveGenerator;
 
 use crate::{
     history_table::HistoryTable,
+    killers_table::KillerMovesTable,
     log_level::{LogDebug, LogInfo},
     search::{Search, SearchParameters, SearchResult},
     ttable::{self, TranspositionTable},
@@ -22,6 +23,7 @@ pub struct Engine {
     board: Board,
     transposition_table: TranspositionTable,
     history_table: HistoryTable,
+    killers_table: KillerMovesTable,
     move_gen: MoveGenerator,
     debug: bool,
 }
@@ -32,6 +34,7 @@ impl Engine {
             board: Board::default_board(),
             transposition_table: TranspositionTable::default(),
             history_table: HistoryTable::default(),
+            killers_table: KillerMovesTable::default(),
             move_gen: MoveGenerator::new(),
             debug: false,
         }
@@ -41,6 +44,7 @@ impl Engine {
         self.board = Board::default_board();
         self.transposition_table.clear();
         self.history_table.clear();
+        self.killers_table.clear();
     }
 
     pub fn set_position(&mut self, fen: Option<&str>, moves: &[String]) -> anyhow::Result<()> {
@@ -92,6 +96,7 @@ impl Engine {
                 &params,
                 &mut self.transposition_table,
                 &mut self.history_table,
+                &mut self.killers_table,
                 output,
             )
             .search(&mut self.board, Some(stop_flag))
@@ -100,6 +105,7 @@ impl Engine {
                 &params,
                 &mut self.transposition_table,
                 &mut self.history_table,
+                &mut self.killers_table,
                 output,
             )
             .search(&mut self.board, Some(stop_flag))
@@ -136,6 +142,10 @@ impl Engine {
 
     pub fn history_table(&self) -> &HistoryTable {
         &self.history_table
+    }
+
+    pub fn killers_table(&self) -> &KillerMovesTable {
+        &self.killers_table
     }
 }
 

@@ -111,8 +111,9 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     let mut nodes = 0u64;
     let mut tt = Default::default();
     let mut hist = Default::default();
+    let mut killers = Default::default();
     let mut sink = io::sink();
-    let mut search = Search::<LogNone>::new(&config, &mut tt, &mut hist, &mut sink);
+    let mut search = Search::<LogNone>::new(&config, &mut tt, &mut hist, &mut killers, &mut sink);
 
     let max_fen_width = benchmark_strings.iter().map(|s| s.len()).max().unwrap();
 
