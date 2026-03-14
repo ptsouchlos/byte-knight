@@ -61,7 +61,7 @@ impl MoveGenerator {
         // calculate sliding attacks from our king square on an empty board and then "and" with the enemy pieces
         // the overlap of these two bitboards will give us the sliding pieces that can "see" our king and are
         // potentially attacking it.
-        let mut enemy_sliding_attacks =
+        let enemy_sliding_attacks =
             self.get_piece_attacks(Piece::Rook, king_sq, them, &Bitboard::default())
                 & (*board.piece_bitboard(Piece::Rook, them)
                     | *board.piece_bitboard(Piece::Queen, them))
@@ -70,28 +70,27 @@ impl MoveGenerator {
                         | *board.piece_bitboard(Piece::Queen, them));
 
         // loop through all sliding attackers
-        while enemy_sliding_attacks.as_number() > 0 {
-            let next_attacker = bitboard_helpers::next_bit(&mut enemy_sliding_attacks) as u8;
-            let attacker_bb = Bitboard::from_square(next_attacker);
+        for next_attacker_sq in enemy_sliding_attacks.iter() {
+            let attacker_bb = Bitboard::from_square(next_attacker_sq);
 
             // get the ray from the attacker to the king square (not inclusive)
             let ray = self.ray_between(
                 Square::from_square_index(king_sq),
-                Square::from_square_index(next_attacker),
+                Square::from_square_index(next_attacker_sq),
             );
 
             let (king_file, king_rank) = square::from_square(king_sq);
-            let (attacker_file, attacker_rank) = square::from_square(next_attacker as u8);
+            let (attacker_file, attacker_rank) = square::from_square(next_attacker_sq);
             // check if the ray is orthogonal or diagonal
             let is_orthogonal = king_file == attacker_file || king_rank == attacker_rank;
-            let is_diagonal = (king_sq as i16 - next_attacker as i16).abs() % 9 == 0
-                || (king_sq as i16 - next_attacker as i16).abs() % 7 == 0;
+            let is_diagonal = (king_sq as i16 - next_attacker_sq as i16).abs() % 9 == 0
+                || (king_sq as i16 - next_attacker_sq as i16).abs() % 7 == 0;
 
             // check if the ray is blocked by any pieces
             match (ray & occupancy).number_of_occupied_squares() {
                 // not blocked so the attacker is checking our king
                 0 => {
-                    checkers |= Bitboard::from_square(next_attacker as u8);
+                    checkers |= Bitboard::from_square(next_attacker_sq);
                 }
                 // exactly 1 blockers, so this piece is pinned
                 1 => {
@@ -197,7 +196,7 @@ impl MoveGenerator {
         let us = board.side_to_move();
         let them = us.opposite();
         let king_bb = board.piece_bitboard(Piece::King, us);
-        let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
+        let king_square = board.king_square(us);
 
         // ensure we definitely don't have the king in the occupancy
         let kingless_occupancy = *occupancy & !(*king_bb);
@@ -264,12 +263,8 @@ impl MoveGenerator {
                 // get the squares attacked by the sliding pieces
                 let mut discovered_checkers = self.calculate_checkers(board, &occupancy);
                 // filter checkers to the same rank as the king
-                let king_sq = bitboard_helpers::next_bit(
-                    &mut board
-                        .piece_bitboard(Piece::King, board.side_to_move())
-                        .clone(),
-                ) as u8;
-                let king_rank = square::from_square(king_sq).1;
+                let king_sq = board.king_square(board.side_to_move());
+                let (_, king_rank) = square::from_square(king_sq);
                 // check if the checkers are on the same rank as the king and the en passant square is not
                 discovered_checkers &= RANK_BITBOARDS[king_rank as usize];
 
@@ -468,12 +463,11 @@ impl MoveGenerator {
 
             // at least one of our moves intersects with the pin ray, so we're attacking the pinner or moving along the pin ray
             // we need to ensure that we move along the correct pin ray
-            let mut pinners = their_pieces & pin_rays;
+            let pinners = their_pieces & pin_rays;
             let piece_bb = Bitboard::from_square(square.to_square_index());
             let mut true_ray_mask = Bitboard::default();
 
-            while pinners.as_number() > 0 {
-                let pinner_sq = bitboard_helpers::next_bit(&mut pinners) as u8;
+            for pinner_sq in pinners.iter() {
                 let ray = self.ray_between(
                     Square::from_square_index(pinner_sq),
                     Square::from_square_index(king_sq),
@@ -674,9 +668,8 @@ impl MoveGenerator {
             | king_non_checker_attacks;
 
         // do any of our attacks put us in check?
-        let mut k_att = king_attacks;
-        while k_att.as_number() > 0 {
-            let capture_sq = bitboard_helpers::next_bit(&mut k_att) as u8;
+        let k_att = king_attacks;
+        for capture_sq in k_att.iter() {
             // remove the piece we're capturing and the king from the occupancy
             let modified_occupancy = occupancy & !Bitboard::from_square(capture_sq) & !*king_bb;
             let is_invalid_capture = self.is_square_attacked_with_occupancy(
@@ -804,16 +797,15 @@ impl MoveGenerator {
         }
 
         // now we generate moves for the rest of the pieces
-        let mut moveable_pieces = our_pieces & !(*king_bb);
-        while moveable_pieces.as_number() > 0 {
+        let moveable_pieces = our_pieces & !(*king_bb);
+        for from_sq in moveable_pieces.iter() {
             // Generate moves for each piece
-            let from = bitboard_helpers::next_bit(&mut moveable_pieces) as u8;
-            let piece = match board.piece_on_square(from) {
+            let piece = match board.piece_on_square(from_sq) {
                 Some((piece, _)) => piece,
                 None => continue,
             };
 
-            let from_square = Square::from_square_index(from);
+            let from_square = Square::from_square_index(from_sq);
             // calculate our legal mobility
             let moves = self.generate_legal_mobility(
                 piece,

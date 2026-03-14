@@ -467,6 +467,13 @@ mod tests {
         let bb = Bitboard::new(0b10110);
         let squares: Vec<u8> = bb.iter().collect();
         assert_eq!(squares, vec![1, 2, 4]);
+        // construct bb from squares
+        let mut new_bb = Bitboard::default();
+        for sq in squares {
+            new_bb |= Bitboard::from_square(sq);
+        }
+
+        assert_eq!(new_bb, bb);
 
         // Now check the default position
         let bb = Bitboard::new(0xFFFF00000000FFFF);
@@ -479,5 +486,12 @@ mod tests {
                 55, 56, 57, 58, 59, 60, 61, 62, 63
             ]
         );
+
+        new_bb = Bitboard::default();
+        for sq in squares {
+            new_bb |= Bitboard::from_square(sq);
+        }
+
+        assert_eq!(new_bb, bb);
     }
 }
