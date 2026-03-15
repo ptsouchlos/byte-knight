@@ -12,7 +12,7 @@ chess = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 colored = { workspace = true }
 rayon = { workspace = true }
-shadow-rs = { version = "1.7.0", default-features = false }
+shadow-rs = { version = "1.7.1", default-features = false }
 
 [build-dependencies]
-shadow-rs = "1.7.0"
+shadow-rs = "1.7.1"
