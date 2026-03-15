@@ -14,7 +14,7 @@ arrayvec = "0.7.6"
 chess = { path = "chess" }
 clap = "4.6.0"
 colored = "3.1.1"
-console = "0.16.2"
+console = "0.16.3"
 criterion = "0.8"
 csv = "1.4.0"
 engine = { path = "engine" }
