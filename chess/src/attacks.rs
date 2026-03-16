@@ -518,7 +518,7 @@ mod tests {
         board::Board,
         definitions::NumberOf,
         magics::{BISHOP_MAGICS, ROOK_MAGICS},
-        move_generation::MoveGenerator,
+        move_generation,
         pieces::Piece,
         side::Side,
     };
@@ -871,8 +871,8 @@ mod tests {
     fn validate_rook_attack_table() {
         for sq in 0..64_u8 {
             let magic = ROOK_MAGICS[sq as usize];
-            let relevant_bits = MoveGenerator::relevant_rook_bits(sq);
-            let blockers_list = MoveGenerator::create_blocker_permutations(relevant_bits);
+            let relevant_bits = move_generation::relevant_rook_bits(sq);
+            let blockers_list = move_generation::create_blocker_permutations(relevant_bits);
             for blockers in blockers_list {
                 let idx = magic.index(blockers);
                 let table_attack = ROOK_ATTACKS[idx];
@@ -901,8 +901,8 @@ mod tests {
     fn validate_bishop_attack_table() {
         for sq in 0..64_u8 {
             let magic = BISHOP_MAGICS[sq as usize];
-            let relevant_bits = MoveGenerator::relevant_bishop_bits(sq);
-            let blockers_list = MoveGenerator::create_blocker_permutations(relevant_bits);
+            let relevant_bits = move_generation::relevant_bishop_bits(sq);
+            let blockers_list = move_generation::create_blocker_permutations(relevant_bits);
             for blockers in blockers_list {
                 let idx = magic.index(blockers);
                 let table_attack = BISHOP_ATTACKS[idx];
