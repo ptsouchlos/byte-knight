@@ -17,8 +17,8 @@ use std::{
 use anyhow::{Result, bail};
 use arrayvec::ArrayVec;
 use chess::{
-    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
-    move_list::MoveList, moves::Move, pieces::Piece,
+    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation, move_list::MoveList,
+    moves::Move, pieces::Piece,
 };
 use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
@@ -154,7 +154,6 @@ pub struct Search<'search_lifetime, Log> {
     transposition_table: &'search_lifetime mut TranspositionTable,
     history_table: &'search_lifetime mut HistoryTable,
     killers_table: &'search_lifetime mut KillerMovesTable,
-    move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
     eval: ByteKnightEvaluation,
@@ -184,7 +183,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             transposition_table: ttable,
             history_table,
             killers_table,
-            move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
             eval: ByteKnightEvaluation::default(),
@@ -219,12 +217,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         let mut ml = MoveList::new();
-        self.move_gen.generate_legal_moves(board, &mut ml);
+        move_generation::generate_legal_moves(board, &mut ml);
         let mut result = match ml.len() {
             0 => {
                 // Draw or something else?
                 let result = SearchResult {
-                    score: if board.is_in_check(&self.move_gen) {
+                    score: if move_generation::is_in_check(board) {
                         -Score::MATE
                     } else {
                         Score::DRAW
@@ -306,7 +304,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     fn verify_pv_moves(&self, pv: &PrincipleVariation, board: &Board) -> Result<()> {
         let mut board_cpy = board.clone();
         let all_ok = pv.iter().all(|mv| {
-            let mv_ok = board_cpy.make_move(mv, &self.move_gen);
+            let mv_ok = board_cpy.make_move(mv);
             mv_ok.is_ok()
         });
         if !all_ok {
@@ -326,7 +324,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_result = SearchResult::default();
         let mut move_list = MoveList::new();
 
-        self.move_gen.generate_legal_moves(board, &mut move_list);
+        move_generation::generate_legal_moves(board, &mut move_list);
         if !move_list.is_empty() {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
@@ -499,11 +497,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // get all legal moves
         let mut move_list = MoveList::new();
         let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        self.move_gen.generate_legal_moves(board, &mut move_list);
+        move_generation::generate_legal_moves(board, &mut move_list);
 
         // do we have moves?
         if move_list.is_empty() {
-            return if board.is_in_check(&self.move_gen) {
+            return if move_generation::is_in_check(board) {
                 -Score::MATE + ply
             } else {
                 Score::DRAW
@@ -543,7 +541,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             };
 
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
-            let is_in_check = board.is_in_check(&self.move_gen);
+            let is_in_check = move_generation::is_in_check(board);
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
 
@@ -623,7 +621,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 best_score = score;
                 best_move = Some(mv);
                 if Node::PV {
-                    // assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
+                    // assert_pv_is_legal(board, mv, &local_pv);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -710,7 +708,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         alpha: Score,
     ) -> Option<Score> {
         // no pruning if we are in check or if we are in a PV node
-        if board.is_in_check(&self.move_gen) || Node::PV {
+        if move_generation::is_in_check(board) || Node::PV {
             return None;
         }
 
@@ -811,7 +809,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return Score::DRAW;
         }
 
-        let in_check = board.is_in_check(&self.move_gen);
+        let in_check = move_generation::is_in_check(board);
         let standing_eval = self.eval.eval(board);
 
         // Have we exceeded max ply?
@@ -832,7 +830,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         let mut move_list = MoveList::new();
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        self.move_gen.generate_legal_moves(board, &mut move_list);
+        move_generation::generate_legal_moves(board, &mut move_list);
 
         let mut local_pv = PrincipleVariation::new();
         // clear the current PV because this is a new position
@@ -922,7 +920,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 // extend PV if we're in a PV node
                 if Node::PV {
-                    // assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
+                    // assert_pv_is_legal(board, mv, &local_pv);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -968,14 +966,13 @@ fn assert_pv_is_legal(
     board: &Board,
     mv: Move,
     local_pv: &PrincipleVariation,
-    move_gen: &MoveGenerator,
 ) {
     let fen = board.to_fen();
     let mut board_cpy = board.clone();
 
     for local_mv in [&mv].into_iter().chain(local_pv.iter()) {
         assert!(
-            board_cpy.is_legal(local_mv, move_gen),
+            move_generation::is_legal(&board_cpy, local_mv),
             "Illegal PV move {local_mv} after move {local_mv} in position {fen}\nFull PV: {}\nResulting FEN: {}",
             [local_mv]
                 .into_iter()
@@ -986,7 +983,7 @@ fn assert_pv_is_legal(
             board_cpy.to_fen()
         );
 
-        let mv_ok = board_cpy.make_move(local_mv, move_gen);
+        let mv_ok = board_cpy.make_move(local_mv);
         assert!(
             mv_ok.is_ok(),
             "Failed to make PV move {local_mv} in position {fen}"
