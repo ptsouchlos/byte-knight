@@ -205,109 +205,109 @@ pub fn generate_moves(board: &Board, move_list: &mut MoveList, move_type: MoveTy
 }
 
 fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
-        /*
-         * For castling, the king and rook must not have moved.
-         * The squares between the king and rook must be empty.
-         * The squares the king moves through must not be under attack (including start and end).
-         * The king must not be in check.
-         * The king must not move through check.
-         * The king must not end up in check.
-         *
-         * FIDE Laws of Chess:
-         * 3.8.2.1 The right to castle has been lost:
-         *     3.8.2.1.1 if the king has already moved, or
-         *     3.8.2.1.2 with a rook that has already moved.
-         *
-         * 3.8.2.2 Castling is prevented temporarily:
-         *     3.8.2.2.1 if the square on which the king stands, or the square which it must cross, or the square which it is to occupy, is attacked by one or more of the opponent's pieces, or
-         *     3.8.2.2.2 if there is any piece between the king and the rook with which castling is to be effected.
-         */
+    /*
+     * For castling, the king and rook must not have moved.
+     * The squares between the king and rook must be empty.
+     * The squares the king moves through must not be under attack (including start and end).
+     * The king must not be in check.
+     * The king must not move through check.
+     * The king must not end up in check.
+     *
+     * FIDE Laws of Chess:
+     * 3.8.2.1 The right to castle has been lost:
+     *     3.8.2.1.1 if the king has already moved, or
+     *     3.8.2.1.2 with a rook that has already moved.
+     *
+     * 3.8.2.2 Castling is prevented temporarily:
+     *     3.8.2.2.1 if the square on which the king stands, or the square which it must cross, or the square which it is to occupy, is attacked by one or more of the opponent's pieces, or
+     *     3.8.2.2.2 if there is any piece between the king and the rook with which castling is to be effected.
+     */
 
-        let occupancy = board.all_pieces();
+    let occupancy = board.all_pieces();
 
-        // white king side castling
-        if board.can_castle_kingside(Side::White) && board.side_to_move() == Side::White {
-            let king_from = Square::from_square_index(Squares::E1); // e1
-            let king_to = Square::from_square_index(Squares::G1); // g1
-            let blockers = Bitboard::from_square(Squares::F1) | Bitboard::from_square(Squares::G1);
-            let king_ray = [Squares::E1, Squares::F1, Squares::G1];
+    // white king side castling
+    if board.can_castle_kingside(Side::White) && board.side_to_move() == Side::White {
+        let king_from = Square::from_square_index(Squares::E1); // e1
+        let king_to = Square::from_square_index(Squares::G1); // g1
+        let blockers = Bitboard::from_square(Squares::F1) | Bitboard::from_square(Squares::G1);
+        let king_ray = [Squares::E1, Squares::F1, Squares::G1];
 
-            let is_blocked = (blockers & occupancy) > 0;
-            let are_any_attacked = king_ray.iter().any(|&square| {
-                is_square_attacked(board, &Square::from_square_index(square), Side::Black)
-            });
+        let is_blocked = (blockers & occupancy) > 0;
+        let are_any_attacked = king_ray.iter().any(|&square| {
+            is_square_attacked(board, &Square::from_square_index(square), Side::Black)
+        });
 
-            if !is_blocked
-                && !are_any_attacked
-                && !is_square_attacked(board, &king_from, Side::Black)
-                && !is_square_attacked(board, &king_to, Side::Black)
-            {
-                move_list.push(Move::new_castle(&king_from, &king_to));
-            }
-        }
-
-        if board.can_castle_queenside(Side::White) && board.side_to_move() == Side::White {
-            let king_from = Square::from_square_index(Squares::E1);
-            let king_to = Square::from_square_index(Squares::C1);
-            let blockers = Bitboard::from_square(Squares::D1)
-                | Bitboard::from_square(Squares::C1)
-                | Bitboard::from_square(Squares::B1);
-            let king_ray = [Squares::E1, Squares::D1, Squares::C1];
-
-            let is_blocked = (blockers & occupancy) > 0;
-            let are_any_attacked = king_ray.iter().any(|&square| {
-                is_square_attacked(board, &Square::from_square_index(square), Side::Black)
-            });
-
-            if !is_blocked
-                && !are_any_attacked
-                && !is_square_attacked(board, &king_from, Side::Black)
-                && !is_square_attacked(board, &king_to, Side::Black)
-            {
-                move_list.push(Move::new_castle(&king_from, &king_to));
-            }
-        }
-
-        if board.can_castle_kingside(Side::Black) && board.side_to_move() == Side::Black {
-            let king_from = Square::from_square_index(Squares::E8);
-            let king_to = Square::from_square_index(Squares::G8);
-            let blockers = Bitboard::from_square(Squares::F8) | Bitboard::from_square(Squares::G8);
-            let king_ray = [Squares::E8, Squares::F8, Squares::G8];
-            let is_blocked = (blockers & occupancy) > 0;
-            let are_any_attacked = king_ray.iter().any(|&square| {
-                is_square_attacked(board, &Square::from_square_index(square), Side::White)
-            });
-
-            if !is_blocked
-                && !are_any_attacked
-                && !is_square_attacked(board, &king_from, Side::White)
-                && !is_square_attacked(board, &king_to, Side::White)
-            {
-                move_list.push(Move::new_castle(&king_from, &king_to));
-            }
-        }
-
-        if board.can_castle_queenside(Side::Black) && board.side_to_move() == Side::Black {
-            let king_from = Square::from_square_index(Squares::E8);
-            let king_to = Square::from_square_index(Squares::C8);
-            let blockers = Bitboard::from_square(Squares::D8)
-                | Bitboard::from_square(Squares::C8)
-                | Bitboard::from_square(Squares::B8);
-            let king_ray = [Squares::E8, Squares::D8, Squares::C8];
-            let is_blocked = (blockers & occupancy) > 0;
-            let are_any_attacked = king_ray.iter().any(|&square| {
-                is_square_attacked(board, &Square::from_square_index(square), Side::White)
-            });
-
-            if !is_blocked
-                && !are_any_attacked
-                && !is_square_attacked(board, &king_from, Side::White)
-                && !is_square_attacked(board, &king_to, Side::White)
-            {
-                move_list.push(Move::new_castle(&king_from, &king_to));
-            }
+        if !is_blocked
+            && !are_any_attacked
+            && !is_square_attacked(board, &king_from, Side::Black)
+            && !is_square_attacked(board, &king_to, Side::Black)
+        {
+            move_list.push(Move::new_castle(&king_from, &king_to));
         }
     }
+
+    if board.can_castle_queenside(Side::White) && board.side_to_move() == Side::White {
+        let king_from = Square::from_square_index(Squares::E1);
+        let king_to = Square::from_square_index(Squares::C1);
+        let blockers = Bitboard::from_square(Squares::D1)
+            | Bitboard::from_square(Squares::C1)
+            | Bitboard::from_square(Squares::B1);
+        let king_ray = [Squares::E1, Squares::D1, Squares::C1];
+
+        let is_blocked = (blockers & occupancy) > 0;
+        let are_any_attacked = king_ray.iter().any(|&square| {
+            is_square_attacked(board, &Square::from_square_index(square), Side::Black)
+        });
+
+        if !is_blocked
+            && !are_any_attacked
+            && !is_square_attacked(board, &king_from, Side::Black)
+            && !is_square_attacked(board, &king_to, Side::Black)
+        {
+            move_list.push(Move::new_castle(&king_from, &king_to));
+        }
+    }
+
+    if board.can_castle_kingside(Side::Black) && board.side_to_move() == Side::Black {
+        let king_from = Square::from_square_index(Squares::E8);
+        let king_to = Square::from_square_index(Squares::G8);
+        let blockers = Bitboard::from_square(Squares::F8) | Bitboard::from_square(Squares::G8);
+        let king_ray = [Squares::E8, Squares::F8, Squares::G8];
+        let is_blocked = (blockers & occupancy) > 0;
+        let are_any_attacked = king_ray.iter().any(|&square| {
+            is_square_attacked(board, &Square::from_square_index(square), Side::White)
+        });
+
+        if !is_blocked
+            && !are_any_attacked
+            && !is_square_attacked(board, &king_from, Side::White)
+            && !is_square_attacked(board, &king_to, Side::White)
+        {
+            move_list.push(Move::new_castle(&king_from, &king_to));
+        }
+    }
+
+    if board.can_castle_queenside(Side::Black) && board.side_to_move() == Side::Black {
+        let king_from = Square::from_square_index(Squares::E8);
+        let king_to = Square::from_square_index(Squares::C8);
+        let blockers = Bitboard::from_square(Squares::D8)
+            | Bitboard::from_square(Squares::C8)
+            | Bitboard::from_square(Squares::B8);
+        let king_ray = [Squares::E8, Squares::D8, Squares::C8];
+        let is_blocked = (blockers & occupancy) > 0;
+        let are_any_attacked = king_ray.iter().any(|&square| {
+            is_square_attacked(board, &Square::from_square_index(square), Side::White)
+        });
+
+        if !is_blocked
+            && !are_any_attacked
+            && !is_square_attacked(board, &king_from, Side::White)
+            && !is_square_attacked(board, &king_to, Side::White)
+        {
+            move_list.push(Move::new_castle(&king_from, &king_to));
+        }
+    }
+}
 
 fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
     debug_assert!(
@@ -332,103 +332,109 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_t
             MoveType::All => attack_bb & !our_pieces,
         };
 
-        enumerate_moves(&bb_moves, &Square::from_square_index(from_sq), piece, board, move_list);
+        enumerate_moves(
+            &bb_moves,
+            &Square::from_square_index(from_sq),
+            piece,
+            board,
+            move_list,
+        );
     }
 }
 
 #[cfg_attr(not(debug_assertions), inline(always))]
 #[cfg_attr(debug_assertions, inline(never))]
 fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
-        let us = board.side_to_move();
-        let them = us.opposite();
-        let their_pieces = board.pieces(them);
-        let occupancy = board.all_pieces();
-        let empty = !occupancy;
-        let direction = if us == Side::White { NORTH } else { SOUTH };
-        let pawns_bb = board.piece_bitboard(Piece::Pawn, us);
+    let us = board.side_to_move();
+    let them = us.opposite();
+    let their_pieces = board.pieces(them);
+    let occupancy = board.all_pieces();
+    let empty = !occupancy;
+    let direction = if us == Side::White { NORTH } else { SOUTH };
+    let pawns_bb = board.piece_bitboard(Piece::Pawn, us);
 
-        // loop through all the pawns for us
-        for from_square in pawns_bb.iter() {
-            let attack_bb = attacks::pawn(from_square, us);
+    // loop through all the pawns for us
+    for from_square in pawns_bb.iter() {
+        let attack_bb = attacks::pawn(from_square, us);
 
-            let mut bb_moves = Bitboard::default();
-            let to_square = match us {
-                Side::White => from_square as u64 + direction,
-                Side::Black => from_square as u64 - direction,
+        let mut bb_moves = Bitboard::default();
+        let to_square = match us {
+            Side::White => from_square as u64 + direction,
+            Side::Black => from_square as u64 - direction,
+        };
+
+        // pawn non-capture moves
+        if *move_type == MoveType::All || *move_type == MoveType::Quiet {
+            let bb_push = Bitboard::new(1u64 << to_square);
+            let bb_single_push = bb_push & empty;
+            let can_double_push = match us {
+                Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
+                Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
             };
 
-            // pawn non-capture moves
-            if *move_type == MoveType::All || *move_type == MoveType::Quiet {
-                let bb_push = Bitboard::new(1u64 << to_square);
-                let bb_single_push = bb_push & empty;
-                let can_double_push = match us {
-                    Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
-                    Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
-                };
-
-                let double_push_square = if can_double_push {
-                    match us {
-                        Side::White => {
-                            let (value, did_overflow) = to_square.overflowing_add(direction);
-                            if did_overflow { None } else { Some(value) }
-                        }
-                        Side::Black => {
-                            let (value, did_overflow) = to_square.overflowing_sub(direction);
-                            if did_overflow { None } else { Some(value) }
-                        }
+            let double_push_square = if can_double_push {
+                match us {
+                    Side::White => {
+                        let (value, did_overflow) = to_square.overflowing_add(direction);
+                        if did_overflow { None } else { Some(value) }
                     }
-                } else {
-                    None
-                };
-
-                // note that the single push square has to be empty in addition to the double push square being empty
-                let is_double_push_unobstructed = if let Some(push_square) = double_push_square {
-                    !occupancy.is_square_occupied(to_square as u8)
-                        && !occupancy.is_square_occupied(push_square as u8)
-                } else {
-                    false
-                };
-
-                let bb_double_push = if can_double_push && is_double_push_unobstructed {
-                    Bitboard::new(1u64 << double_push_square.unwrap()) & empty
-                } else {
-                    Bitboard::default()
-                };
-                bb_moves |= bb_single_push | bb_double_push;
-            }
-
-            // pawn captures
-            if move_type == &MoveType::All || move_type == &MoveType::Capture {
-                let bb_capture = attack_bb & their_pieces;
-                // en passant
-                let bb_en_passant = match board.en_passant_square() {
-                    Some(en_passant_square) => {
-                        // we only want to add the en passant square if it is within range of the pawn
-                        // this means that the en passant square is within 1 rank of the pawn and the en passant square
-                        // is in the pawn's attack table
-                        let en_passant_bb = Bitboard::from_square(en_passant_square);
-                        let result = en_passant_bb & !(attack_bb);
-                        let is_in_range = result == 0;
-                        if is_in_range {
-                            en_passant_bb
-                        } else {
-                            Bitboard::default()
-                        }
+                    Side::Black => {
+                        let (value, did_overflow) = to_square.overflowing_sub(direction);
+                        if did_overflow { None } else { Some(value) }
                     }
-                    None => Bitboard::default(),
-                };
-                bb_moves |= bb_capture | bb_en_passant;
-            }
+                }
+            } else {
+                None
+            };
 
-            enumerate_moves(
-                &bb_moves,
-                &Square::from_square_index(from_square),
-                Piece::Pawn,
-                board,
-                move_list,
-            );
+            // note that the single push square has to be empty in addition to the double push square being empty
+            let is_double_push_unobstructed = if let Some(push_square) = double_push_square {
+                !occupancy.is_square_occupied(to_square as u8)
+                    && !occupancy.is_square_occupied(push_square as u8)
+            } else {
+                false
+            };
+
+            let bb_double_push = if can_double_push && is_double_push_unobstructed {
+                Bitboard::new(1u64 << double_push_square.unwrap()) & empty
+            } else {
+                Bitboard::default()
+            };
+            bb_moves |= bb_single_push | bb_double_push;
         }
+
+        // pawn captures
+        if move_type == &MoveType::All || move_type == &MoveType::Capture {
+            let bb_capture = attack_bb & their_pieces;
+            // en passant
+            let bb_en_passant = match board.en_passant_square() {
+                Some(en_passant_square) => {
+                    // we only want to add the en passant square if it is within range of the pawn
+                    // this means that the en passant square is within 1 rank of the pawn and the en passant square
+                    // is in the pawn's attack table
+                    let en_passant_bb = Bitboard::from_square(en_passant_square);
+                    let result = en_passant_bb & !(attack_bb);
+                    let is_in_range = result == 0;
+                    if is_in_range {
+                        en_passant_bb
+                    } else {
+                        Bitboard::default()
+                    }
+                }
+                None => Bitboard::default(),
+            };
+            bb_moves |= bb_capture | bb_en_passant;
+        }
+
+        enumerate_moves(
+            &bb_moves,
+            &Square::from_square_index(from_square),
+            Piece::Pawn,
+            board,
+            move_list,
+        );
     }
+}
 
 /// Enumerate all moves in a given bitboard and add them to the given [`MoveList`]
 #[allow(clippy::panic)]
@@ -439,82 +445,82 @@ pub(crate) fn enumerate_moves(
     board: &Board,
     move_list: &mut MoveList,
 ) {
-        if bitboard.as_number() == 0 {
-            return;
+    if bitboard.as_number() == 0 {
+        return;
+    }
+
+    let us = board.side_to_move();
+    let them = us.opposite();
+    let enemy_pieces = board.pieces(them);
+    let promotion_rank = Rank::promotion_rank(us);
+    for to_square in bitboard.iter() {
+        let (file, rank) = square::from_square(to_square);
+        let (from_file, _) = square::from_square(from.to_square_index());
+
+        let en_passant = match board.en_passant_square() {
+            Some(en_passant_square) => en_passant_square == to_square && piece == Piece::Pawn,
+            None => false,
+        };
+
+        let is_capture: bool = enemy_pieces.is_square_occupied(to_square) || en_passant;
+        // 2 rows = 16 squares
+        let is_double_move =
+            piece == Piece::Pawn && (to_square as i8 - from.to_square_index() as i8).abs() == 16;
+        let is_promotion =
+            piece == Piece::Pawn && square::is_square_on_rank(to_square, promotion_rank as u8);
+
+        if is_double_move && en_passant {
+            panic!("Double move and en passant should not happen");
         }
 
-        let us = board.side_to_move();
-        let them = us.opposite();
-        let enemy_pieces = board.pieces(them);
-        let promotion_rank = Rank::promotion_rank(us);
-        for to_square in bitboard.iter() {
-            let (file, rank) = square::from_square(to_square);
-            let (from_file, _) = square::from_square(from.to_square_index());
+        // a castle is the only time a king can move 2 squares
+        let is_castle = piece == Piece::King && from_file.abs_diff(file) == 2;
 
-            let en_passant = match board.en_passant_square() {
-                Some(en_passant_square) => en_passant_square == to_square && piece == Piece::Pawn,
-                None => false,
-            };
+        let mut move_desc = MoveDescriptor::None;
+        if is_double_move {
+            move_desc = MoveDescriptor::PawnTwoUp;
+        } else if en_passant {
+            move_desc = MoveDescriptor::EnPassantCapture;
+        } else if is_castle {
+            move_desc = MoveDescriptor::Castle;
+        }
 
-            let is_capture: bool = enemy_pieces.is_square_occupied(to_square) || en_passant;
-            // 2 rows = 16 squares
-            let is_double_move = piece == Piece::Pawn
-                && (to_square as i8 - from.to_square_index() as i8).abs() == 16;
-            let is_promotion =
-                piece == Piece::Pawn && square::is_square_on_rank(to_square, promotion_rank as u8);
+        let capture_piece = if is_capture && !en_passant {
+            Some(board.piece_on_square(to_square).unwrap().0)
+        } else if en_passant {
+            Some(Piece::Pawn)
+        } else {
+            None
+        };
 
-            if is_double_move && en_passant {
-                panic!("Double move and en passant should not happen");
-            }
-
-            // a castle is the only time a king can move 2 squares
-            let is_castle = piece == Piece::King && from_file.abs_diff(file) == 2;
-
-            let mut move_desc = MoveDescriptor::None;
-            if is_double_move {
-                move_desc = MoveDescriptor::PawnTwoUp;
-            } else if en_passant {
-                move_desc = MoveDescriptor::EnPassantCapture;
-            } else if is_castle {
-                move_desc = MoveDescriptor::Castle;
-            }
-
-            let capture_piece = if is_capture && !en_passant {
-                Some(board.piece_on_square(to_square).unwrap().0)
-            } else if en_passant {
-                Some(Piece::Pawn)
-            } else {
-                None
-            };
-
-            let to_square = square::to_square_object(file, rank);
-            if is_promotion {
-                // we have to add 4 moves for each promotion type
-                for promotion_type in [
-                    PromotionDescriptor::Queen,
-                    PromotionDescriptor::Rook,
-                    PromotionDescriptor::Bishop,
-                    PromotionDescriptor::Knight,
-                ] {
-                    let mv = Move::new(
-                        from,
-                        &to_square,
-                        move_desc,
-                        piece,
-                        capture_piece,
-                        Some(promotion_type.to_piece()),
-                    );
-                    move_list.push(mv);
-                }
-            } else if is_castle {
-                let mv = Move::new_castle(from, &to_square);
-                move_list.push(mv);
-            } else {
-                let mv = Move::new(from, &to_square, move_desc, piece, capture_piece, None);
+        let to_square = square::to_square_object(file, rank);
+        if is_promotion {
+            // we have to add 4 moves for each promotion type
+            for promotion_type in [
+                PromotionDescriptor::Queen,
+                PromotionDescriptor::Rook,
+                PromotionDescriptor::Bishop,
+                PromotionDescriptor::Knight,
+            ] {
+                let mv = Move::new(
+                    from,
+                    &to_square,
+                    move_desc,
+                    piece,
+                    capture_piece,
+                    Some(promotion_type.to_piece()),
+                );
                 move_list.push(mv);
             }
+        } else if is_castle {
+            let mv = Move::new_castle(from, &to_square);
+            move_list.push(mv);
+        } else {
+            let mv = Move::new(from, &to_square, move_desc, piece, capture_piece, None);
+            move_list.push(mv);
         }
     }
+}
 
 /// Returns true if the given square is attacked by any piece on the attacking_side.
 /// Uses the "super-piece" method: project attacks FROM the target square and check for collisions.
