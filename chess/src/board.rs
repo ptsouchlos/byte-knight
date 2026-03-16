@@ -475,63 +475,6 @@ impl Board {
         }
     }
 
-    /// Check if the side to move is in check.
-    ///
-    /// # Arguments
-    ///
-    /// - `move_gen` - The move generator to use for generating moves.
-    ///
-    /// # Returns
-    ///
-    /// - `true` if the side to move is in check, otherwise `false`.
-    pub fn is_in_check(&self, move_gen: &MoveGenerator) -> bool {
-        // pseudo legal check
-        // check if we are in check
-        // get the kings location and check if that square is attacked by the opponent
-        let king_square = self.king_square(self.side_to_move());
-        move_gen.is_square_attacked(
-            self,
-            &Square::from_square_index(king_square),
-            self.side_to_move().opposite(),
-        )
-    }
-
-    /// Check if the side to move is in checkmate.
-    pub fn is_checkmate(&self, move_gen: &MoveGenerator) -> bool {
-        // if the side to move is not in check, it's not checkmate
-        if !self.is_in_check(move_gen) {
-            return false;
-        }
-
-        let king_sq = self.king_square(self.side_to_move());
-
-        // check mate happens when we're in check and all the legal moves are illegal but we
-        // don't want to try all the moves to check their legality
-        // instead we can get king moves only and then check if the possible squares the king can move to are attacked
-        let mut occupancy = self.all_pieces();
-        let us = self.side_to_move();
-
-        let king_attacks = move_gen.get_piece_attacks(Piece::King, king_sq, us, &occupancy);
-        let our_pieces = self.pieces(self.side_to_move());
-        let king_attacks = king_attacks & !our_pieces;
-
-        // modify occupancy to exclude the king square
-        occupancy.clear_square(king_sq);
-
-        // check if the king can move to any of the squares it's attacking
-        for sq in king_attacks.iter() {
-            if move_gen.is_square_attacked_with_occupancy(
-                self,
-                &Square::from_square_index(sq),
-                self.side_to_move().opposite(),
-                &occupancy,
-            ) {
-                return true;
-            }
-        }
-        false
-    }
-
     /// Get the color of the piece on a given square.
     ///
     /// Returns `Some(Side)` if the square is occupied, otherwise `None`.
@@ -629,27 +572,6 @@ impl Board {
         }
 
         repetition_count >= 2
-    }
-
-    /// Check if a given move is legal. This function does not alter the current board state.
-    /// Instead it makes a copy of the current state and tries to make the move. There is a performance
-    /// penalty for this, so use this function sparingly.
-    pub fn is_legal(&self, mv: &Move, move_gen: &MoveGenerator) -> bool {
-        // check if a move is legal without altering the current board state
-        let mut board_copy = self.clone();
-        board_copy.make_move(mv, move_gen).is_ok()
-    }
-
-    /// Check if a list of moves are legal. This function does not alter the current board state.
-    pub fn are_legal(&self, list: &MoveList, move_gen: &MoveGenerator) -> bool {
-        // check if a list of moves are legal without altering the current board state
-        let mut board_copy = self.clone();
-        for mv in list.iter() {
-            if board_copy.make_move(mv, move_gen).is_err() {
-                return false;
-            }
-        }
-        true
     }
 
     /// Get the last move made on the board.
