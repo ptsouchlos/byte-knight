@@ -11,9 +11,7 @@ use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, MAX_REPETITION_COUNT, SPACE};
 use crate::fen::FenError;
 use crate::file::File;
-use crate::move_generation::MoveGenerator;
 use crate::move_history::BoardHistory;
-use crate::move_list::MoveList;
 use crate::moves::Move;
 use crate::rank::Rank;
 use crate::square::Square;
@@ -633,7 +631,7 @@ mod tests {
     use crate::{
         definitions::{DEFAULT_FEN, Squares},
         file::File,
-        move_generation::MoveGenerator,
+        move_generation,
         move_list::MoveList,
         moves::{MoveDescriptor, MoveType},
         rank::Rank,
@@ -700,21 +698,20 @@ mod tests {
 
     #[test]
     fn checkmate() {
-        let move_gen = MoveGenerator::new();
         {
             let board =
                 Board::from_fen("r1b1k1nr/pppp1ppp/2n5/4P3/8/2Q2N2/P1P1PPPP/RNq1KB1R w KQkq - 1 9")
                     .unwrap();
 
-            assert!(board.is_in_check(&move_gen));
-            assert!(board.is_checkmate(&move_gen));
+            assert!(move_generation::is_in_check(&board));
+            assert!(move_generation::is_checkmate(&board));
         }
         {
             let board =
                 Board::from_fen("r1b3nr/5ppp/3pk2R/8/2Q5/4R1PB/2PPPP1P/RNB1K1NR b KQ - 0 1")
                     .unwrap();
-            assert!(board.is_in_check(&move_gen));
-            assert!(board.is_checkmate(&move_gen));
+            assert!(move_generation::is_in_check(&board));
+            assert!(move_generation::is_checkmate(&board));
         }
     }
 
@@ -728,15 +725,14 @@ mod tests {
     #[test]
     fn make_and_unmake_move_changes_hash() {
         static FEN: &str = "6nr/pp3p1p/k1p5/8/1QN5/2P1P3/4KPqP/8 b - - 5 26";
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         let mut board = Board::from_fen(FEN).unwrap();
         let hash = board.zobrist_hash();
 
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         for mv in move_list.iter() {
-            let mv_ok = board.make_move(mv, &move_gen);
+            let mv_ok = board.make_move(mv);
             if mv_ok.is_ok() {
                 // legal move, check that the new hash is different
                 let move_hash = board.zobrist_hash();
@@ -835,12 +831,11 @@ mod tests {
     #[test]
     fn get_last_move() {
         let mut board = Board::default_board();
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         let first_move = move_list.iter().next().unwrap();
-        let mv_ok = board.make_move(first_move, &move_gen);
+        let mv_ok = board.make_move(first_move);
         assert!(mv_ok.is_ok());
 
         let last_move = board.last_move().unwrap();
