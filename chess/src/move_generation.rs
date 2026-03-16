@@ -20,7 +20,6 @@ use crate::{
 pub(crate) const NORTH: u64 = 8;
 pub(crate) const SOUTH: u64 = 8;
 
-
 fn edges(file: u8, rank: u8) -> Bitboard {
     let file_bb = FILE_BITBOARDS[file as usize];
     let rank_bb = RANK_BITBOARDS[rank as usize];
@@ -177,15 +176,8 @@ pub fn calculate_bishop_attack(square: u8, blocker: &Bitboard) -> Bitboard {
 pub(crate) fn get_attacked_squares(board: &Board, side: Side, occupancy: &Bitboard) -> Bitboard {
     let mut attacked = Bitboard::default();
 
-    for piece in [
-        Piece::Bishop,
-        Piece::Rook,
-        Piece::Queen,
-        Piece::King,
-        Piece::Knight,
-        Piece::Pawn,
-    ] {
-        let piece_bb = *board.piece_bitboard(piece, side);
+    for piece in Piece::iter() {
+        let piece_bb = board.piece_bitboard(piece, side);
         if piece_bb.as_number() == 0 {
             continue;
         }
@@ -201,15 +193,10 @@ pub(crate) fn get_attacked_squares(board: &Board, side: Side, occupancy: &Bitboa
 /// Generates pseudo-legal moves for the current board state.
 /// This function does not check for legality of the moves.
 pub fn generate_moves(board: &Board, move_list: &mut MoveList, move_type: MoveType) {
-    for piece in [
-        Piece::King,
-        Piece::Knight,
-        Piece::Rook,
-        Piece::Bishop,
-        Piece::Queen,
-    ] {
+    for piece in Piece::iter() {
         get_piece_moves(piece, board, move_list, &move_type);
     }
+
     get_pawn_moves(board, move_list, &move_type);
 
     if move_type == MoveType::All || move_type == MoveType::Quiet {
