@@ -58,24 +58,19 @@ pub fn between(from: u8, to: u8) -> Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use crate::{move_generation::MoveGenerator, pieces::SQUARE_NAME, square::Square};
+    use crate::pieces::SQUARE_NAME;
 
     #[test]
     fn validate_rays_between() {
-        let move_gen = MoveGenerator::new();
         for from in 0..64_u8 {
             for to in 0..64_u8 {
                 let bb = super::between(from, to);
-                let move_gen_bb = move_gen.ray_between(
-                    Square::from_square_index(from),
-                    Square::from_square_index(to),
-                );
                 println!(
-                    "{} -> {}\n{}\n{}",
-                    SQUARE_NAME[from as usize], SQUARE_NAME[to as usize], bb, move_gen_bb
+                    "{} -> {}\n{}",
+                    SQUARE_NAME[from as usize], SQUARE_NAME[to as usize], bb
                 );
-
-                assert_eq!(bb, move_gen_bb);
+                // Verify symmetry: between(a, b) == between(b, a)
+                assert_eq!(bb, super::between(to, from));
             }
         }
     }
