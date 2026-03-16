@@ -6,7 +6,7 @@
 use crate::{
     board::Board,
     definitions::{CastlingAvailability, Squares},
-    move_generation::MoveGenerator,
+    move_generation,
     moves::{self, Move},
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
@@ -337,7 +337,7 @@ impl Board {
     /// and then undo the move if it is illegal.
     #[cfg_attr(not(debug_assertions), inline(always))]
     #[cfg_attr(debug_assertions, inline(never))]
-    pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
+    pub fn make_move(&mut self, mv: &Move) -> Result<()> {
         let us = self.side_to_move();
         let them = us.opposite();
         self.make_move_unchecked(mv)?;
@@ -346,7 +346,7 @@ impl Board {
         // if it is not, we need to undo the move
         let king_square = self.king_square(us);
         let is_king_in_check =
-            move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
+            move_generation::is_square_attacked(self, &Square::from_square_index(king_square), them);
 
         if is_king_in_check {
             self.unmake_move()?;
@@ -548,16 +548,15 @@ fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use crate::{
-        bitboard::Bitboard, board::Board, definitions::Squares, move_generation::MoveGenerator,
+        bitboard::Bitboard, board::Board, definitions::Squares, move_generation,
         move_list::MoveList, moves::MoveType, pieces::Piece, side::Side,
     };
 
     #[test]
     fn test_making_en_passant_move() {
         let mut board = Board::from_fen("8/2k5/8/2Pp3r/K7/8/8/8 w - d6 0 1").unwrap();
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
-        move_gen.generate_legal_moves(&board, &mut move_list);
+        move_generation::generate_legal_moves(&board, &mut move_list);
 
         let en_passant_move = move_list
             .iter()
@@ -567,7 +566,7 @@ mod tests {
         println!("Making en passant move: {en_passant_move}");
         assert!(board.piece_on_square(Squares::C5).is_some());
         assert!(board.check_move_preconditions(en_passant_move).is_ok());
-        let move_result = board.make_move(en_passant_move, &move_gen);
+        let move_result = board.make_move(en_passant_move);
         assert!(move_result.is_ok());
     }
 
@@ -597,11 +596,10 @@ mod tests {
 
     #[test]
     fn properly_undo_piece_promotion() {
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         let mut board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         let initial_mv = *move_list
             .iter()
@@ -612,7 +610,7 @@ mod tests {
         assert_eq!(queen_bb.number_of_occupied_squares(), 1);
         assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
 
-        let mv_ok = board.make_move(&initial_mv, &move_gen);
+        let mv_ok = board.make_move(&initial_mv);
         assert!(mv_ok.is_ok());
 
         queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
@@ -631,11 +629,10 @@ mod tests {
 
     #[test]
     fn make_move_updates_piece_boards() {
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         let mut board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         let initial_mv = *move_list
             .iter()
@@ -647,16 +644,16 @@ mod tests {
             .find(|mv| mv.to_long_algebraic() == "d7c8r")
             .unwrap();
 
-        let mut mv_ok = board.make_move(&initial_mv, &move_gen);
+        let mut mv_ok = board.make_move(&initial_mv);
         assert!(mv_ok.is_ok());
 
         // generate moves again
         move_list.clear();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
         let mut node_count = 0;
         for mv in move_list.iter() {
             println!("trying move {}", mv.to_long_algebraic());
-            mv_ok = board.make_move(mv, &move_gen);
+            mv_ok = board.make_move(mv);
             if mv_ok.is_ok() {
                 node_count += 1;
                 let undo_result = board.unmake_move();
@@ -681,7 +678,7 @@ mod tests {
             board.piece_bitboard(Piece::Queen, Side::White)
         );
 
-        mv_ok = board.make_move(&next_move, &move_gen);
+        mv_ok = board.make_move(&next_move);
         assert!(mv_ok.is_ok());
 
         println!(
@@ -690,11 +687,11 @@ mod tests {
         );
 
         move_list.clear();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
         node_count = 0;
 
         for mv in move_list.iter() {
-            mv_ok = board.make_move(mv, &move_gen);
+            mv_ok = board.make_move(mv);
             if mv_ok.is_ok() {
                 println!("{} 1", mv.to_long_algebraic());
                 node_count += 1;
@@ -708,14 +705,13 @@ mod tests {
 
     #[test]
     fn make_move_and_undo_move() {
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         {
             let mut board =
                 Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
                     .unwrap();
 
-            move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+            move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
             let first_mv = move_list
                 .iter()
@@ -727,7 +723,7 @@ mod tests {
                 .unwrap();
 
             println!("{}\n{}", board.to_fen(), board.board_state());
-            let mut mv_ok = board.make_move(first_mv, &move_gen);
+            let mut mv_ok = board.make_move(first_mv);
             assert!(mv_ok.is_ok());
             println!("{}\n{}", board.to_fen(), board.board_state());
             // undo the move
@@ -736,7 +732,7 @@ mod tests {
             println!("{}\n{}", board.to_fen(), board.board_state());
 
             // make the second move
-            mv_ok = board.make_move(second_mv, &move_gen);
+            mv_ok = board.make_move(second_mv);
             assert!(mv_ok.is_ok());
             // undo the move
             undo_ok = board.unmake_move();
@@ -747,7 +743,7 @@ mod tests {
             // start with default board
             let mut board = Board::default_board();
 
-            move_gen.generate_legal_moves(&board, &mut move_list);
+            move_generation::generate_legal_moves(&board, &mut move_list);
             // only move pawns and do 2 up move
             let first_mv = move_list
                 .iter()
@@ -755,7 +751,7 @@ mod tests {
                 .unwrap();
 
             // make the move
-            let mv_ok = board.make_move(first_mv, &move_gen);
+            let mv_ok = board.make_move(first_mv);
             assert!(mv_ok.is_ok());
             // check the en passant square
             assert_eq!(board.en_passant_square(), Some(Squares::E3));
