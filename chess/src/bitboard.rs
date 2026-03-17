@@ -12,7 +12,7 @@ use std::{
     },
 };
 
-use crate::{bitboard_helpers, square::Square};
+use crate::{bitboard_helpers, definitions::EMPTY, square::Square};
 
 /// Bitboard representation of a chess board.
 /// LSB (bit 0) is a1, MSB (bit 63) is h8.
@@ -83,6 +83,15 @@ impl Bitboard {
     /// Convert to a 64-bit unsigned integer.
     pub const fn as_number(&self) -> u64 {
         self.data
+    }
+
+    /// Check if the current [`Bitboard`] is empty.
+    /// This is equivalent to having no occupied squares.
+    ///
+    /// # Returns
+    /// True if the [`Bitboard`] is empty, false otherwise.
+    pub const fn is_empty(&self) -> bool {
+        self.data == EMPTY
     }
 
     /// Check if the bitboard intersects with another bitboard.
