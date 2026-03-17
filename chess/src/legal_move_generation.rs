@@ -152,32 +152,13 @@ fn calculate_check_and_pin_metadata(
 /// # Returns
 ///
 /// A [`Bitboard`] representing the squares that are checking the king.
-fn calculate_checkers(board: &Board, occupancy: &Bitboard) -> Bitboard {
+fn calculate_checkers(board: &Board, occupancy: Bitboard) -> Bitboard {
     let us = board.side_to_move();
-    let them = us.opposite();
     let king_bb = board.piece_bitboard(Piece::King, us);
     let king_square = board.king_square(us);
+    let kingless_occupancy = occupancy & !(*king_bb);
 
-    let kingless_occupancy = *occupancy & !(*king_bb);
-    // Super-piece: project attacks from king square
-    let knight_attacks = attacks::knight(king_square);
-    let rook_attacks = attacks::rook(king_square, kingless_occupancy);
-    let bishop_attacks = attacks::bishop(king_square, kingless_occupancy);
-    let queen_attacks = rook_attacks | bishop_attacks;
-    // Pawn attacks use the side-to-move's direction (opposite of attacking side)
-    let pawn_attacks = attacks::pawn(king_square, us);
-
-    let enemy_pawns = board.piece_bitboard(Piece::Pawn, them);
-    let enemy_knights = board.piece_bitboard(Piece::Knight, them);
-    let enemy_bishops = board.piece_bitboard(Piece::Bishop, them);
-    let enemy_rooks = board.piece_bitboard(Piece::Rook, them);
-    let enemy_queens = board.piece_bitboard(Piece::Queen, them);
-
-    knight_attacks & *enemy_knights
-        | rook_attacks & *enemy_rooks
-        | bishop_attacks & *enemy_bishops
-        | queen_attacks & *enemy_queens
-        | pawn_attacks & *enemy_pawns
+    attacks::all_attackers_of(king_square, board, us.opposite(), kingless_occupancy)
 }
 
 /// Calculate the en passant bitboard for the current position.
@@ -186,8 +167,8 @@ fn calculate_checkers(board: &Board, occupancy: &Bitboard) -> Bitboard {
 /// # Arguments
 /// - from - The square the pawn is moving from
 /// - board - The current board state
-/// - push_mask - The push mask for the king. See [calculate_capture_and_push_masks][MoveGenerator::calculate_capture_and_push_masks] for more.
-/// - checkers - The squares that are attacking the king. See [calculate_checkers][MoveGenerator::calculate_checkers] for more.
+/// - push_mask - The push mask for the king. See [`calculate_check_and_pin_metadata`] for more.
+/// - checkers - The squares that are attacking the king. See [`calculate_checkers`] for more.
 ///
 /// # Returns
 /// A [`Bitboard`] with the en passant square set if it is a valid move, otherwise an empty bitboard.
@@ -210,7 +191,7 @@ fn calculate_en_passant_bitboard(
                 Side::Black => sq + NORTH as u8,
             };
             occupancy &= !(Bitboard::from_square(captured_sq));
-            let mut discovered_checkers = calculate_checkers(board, &occupancy);
+            let mut discovered_checkers = calculate_checkers(board, occupancy);
             let king_sq = board.king_square(board.side_to_move());
             let (_, king_rank) = square::from_square(king_sq);
             discovered_checkers &= RANK_BITBOARDS[king_rank as usize];
@@ -245,7 +226,7 @@ fn calculate_en_passant_bitboard(
 /// # Returns
 /// A [`Bitboard`] with the legal moves for the pawn.
 ///
-/// These moves need to be enumerated to get the actual moves. See [`MoveGenerator::enumerate_moves`]
+/// These moves need to be enumerated to get the actual moves. See [`move_generation::enumerate_moves`]
 #[allow(clippy::too_many_arguments)]
 fn generate_legal_pawn_mobility(
     board: &Board,
@@ -360,7 +341,7 @@ fn generate_legal_pawn_mobility(
 ///
 /// A [`Bitboard`] with the legal moves for the piece.
 ///
-/// These moves need to be enumerated to get the actual moves. See [`MoveGenerator::enumerate_moves`]
+/// These moves need to be enumerated to get the actual moves. See [`move_generation::enumerate_moves`]
 #[allow(clippy::too_many_arguments)]
 fn generate_normal_piece_legal_mobility(
     piece: Piece,
@@ -577,7 +558,7 @@ fn generate_king_legal_mobility(
             board,
             &Square::from_square_index(capture_sq),
             them,
-            &modified_occupancy,
+            modified_occupancy,
         );
         if is_invalid_capture {
             king_attacks &= !Bitboard::from_square(capture_sq);
@@ -716,7 +697,7 @@ mod tests {
                 .unwrap();
         let occupancy = board.all_pieces();
         let (_, _, _, pinned, _, _) = calculate_check_and_pin_metadata(&board);
-        let checkers = calculate_checkers(&board, &occupancy);
+        let checkers = calculate_checkers(&board, occupancy);
         assert_eq!(checkers, 0);
         assert_eq!(pinned, Bitboard::from_square(Squares::D7));
     }
@@ -726,7 +707,7 @@ mod tests {
         let board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1").unwrap();
         let occupancy = board.all_pieces();
         let (_, _, _, pinned, _, _) = calculate_check_and_pin_metadata(&board);
-        let checkers = calculate_checkers(&board, &occupancy);
+        let checkers = calculate_checkers(&board, occupancy);
         assert_eq!(checkers, 0);
         assert_eq!(pinned, Bitboard::default());
     }
@@ -740,7 +721,7 @@ mod tests {
         let (_, _, _, pinned, orthogonal_rays, diagonal_rays) =
             calculate_check_and_pin_metadata(&board);
         let pin_rays = orthogonal_rays | diagonal_rays;
-        let checkers = calculate_checkers(&board, &occupancy);
+        let checkers = calculate_checkers(&board, occupancy);
         assert_eq!(checkers, 0);
         assert_eq!(pinned, 0);
         assert_eq!(pin_rays, 0);

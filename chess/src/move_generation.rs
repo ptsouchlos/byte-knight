@@ -469,14 +469,14 @@ pub fn is_square_attacked_with_occupancy(
     board: &Board,
     square: &Square,
     attacking_side: Side,
-    occupancy: &Bitboard,
+    occupancy: Bitboard,
 ) -> bool {
     let sq = square.to_square_index();
 
     let king_attacks = attacks::king(sq);
     let knight_attacks = attacks::knight(sq);
-    let rook_attacks = attacks::rook(sq, *occupancy);
-    let bishop_attacks = attacks::bishop(sq, *occupancy);
+    let rook_attacks = attacks::rook(sq, occupancy);
+    let bishop_attacks = attacks::bishop(sq, occupancy);
     let queen_attacks = rook_attacks | bishop_attacks;
     // Pawn attacks use the opposite side's direction (super-piece method)
     let pawn_attacks = attacks::pawn(sq, attacking_side.opposite());
@@ -490,7 +490,7 @@ pub fn is_square_attacked_with_occupancy(
 }
 
 pub fn is_square_attacked(board: &Board, square: &Square, attacking_side: Side) -> bool {
-    is_square_attacked_with_occupancy(board, square, attacking_side, &board.all_pieces())
+    is_square_attacked_with_occupancy(board, square, attacking_side, board.all_pieces())
 }
 
 /// Check if the side to move is in check.
@@ -504,6 +504,7 @@ pub fn is_in_check(board: &Board) -> bool {
 }
 
 /// Check if the side to move is in checkmate.
+/// Checkmate = in check and no legal moves.
 pub fn is_checkmate(board: &Board) -> bool {
     if !is_in_check(board) {
         return false;
@@ -522,16 +523,17 @@ pub fn is_checkmate(board: &Board) -> bool {
 
     // check if the king can move to any of the squares it's attacking
     for sq in king_attacks.iter() {
-        if is_square_attacked_with_occupancy(
+        if !is_square_attacked_with_occupancy(
             board,
             &Square::from_square_index(sq),
             us.opposite(),
-            &occupancy,
+            occupancy,
         ) {
-            return true;
+            return false;
         }
     }
-    false
+    // All espcape squares are attacked and we're in check
+    true
 }
 
 /// Check if a given move is legal. This function does not alter the board state.
