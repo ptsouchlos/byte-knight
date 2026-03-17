@@ -194,11 +194,7 @@ fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
             is_square_attacked(board, &Square::from_square_index(square), Side::Black)
         });
 
-        if !is_blocked
-            && !are_any_attacked
-            && !is_square_attacked(board, &king_from, Side::Black)
-            && !is_square_attacked(board, &king_to, Side::Black)
-        {
+        if !is_blocked && !are_any_attacked {
             move_list.push(Move::new_castle(&king_from, &king_to));
         }
     }
@@ -216,11 +212,7 @@ fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
             is_square_attacked(board, &Square::from_square_index(square), Side::Black)
         });
 
-        if !is_blocked
-            && !are_any_attacked
-            && !is_square_attacked(board, &king_from, Side::Black)
-            && !is_square_attacked(board, &king_to, Side::Black)
-        {
+        if !is_blocked && !are_any_attacked {
             move_list.push(Move::new_castle(&king_from, &king_to));
         }
     }
@@ -235,11 +227,7 @@ fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
             is_square_attacked(board, &Square::from_square_index(square), Side::White)
         });
 
-        if !is_blocked
-            && !are_any_attacked
-            && !is_square_attacked(board, &king_from, Side::White)
-            && !is_square_attacked(board, &king_to, Side::White)
-        {
+        if !is_blocked && !are_any_attacked {
             move_list.push(Move::new_castle(&king_from, &king_to));
         }
     }
@@ -256,11 +244,7 @@ fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
             is_square_attacked(board, &Square::from_square_index(square), Side::White)
         });
 
-        if !is_blocked
-            && !are_any_attacked
-            && !is_square_attacked(board, &king_from, Side::White)
-            && !is_square_attacked(board, &king_to, Side::White)
-        {
+        if !is_blocked && !are_any_attacked {
             move_list.push(Move::new_castle(&king_from, &king_to));
         }
     }
