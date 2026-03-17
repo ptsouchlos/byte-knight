@@ -193,7 +193,7 @@ pub(crate) fn get_attacked_squares(board: &Board, side: Side, occupancy: &Bitboa
 /// Generates pseudo-legal moves for the current board state.
 /// This function does not check for legality of the moves.
 pub fn generate_moves(board: &Board, move_list: &mut MoveList, move_type: MoveType) {
-    for piece in Piece::iter() {
+    for piece in Piece::iter().filter(|p| *p != Piece::Pawn) {
         get_piece_moves(piece, board, move_list, &move_type);
     }
 
