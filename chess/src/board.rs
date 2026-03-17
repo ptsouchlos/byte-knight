@@ -502,23 +502,27 @@ impl Board {
     ///
     /// Returns true if the game is a draw by insufficient material, otherwise false.
     pub fn insufficient_material(&self) -> bool {
-        // if any side has a Queen, Rook or Pawn, there's sufficient material
-        let queen_bbs = *self.piece_bitboard(Piece::Queen, Side::Black)
-            | *self.piece_bitboard(Piece::Queen, Side::White);
-        let rook_bbs = *self.piece_bitboard(Piece::Rook, Side::Black)
-            | *self.piece_bitboard(Piece::Rook, Side::White);
-        let pawn_bbs = *self.piece_bitboard(Piece::Pawn, Side::Black)
-            | *self.piece_bitboard(Piece::Pawn, Side::White);
-
-        if (queen_bbs | rook_bbs | pawn_bbs).number_of_occupied_squares() > 0 {
+        // If any side has a Queen, Rook or Pawn, there's sufficient material
+        let pawns = self.piece_kind_bitboard(Piece::Pawn);
+        let rooks = self.piece_kind_bitboard(Piece::Rook);
+        let queens = self.piece_kind_bitboard(Piece::Queen);
+        if (pawns | rooks | queens).number_of_occupied_squares() > 0 {
             return false;
         }
 
+        let knights = self.piece_kind_bitboard(Piece::Knight);
+        let bishops = self.piece_kind_bitboard(Piece::Bishop);
+
+        let minor_pieces = knights | bishops;
+        if minor_pieces.number_of_occupied_squares() <= 1 {
+            return true;
+        }
+
         // check bishops and knights
-        let white_bishops = self.piece_bitboard(Piece::Bishop, Side::White);
-        let black_bishops = self.piece_bitboard(Piece::Bishop, Side::Black);
-        let white_knights = self.piece_bitboard(Piece::Knight, Side::White);
-        let black_knights = self.piece_bitboard(Piece::Knight, Side::Black);
+        let white_bishops = bishops & self.pieces(Side::White);
+        let black_bishops = bishops & self.pieces(Side::Black);
+        let white_knights = knights & self.pieces(Side::White);
+        let black_knights = knights & self.pieces(Side::Black);
 
         let wb_count = white_bishops.number_of_occupied_squares();
         let bb_count = black_bishops.number_of_occupied_squares();
@@ -536,8 +540,8 @@ impl Board {
             (0, 0, 0, 1) => true,
             (1, 1, 0, 0) => {
                 // bishops on the same color
-                Square::from_bitboard(white_bishops).color()
-                    == Square::from_bitboard(black_bishops).color()
+                Square::from_bitboard(&white_bishops).color()
+                    == Square::from_bitboard(&black_bishops).color()
             }
             _ => false,
         }
