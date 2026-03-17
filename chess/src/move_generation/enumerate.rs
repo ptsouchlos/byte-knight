@@ -1,3 +1,10 @@
+// Part of the byte-knight project.
+// Author: Paul Tsouchlos (ptsouchlos) (developer.paul.123@gmail.com)
+// GNU General Public License v3.0 or later
+// https://www.gnu.org/licenses/gpl-3.0-standalone.html
+
+//! This module defines functionality for enumerating moves from a given bitboard.
+
 use crate::{
     bitboard::Bitboard,
     board::Board,
@@ -9,6 +16,13 @@ use crate::{
 };
 
 /// Enumerate all moves in a given bitboard and add them to the given [`MoveList`]
+///
+/// # Arguments
+/// - `bitboard`: The [`Bitboard`] to enumerate moves for.
+/// - `from`: The from square the moves originate from.
+/// - `piece`: The `piece` that is moving.
+/// - `board`: The current [`Board`].
+/// - `move_list`: The [`MoveList`] to push enumerated moves into.
 #[allow(clippy::panic)]
 pub(crate) fn enumerate_moves(
     bitboard: &Bitboard,
@@ -17,6 +31,7 @@ pub(crate) fn enumerate_moves(
     board: &Board,
     move_list: &mut MoveList,
 ) {
+    // Stop if the bitboard is empty.
     if bitboard.as_number() == 0 {
         return;
     }
