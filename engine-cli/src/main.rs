@@ -114,8 +114,7 @@ fn main() {
             } => {
                 println!("running split perft at depth {}", depth);
                 let board = &mut chess::board::Board::from_fen(&fen).unwrap();
-                let move_results =
-                    chess::perft::split_perft(board, depth, print_moves).unwrap();
+                let move_results = chess::perft::split_perft(board, depth, print_moves).unwrap();
                 for res in &move_results {
                     println!("{}: {}", res.mv.to_long_algebraic(), res.nodes);
                 }

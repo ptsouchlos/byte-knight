@@ -962,11 +962,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 }
 
 #[allow(dead_code)]
-fn assert_pv_is_legal(
-    board: &Board,
-    mv: Move,
-    local_pv: &PrincipleVariation,
-) {
+fn assert_pv_is_legal(board: &Board, mv: Move, local_pv: &PrincipleVariation) {
     let fen = board.to_fen();
     let mut board_cpy = board.clone();
 
