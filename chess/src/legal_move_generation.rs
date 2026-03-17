@@ -655,7 +655,13 @@ pub fn generate_legal_moves(board: &Board, move_list: &mut MoveList) {
     let king_sq = Square::from_square_index(king_square);
     let king_moves = generate_king_legal_mobility(&king_sq, board, &capture_mask, &checkers);
 
-    move_generation::enumerate_moves(&king_moves, &king_sq, Piece::King, board, move_list);
+    move_generation::enumerate::enumerate_moves(
+        &king_moves,
+        &king_sq,
+        Piece::King,
+        board,
+        move_list,
+    );
 
     let num_checkers = checkers.as_number().count_ones();
     if num_checkers > 1 {
@@ -682,7 +688,7 @@ pub fn generate_legal_moves(board: &Board, move_list: &mut MoveList) {
             &checkers,
         );
 
-        move_generation::enumerate_moves(&moves, &from_square, piece, board, move_list);
+        move_generation::enumerate::enumerate_moves(&moves, &from_square, piece, board, move_list);
     }
 }
 
