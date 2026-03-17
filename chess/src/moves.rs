@@ -7,7 +7,7 @@ use std::fmt::Display;
 
 use crate::{
     pieces::{PIECE_SHORT_NAMES, Piece, SQUARE_NAME},
-    square::{Square, to_square},
+    square::Square,
 };
 const MOVE_INFO_CAPTURED_PIECE_SHIFT: u32 = 20;
 const MOVE_INFO_PIECE_SHIFT: u32 = 17;
@@ -121,8 +121,8 @@ impl Move {
         captured_piece: Option<Piece>,
         promotion_piece: Option<Piece>,
     ) -> Self {
-        let from_index = to_square(from.file as u8, from.rank as u8) as u32;
-        let to_index = to_square(to.file as u8, to.rank as u8) as u32;
+        let from_index = from.to_square_index() as u32;
+        let to_index = to.to_square_index() as u32;
 
         let is_promotion = promotion_piece.is_some();
         let promotion_descriptor = match promotion_piece {
