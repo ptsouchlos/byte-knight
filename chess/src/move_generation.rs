@@ -7,33 +7,18 @@ use crate::{
     attacks,
     bitboard::Bitboard,
     board::Board,
-    definitions::{FILE_BITBOARDS, RANK_BITBOARDS, Squares},
-    file::File,
+    definitions::Squares,
     move_list::MoveList,
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     pieces::Piece,
     rank::Rank,
+    rays,
     side::Side,
     square::{self, Square},
 };
 
 pub(crate) const NORTH: u64 = 8;
 pub(crate) const SOUTH: u64 = 8;
-
-fn edges(file: u8, rank: u8) -> Bitboard {
-    let file_bb = FILE_BITBOARDS[file as usize];
-    let rank_bb = RANK_BITBOARDS[rank as usize];
-    (FILE_BITBOARDS[File::A as usize] & !file_bb)
-        | (FILE_BITBOARDS[File::H as usize] & !file_bb)
-        | (RANK_BITBOARDS[Rank::R1 as usize] & !rank_bb)
-        | (RANK_BITBOARDS[Rank::R8 as usize] & !rank_bb)
-}
-
-#[allow(dead_code)]
-pub(crate) fn edges_from_square(square: u8) -> Bitboard {
-    let (file, rank) = square::from_square(square);
-    edges(file, rank)
-}
 
 /// Calculate the "relevant" bits for rook attacks at a given square.
 ///
@@ -53,7 +38,7 @@ pub fn relevant_rook_bits(square: u8) -> Bitboard {
 
     let (file, rank) = square::from_square(square);
     let rook_rays_bb = attacks::orthogonal_ray_attacks(square, 0);
-    let edges = edges(file, rank);
+    let edges = rays::edges(file, rank);
 
     rook_rays_bb & !edges & !bb
 }
@@ -75,7 +60,7 @@ pub fn relevant_bishop_bits(square: u8) -> Bitboard {
     bb.set_square(square);
 
     let (file, rank) = square::from_square(square);
-    let edges = edges(file, rank);
+    let edges = rays::edges(file, rank);
 
     let bishop_ray_attacks = attacks::diagonal_ray_attacks(square, 0);
 
@@ -121,23 +106,9 @@ pub fn create_blocker_permutations(bb: Bitboard) -> Vec<Bitboard> {
 pub fn rook_attacks(square: u8, blockers: &Vec<Bitboard>) -> Vec<Bitboard> {
     let mut attacks = Vec::with_capacity(blockers.len());
     for blocker in blockers {
-        attacks.push(calculate_rook_attack(square, blocker));
+        attacks.push(attacks::rook(square, *blocker));
     }
     attacks
-}
-
-/// Calculates rook attacks from a given square with a given blocker bitboard.
-///
-/// # Arguments
-///
-/// - square - The square to calculate the attacks from
-/// - blocker - The blocker bitboard
-///
-/// # Returns
-///
-/// A bitboard representing the rook attacks from the given square with the given blocker bitboard.
-pub fn calculate_rook_attack(square: u8, blocker: &Bitboard) -> Bitboard {
-    attacks::orthogonal_ray_attacks(square, blocker.as_number())
 }
 
 /// Calculates bishop attacks from a given square with a given blocker bitboard.
@@ -153,23 +124,9 @@ pub fn calculate_rook_attack(square: u8, blocker: &Bitboard) -> Bitboard {
 pub fn bishop_attacks(square: u8, blockers: &Vec<Bitboard>) -> Vec<Bitboard> {
     let mut attacks = Vec::with_capacity(blockers.len());
     for blocker in blockers {
-        attacks.push(calculate_bishop_attack(square, blocker));
+        attacks.push(attacks::bishop(square, *blocker));
     }
     attacks
-}
-
-/// Calculates bishop attacks from a given square with a given blocker bitboard.
-///
-/// # Arguments
-///
-/// - square - The square to calculate the attacks from
-/// - blocker - The blocker bitboard
-///
-/// # Returns
-///
-/// A bitboard representing the bishop attacks from the given square with the given blocker bitboard.
-pub fn calculate_bishop_attack(square: u8, blocker: &Bitboard) -> Bitboard {
-    attacks::diagonal_ray_attacks(square, blocker.as_number())
 }
 
 /// Calculate all squares currently being attacked by a given side.

@@ -5,7 +5,13 @@
 
 //! This module provides functionality to retrieve the ray (line of squares) between two squares on a chessboard.
 
-use crate::{attacks, bitboard::Bitboard, definitions::NumberOf};
+use crate::{
+    attacks,
+    bitboard::Bitboard,
+    definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
+    file::File,
+    rank::Rank,
+};
 
 #[allow(long_running_const_eval)]
 static RAYS_BETWEEN: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] = initialize_rays_between();
@@ -54,6 +60,23 @@ const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::
 /// - A [`Bitboard`] representing the squares between `from` and `to`.
 pub fn between(from: u8, to: u8) -> Bitboard {
     RAYS_BETWEEN[from as usize][to as usize]
+}
+
+/// Returns a [`Bitboard`] representing the edge squares of the chessboard, excluding the specified file and rank.
+///
+/// # Arguments
+/// - `file`: The file (0-7) to exclude from the edge squares.
+/// - `rank`: The rank (0-7) to exclude from the edge squares.
+///
+/// # Returns
+/// - A [`Bitboard`] representing the edge squares of the chessboard, excluding the specified
+pub fn edges(file: u8, rank: u8) -> Bitboard {
+    let file_bb = FILE_BITBOARDS[file as usize];
+    let rank_bb = RANK_BITBOARDS[rank as usize];
+    (FILE_BITBOARDS[File::A as usize] & !file_bb)
+        | (FILE_BITBOARDS[File::H as usize] & !file_bb)
+        | (RANK_BITBOARDS[Rank::R1 as usize] & !rank_bb)
+        | (RANK_BITBOARDS[Rank::R8 as usize] & !rank_bb)
 }
 
 #[cfg(test)]

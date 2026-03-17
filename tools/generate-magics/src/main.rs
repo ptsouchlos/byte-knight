@@ -7,6 +7,7 @@ use std::fmt::{Display, Formatter};
 
 use anyhow::{Result, bail};
 use chess::{
+    attacks,
     bitboard::Bitboard,
     definitions::{BISHOP_BLOCKER_PERMUTATIONS, NumberOf, ROOK_BLOCKER_PERMUTATIONS},
     magics::MagicNumber,
@@ -69,8 +70,8 @@ fn try_to_make_table(
 
     for blocker in blockers {
         let attack = match piece {
-            Piece::Rook => move_generation::calculate_rook_attack(square, blocker),
-            Piece::Bishop => move_generation::calculate_bishop_attack(square, blocker),
+            Piece::Rook => attacks::rook(square, *blocker),
+            Piece::Bishop => attacks::bishop(square, *blocker),
             _ => panic!("Invalid piece type"),
         };
 
