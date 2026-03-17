@@ -12,154 +12,8 @@ use crate::move_list::MoveList;
 use crate::rays;
 use crate::square;
 use crate::{
-    bitboard::Bitboard, bitboard_helpers, board::Board, definitions::Squares, pieces::Piece,
-    rank::Rank, side::Side, square::Square,
+    bitboard::Bitboard, board::Board, pieces::Piece, rank::Rank, side::Side, square::Square,
 };
-
-/// Calculates checkers, pinned pieces, capture mask, push mask and pin rays for the current position.
-///
-/// # Arguments
-///
-/// - board - The current board state
-///
-/// # Returns
-///
-/// A tuple containing:
-/// - A [`Bitboard`] representing the squares that are checking the king
-/// - A [`Bitboard`] representing the squares can be attacked
-/// - A [`Bitboard`] representing the squares that can be pushed to
-/// - A [`Bitboard`] representing the squares that are pinned
-/// - A [`Bitboard`] representing the orthogonal pin rays
-/// - A [`Bitboard`] representing the diagonal pin rays
-///
-fn calculate_check_and_pin_metadata(
-    board: &Board,
-) -> (Bitboard, Bitboard, Bitboard, Bitboard, Bitboard, Bitboard) {
-    let us = board.side_to_move();
-    let them = us.opposite();
-    let occupancy = board.all_pieces();
-    let empty = !occupancy;
-    let their_pieces = board.pieces(them);
-    let our_pieces = board.pieces(us);
-    let enemy_or_empty = their_pieces | empty;
-    let king_sq = board.king_square(us);
-
-    let mut pinned = Bitboard::default();
-    let mut capture_mask = enemy_or_empty & !(*board.piece_bitboard(Piece::King, them));
-    let mut orthogonal_pin_rays = Bitboard::default();
-    let mut diagonal_pin_rays = Bitboard::default();
-
-    // Super-piece method: project attacks from king square with opposite side semantics
-    let mut checkers = *board.piece_bitboard(Piece::Knight, them) & attacks::knight(king_sq)
-        | *board.piece_bitboard(Piece::Pawn, them) & attacks::pawn(king_sq, us);
-
-    let enemy_sliding_attacks = attacks::rook(king_sq, Bitboard::default())
-        & (*board.piece_bitboard(Piece::Rook, them) | *board.piece_bitboard(Piece::Queen, them))
-        | attacks::bishop(king_sq, Bitboard::default())
-            & (*board.piece_bitboard(Piece::Bishop, them)
-                | *board.piece_bitboard(Piece::Queen, them));
-
-    for next_attacker_sq in enemy_sliding_attacks.iter() {
-        let attacker_bb = Bitboard::from_square(next_attacker_sq);
-
-        let ray = rays::between(king_sq, next_attacker_sq);
-
-        let (king_file, king_rank) = square::from_square(king_sq);
-        let (attacker_file, attacker_rank) = square::from_square(next_attacker_sq);
-        let is_orthogonal = king_file == attacker_file || king_rank == attacker_rank;
-        let is_diagonal = (king_sq as i16 - next_attacker_sq as i16).abs() % 9 == 0
-            || (king_sq as i16 - next_attacker_sq as i16).abs() % 7 == 0;
-
-        match (ray & occupancy).number_of_occupied_squares() {
-            0 => {
-                checkers |= Bitboard::from_square(next_attacker_sq);
-            }
-            1 => {
-                let overlap = ray & our_pieces;
-                if overlap.number_of_occupied_squares() == 1 {
-                    pinned |= ray & our_pieces;
-                    if is_orthogonal {
-                        orthogonal_pin_rays |= ray | attacker_bb;
-                    } else if is_diagonal {
-                        diagonal_pin_rays |= ray | attacker_bb;
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
-
-    let mut push_mask = Bitboard::from(u64::MAX);
-
-    if checkers.number_of_occupied_squares() >= 1 {
-        let is_single_check = checkers.number_of_occupied_squares() == 1;
-
-        capture_mask = checkers & !(*board.piece_bitboard(Piece::King, them));
-
-        if is_single_check {
-            let mut checkers_clone = checkers;
-            let checker = bitboard_helpers::next_bit(&mut checkers_clone) as u8;
-
-            let ray = rays::between(king_sq, checker as u8);
-
-            if let Some((piece, side)) = board.piece_on_square(checker as u8) {
-                debug_assert!(side == them);
-                let is_slider = piece.is_slider();
-                if is_slider {
-                    push_mask = ray;
-                } else {
-                    push_mask = Bitboard::default();
-                }
-            }
-        }
-    }
-
-    let en_passant_bb = board
-        .en_passant_square()
-        .map(Bitboard::from)
-        .unwrap_or_default();
-    match board.side_to_move() {
-        Side::White => {
-            let left = en_passant_bb >> SOUTH;
-            if left & checkers != 0 {
-                capture_mask |= en_passant_bb;
-            }
-        }
-        Side::Black => {
-            let right = en_passant_bb << NORTH;
-            if right & checkers != 0 {
-                capture_mask |= en_passant_bb;
-            }
-        }
-    }
-
-    (
-        checkers,
-        capture_mask,
-        push_mask,
-        pinned,
-        orthogonal_pin_rays,
-        diagonal_pin_rays,
-    )
-}
-
-/// Calculate 'checkers' and 'pinned' bitboard masks for the current position.
-///
-/// # Arguments
-/// - board - The current board state
-/// - occupancy - The occupancy bitboard
-///
-/// # Returns
-///
-/// A [`Bitboard`] representing the squares that are checking the king.
-fn calculate_checkers(board: &Board, occupancy: Bitboard) -> Bitboard {
-    let us = board.side_to_move();
-    let king_bb = board.piece_bitboard(Piece::King, us);
-    let king_square = board.king_square(us);
-    let kingless_occupancy = occupancy & !(*king_bb);
-
-    attacks::all_attackers_of(king_square, board, us.opposite(), kingless_occupancy)
-}
 
 /// Calculate the en passant bitboard for the current position.
 /// This will return a bitboard with the en passant square set if it is a valid move.
@@ -175,8 +29,8 @@ fn calculate_checkers(board: &Board, occupancy: Bitboard) -> Bitboard {
 fn calculate_en_passant_bitboard(
     from: u8,
     board: &Board,
-    push_mask: &Bitboard,
-    checkers: &Bitboard,
+    push_mask: Bitboard,
+    checkers: Bitboard,
 ) -> Bitboard {
     let en_passant_sq = board.en_passant_square();
 
@@ -191,14 +45,14 @@ fn calculate_en_passant_bitboard(
                 Side::Black => sq + NORTH as u8,
             };
             occupancy &= !(Bitboard::from_square(captured_sq));
-            let mut discovered_checkers = calculate_checkers(board, occupancy);
+            let mut discovered_checkers = move_generation::calculate_checkers(board, occupancy);
             let king_sq = board.king_square(board.side_to_move());
             let (_, king_rank) = square::from_square(king_sq);
             discovered_checkers &= RANK_BITBOARDS[king_rank as usize];
 
             let is_discovered_check = discovered_checkers.number_of_occupied_squares() > 0
                 && checkers.number_of_occupied_squares() == 0;
-            let ep_is_blocker = en_passant_bb.intersects(*push_mask) && !is_discovered_check;
+            let ep_is_blocker = en_passant_bb.intersects(push_mask) && !is_discovered_check;
 
             if !is_discovered_check || ep_is_blocker {
                 en_passant_bb
@@ -230,13 +84,13 @@ fn calculate_en_passant_bitboard(
 #[allow(clippy::too_many_arguments)]
 fn generate_legal_pawn_mobility(
     board: &Board,
-    square: &Square,
-    pinned_pieces: &Bitboard,
-    capture_mask: &Bitboard,
-    push_mask: &Bitboard,
-    orthogonal_pin_rays: &Bitboard,
-    diagonal_pin_rays: &Bitboard,
-    checkers: &Bitboard,
+    square: Square,
+    pinned_pieces: Bitboard,
+    capture_mask: Bitboard,
+    push_mask: Bitboard,
+    orthogonal_pin_rays: Bitboard,
+    diagonal_pin_rays: Bitboard,
+    checkers: Bitboard,
 ) -> Bitboard {
     let is_pinned = pinned_pieces.intersects(Bitboard::from_square(square.to_square_index()));
     let us = board.side_to_move();
@@ -304,13 +158,13 @@ fn generate_legal_pawn_mobility(
         calculate_en_passant_bitboard(from_square, board, push_mask, checkers);
 
     let hv_pin_ray_mask = if is_pinned {
-        *orthogonal_pin_rays
+        orthogonal_pin_rays
     } else {
         Bitboard::from(u64::MAX)
     };
 
     let diag_pin_ray_mask = if is_pinned {
-        *diagonal_pin_rays
+        diagonal_pin_rays
     } else {
         Bitboard::from(u64::MAX)
     };
@@ -320,7 +174,7 @@ fn generate_legal_pawn_mobility(
         & (their_pieces | en_passant_bb)
         & diag_pin_ray_mask;
 
-    (legal_pushes | attacks) & (*capture_mask | *push_mask)
+    (legal_pushes | attacks) & (capture_mask | push_mask)
 }
 
 /// Generate the legal moves for a normal piece (not a pawn or king) from the given square.
@@ -345,20 +199,20 @@ fn generate_legal_pawn_mobility(
 #[allow(clippy::too_many_arguments)]
 fn generate_normal_piece_legal_mobility(
     piece: Piece,
-    square: &Square,
+    square: Square,
     board: &Board,
-    capture_mask: &Bitboard,
-    pinned_mask: &Bitboard,
-    push_mask: &Bitboard,
-    orthogonal_pin_rays: &Bitboard,
-    diagonal_pin_rays: &Bitboard,
+    capture_mask: Bitboard,
+    pinned_mask: Bitboard,
+    push_mask: Bitboard,
+    orthogonal_pin_rays: Bitboard,
+    diagonal_pin_rays: Bitboard,
 ) -> Bitboard {
     let is_pinned = pinned_mask.intersects(Bitboard::from_square(square.to_square_index()));
     let us = board.side_to_move();
     let their_pieces = board.pieces(us.opposite());
     let from_square = square.to_square_index();
     let occupancy = board.all_pieces();
-    let pin_rays = *orthogonal_pin_rays | *diagonal_pin_rays;
+    let pin_rays = orthogonal_pin_rays | diagonal_pin_rays;
 
     assert!(!piece.is_king() && !piece.is_pawn());
 
@@ -387,127 +241,8 @@ fn generate_normal_piece_legal_mobility(
         Bitboard::from(u64::MAX)
     };
 
-    ((piece_attacks & *capture_mask & their_pieces) | (piece_attacks & empty & *push_mask))
+    ((piece_attacks & capture_mask & their_pieces) | (piece_attacks & empty & push_mask))
         & pin_ray_mask
-}
-
-/// Generate legal castling moves for the king.
-///
-/// # Arguments
-///
-/// - square - The square the king is on
-/// - board - The current board state
-/// - attacked_squares - The squares that are attacked by the opponent
-/// - checkers - The squares that are checking the king
-///
-/// # Returns
-///
-/// A [`Bitboard`] with the legal castling moves for the king.
-fn generate_legal_castling_mobility(
-    square: &Square,
-    board: &Board,
-    attacked_squares: &Bitboard,
-    checkers: &Bitboard,
-) -> Bitboard {
-    /*
-     * For castling, the king and rook must not have moved.
-     * The squares between the king and rook must be empty.
-     * The squares the king moves through must not be under attack (including start and end).
-     * The king must not be in check.
-     * The king must not move through check.
-     * The king must not end up in check.
-     *
-     * FIDE Laws of Chess:
-     * 3.8.2.1 The right to castle has been lost:
-     *     3.8.2.1.1 if the king has already moved, or
-     *     3.8.2.1.2 with a rook that has already moved.
-     *
-     * 3.8.2.2 Castling is prevented temporarily:
-     *     3.8.2.2.1 if the square on which the king stands, or the square which it must cross, or the square which it is to occupy, is attacked by one or more of the opponent's pieces, or
-     *     3.8.2.2.2 if there is any piece between the king and the rook with which castling is to be effected.
-     */
-
-    let in_check = checkers.number_of_occupied_squares() > 0;
-    if in_check {
-        return Bitboard::default();
-    }
-
-    let us = board.side_to_move();
-    let occupancy = board.all_pieces();
-    let mut castling_moves = Bitboard::default();
-    let king_side_castle = board.can_castle_kingside(us);
-    let queen_side_castle = board.can_castle_queenside(us);
-
-    let king_sq = match us {
-        Side::White => Squares::E1,
-        Side::Black => Squares::E8,
-    };
-
-    let king_in_place = king_sq == square.to_square_index();
-    if !king_in_place {
-        return Bitboard::default();
-    }
-
-    if king_side_castle {
-        let king_side_rook = match us {
-            Side::White => Squares::H1,
-            Side::Black => Squares::H8,
-        };
-        let maybe_rook = board.piece_on_square(king_side_rook);
-        let rook_in_place = match maybe_rook {
-            Some((Piece::Rook, side)) => side == us,
-            _ => false,
-        };
-
-        let king_side_empty = match us {
-            Side::White => Bitboard::from_square(Squares::F1) | Bitboard::from_square(Squares::G1),
-            Side::Black => Bitboard::from_square(Squares::F8) | Bitboard::from_square(Squares::G8),
-        };
-
-        let king_side_target_sq = match us {
-            Side::White => Squares::G1,
-            Side::Black => Squares::G8,
-        };
-
-        let is_king_ray_empty = king_side_empty & occupancy == Bitboard::default();
-        let is_king_ray_attacked = king_side_empty & *attacked_squares != Bitboard::default();
-        if is_king_ray_empty && !is_king_ray_attacked && rook_in_place && king_in_place {
-            castling_moves |= Bitboard::from_square(king_side_target_sq);
-        }
-    }
-
-    if queen_side_castle {
-        let queen_side_rook = match us {
-            Side::White => Squares::A1,
-            Side::Black => Squares::A8,
-        };
-        let maybe_rook = board.piece_on_square(queen_side_rook);
-        let rook_in_place = match maybe_rook {
-            Some((Piece::Rook, side)) => side == us,
-            _ => false,
-        };
-
-        let queen_side_no_attack = match us {
-            Side::White => Bitboard::from_square(Squares::C1) | Bitboard::from_square(Squares::D1),
-            Side::Black => Bitboard::from_square(Squares::C8) | Bitboard::from_square(Squares::D8),
-        };
-        let queen_side_empty = match us {
-            Side::White => queen_side_no_attack | Bitboard::from_square(Squares::B1),
-            Side::Black => queen_side_no_attack | Bitboard::from_square(Squares::B8),
-        };
-
-        let queen_side_target_sq = match us {
-            Side::White => Squares::C1,
-            Side::Black => Squares::C8,
-        };
-
-        let is_king_ray_empty = queen_side_empty & occupancy == Bitboard::default();
-        let is_king_ray_attacked = queen_side_no_attack & *attacked_squares != Bitboard::default();
-        if is_king_ray_empty && !is_king_ray_attacked && rook_in_place && king_in_place {
-            castling_moves |= Bitboard::from_square(queen_side_target_sq);
-        }
-    }
-    castling_moves
 }
 
 /// Generate legal moves for the king
@@ -523,10 +258,10 @@ fn generate_legal_castling_mobility(
 ///
 /// A [`Bitboard`] of legal moves for the king
 fn generate_king_legal_mobility(
-    square: &Square,
+    square: Square,
     board: &Board,
-    capture_mask: &Bitboard,
-    checkers: &Bitboard,
+    capture_mask: Bitboard,
+    checkers: Bitboard,
 ) -> Bitboard {
     let us = board.side_to_move();
     let them = us.opposite();
@@ -543,20 +278,19 @@ fn generate_king_legal_mobility(
         move_generation::get_attacked_squares(board, them, &attacked_squares_occupancy);
     let king_pushes = king_moves_bb & !attacked_squares & !our_pieces & !their_pieces;
 
-    let castling_moves =
-        generate_legal_castling_mobility(square, board, &attacked_squares, checkers);
+    let castling_moves = move_generation::castling::legal_mobility(board, checkers);
 
-    let king_non_checker_attacks = (king_moves_bb & their_pieces & !*checkers) & !attacked_squares;
+    let king_non_checker_attacks = (king_moves_bb & their_pieces & !checkers) & !attacked_squares;
 
-    let mut king_attacks = (king_moves_bb & *capture_mask & their_pieces & !attacked_squares)
+    let mut king_attacks = (king_moves_bb & capture_mask & their_pieces & !attacked_squares)
         | king_non_checker_attacks;
 
     let k_att = king_attacks;
     for capture_sq in k_att.iter() {
         let modified_occupancy = occupancy & !Bitboard::from_square(capture_sq) & !*king_bb;
-        let is_invalid_capture = move_generation::is_square_attacked_with_occupancy(
+        let is_invalid_capture = move_generation::square_state::is_square_attacked_with_occupancy(
             board,
-            &Square::from_square_index(capture_sq),
+            Square::from_square_index(capture_sq),
             them,
             modified_occupancy,
         );
@@ -589,14 +323,14 @@ fn generate_king_legal_mobility(
 #[allow(clippy::too_many_arguments)]
 fn generate_legal_mobility(
     piece: Piece,
-    square: &Square,
+    square: Square,
     board: &Board,
-    pinned_mask: &Bitboard,
-    capture_mask: &Bitboard,
-    push_mask: &Bitboard,
-    orthogonal_pin_rays: &Bitboard,
-    diagonal_pin_rays: &Bitboard,
-    checkers: &Bitboard,
+    pinned_mask: Bitboard,
+    capture_mask: Bitboard,
+    push_mask: Bitboard,
+    orthogonal_pin_rays: Bitboard,
+    diagonal_pin_rays: Bitboard,
+    checkers: Bitboard,
 ) -> Bitboard {
     match piece {
         Piece::Pawn => generate_legal_pawn_mobility(
@@ -650,10 +384,10 @@ pub fn generate_legal_moves(board: &Board, move_list: &mut MoveList) {
     let king_square = board.king_square(us);
 
     let (checkers, capture_mask, push_mask, pinned, orthogonal_pin_rays, diagonal_pin_rays) =
-        calculate_check_and_pin_metadata(board);
+        move_generation::calculate_check_and_pin_metadata(board);
 
     let king_sq = Square::from_square_index(king_square);
-    let king_moves = generate_king_legal_mobility(&king_sq, board, &capture_mask, &checkers);
+    let king_moves = generate_king_legal_mobility(king_sq, board, capture_mask, checkers);
 
     move_generation::enumerate::enumerate_moves(
         &king_moves,
@@ -678,14 +412,14 @@ pub fn generate_legal_moves(board: &Board, move_list: &mut MoveList) {
         let from_square = Square::from_square_index(from_sq);
         let moves = generate_legal_mobility(
             piece,
-            &from_square,
+            from_square,
             board,
-            &pinned,
-            &capture_mask,
-            &push_mask,
-            &orthogonal_pin_rays,
-            &diagonal_pin_rays,
-            &checkers,
+            pinned,
+            capture_mask,
+            push_mask,
+            orthogonal_pin_rays,
+            diagonal_pin_rays,
+            checkers,
         );
 
         move_generation::enumerate::enumerate_moves(&moves, &from_square, piece, board, move_list);
@@ -694,97 +428,9 @@ pub fn generate_legal_moves(board: &Board, move_list: &mut MoveList) {
 
 #[cfg(test)]
 mod tests {
+    use crate::definitions::Squares;
+
     use super::*;
-
-    #[test]
-    fn calculate_pinned_pieces() {
-        let board =
-            Board::from_fen("2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 3 2")
-                .unwrap();
-        let occupancy = board.all_pieces();
-        let (_, _, _, pinned, _, _) = calculate_check_and_pin_metadata(&board);
-        let checkers = calculate_checkers(&board, occupancy);
-        assert_eq!(checkers, 0);
-        assert_eq!(pinned, Bitboard::from_square(Squares::D7));
-    }
-
-    #[test]
-    fn calculate_pinned_pieces_2() {
-        let board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1").unwrap();
-        let occupancy = board.all_pieces();
-        let (_, _, _, pinned, _, _) = calculate_check_and_pin_metadata(&board);
-        let checkers = calculate_checkers(&board, occupancy);
-        assert_eq!(checkers, 0);
-        assert_eq!(pinned, Bitboard::default());
-    }
-
-    #[test]
-    fn calculate_pinned_pieces_3() {
-        let board =
-            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQKR2 b Q - 2 8").unwrap();
-
-        let occupancy = board.all_pieces();
-        let (_, _, _, pinned, orthogonal_rays, diagonal_rays) =
-            calculate_check_and_pin_metadata(&board);
-        let pin_rays = orthogonal_rays | diagonal_rays;
-        let checkers = calculate_checkers(&board, occupancy);
-        assert_eq!(checkers, 0);
-        assert_eq!(pinned, 0);
-        assert_eq!(pin_rays, 0);
-    }
-
-    #[test]
-    fn calculate_pins() {
-        let board =
-            Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nPB5/B1P1P3/5N2/q2P1KPP/b2Q1R2 w kq - 0 3")
-                .unwrap();
-        let (_, _, _, pinned_pieces, horizontal_pin_rays, diagonal_pin_rays) =
-            calculate_check_and_pin_metadata(&board);
-
-        assert_eq!(pinned_pieces.number_of_occupied_squares(), 2);
-        println!("horizontal pin rays:\n{horizontal_pin_rays}");
-        println!("diagonal pin rays:\n{diagonal_pin_rays}");
-
-        assert!(pinned_pieces.intersects(Bitboard::from_square(Squares::C5)));
-        assert!(pinned_pieces.intersects(Bitboard::from_square(Squares::D2)));
-    }
-
-    #[test]
-    fn check_pinned_and_capture_mask() {
-        let board =
-            Board::from_fen("rnQq1k1r/pp2bppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R b KQ - 0 8").unwrap();
-        let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
-            calculate_check_and_pin_metadata(&board);
-        println!("checkers:\n{checkers}");
-        println!("check mask:\n{capture_mask}");
-        println!("push mask:\n{push_mask}");
-        println!("pinned:\n{pinned}");
-        println!("orthogonal rays:\n{orthogonal_rays}");
-        println!("diagonal rays:\n{diagonal_rays}");
-
-        assert_eq!(checkers, 0);
-        assert_eq!(pinned, Bitboard::from_square(Squares::D8));
-        println!("capture mask:\n{capture_mask}");
-        println!("push mask:\n{push_mask}");
-    }
-
-    #[test]
-    fn check_pinned_and_capture_mask_2() {
-        let board = Board::from_fen("4B1r1/2q2p2/QP4k1/3P2p1/7B/8/6K1/7R b - - 3 59").unwrap();
-        let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
-            calculate_check_and_pin_metadata(&board);
-        println!("checkers:\n{checkers}");
-        println!("check mask:\n{capture_mask}");
-        println!("push mask:\n{push_mask}");
-        println!("pinned:\n{pinned}");
-        println!("orthogonal rays:\n{orthogonal_rays}");
-        println!("diagonal rays:\n{diagonal_rays}");
-
-        assert_eq!(checkers, 0);
-        assert_eq!(pinned, Bitboard::from_square(Squares::F7));
-        assert_eq!(orthogonal_rays, 0);
-        assert!(diagonal_rays > 0);
-    }
 
     #[test]
     fn en_passant_capture_causes_discovered_check() {

@@ -345,9 +345,9 @@ impl Board {
         // check if the move is legal
         // if it is not, we need to undo the move
         let king_square = self.king_square(us);
-        let is_king_in_check = move_generation::is_square_attacked(
+        let is_king_in_check = move_generation::square_state::is_square_attacked(
             self,
-            &Square::from_square_index(king_square),
+            Square::from_square_index(king_square),
             them,
         );
 
