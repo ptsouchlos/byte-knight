@@ -78,8 +78,9 @@ impl<Values: EvalValues> Evaluation<Values> {
         let mut score = PhasedScore::default();
         let us = side;
         let them = us.opposite();
+        let occ = board.all_pieces();
 
-        let pawn_attacks = attacks::for_piece(Piece::Pawn, board, us);
+        let pawn_attacks = attacks::for_piece(Piece::Pawn, board, occ, us);
         for piece_attacked in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
             let count = (pawn_attacks & piece_bb).number_of_occupied_squares();
@@ -88,7 +89,7 @@ impl<Values: EvalValues> Evaluation<Values> {
             }
         }
 
-        let knight_attacks = attacks::for_piece(Piece::Knight, board, us);
+        let knight_attacks = attacks::for_piece(Piece::Knight, board, occ, us);
         for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
             let count = (knight_attacks & piece_bb).number_of_occupied_squares();
@@ -99,7 +100,7 @@ impl<Values: EvalValues> Evaluation<Values> {
             }
         }
 
-        let bishop_attacks = attacks::for_piece(Piece::Bishop, board, us);
+        let bishop_attacks = attacks::for_piece(Piece::Bishop, board, occ, us);
         for piece_attacked in [Piece::Knight, Piece::Rook, Piece::Queen] {
             let piece_bb = *board.piece_bitboard(piece_attacked, them);
             let count = (bishop_attacks & piece_bb).number_of_occupied_squares();
@@ -122,7 +123,7 @@ impl<Values: EvalValues> Evaluation<Values> {
         let them = us.opposite();
         let occ = board.all_pieces();
         let our_pieces = board.pieces(us);
-        let enemy_pawn_attacks = attacks::for_piece(Piece::Pawn, board, them);
+        let enemy_pawn_attacks = attacks::for_piece(Piece::Pawn, board, occ, them);
 
         for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
             let piece_bb = board.piece_bitboard(piece, side);

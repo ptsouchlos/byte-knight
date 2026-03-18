@@ -7,10 +7,11 @@ use std::fmt::{Display, Formatter};
 
 use anyhow::{Result, bail};
 use chess::{
+    attacks,
     bitboard::Bitboard,
     definitions::{BISHOP_BLOCKER_PERMUTATIONS, NumberOf, ROOK_BLOCKER_PERMUTATIONS},
     magics::MagicNumber,
-    move_generation::MoveGenerator,
+    move_generation,
     pieces::{Piece, SQUARE_NAME},
 };
 use rand::prelude::*;
@@ -50,7 +51,7 @@ fn find_magic<R: Rng>(
     let bits = relevant_bb.as_number().count_ones();
     let magic_entry = MagicNumber::new(relevant_bb, 64 - bits as u8, 0, random_num);
 
-    let blocker_permutations = MoveGenerator::create_blocker_permutations(relevant_bb);
+    let blocker_permutations = move_generation::create_blocker_permutations(relevant_bb);
     let total_permutations = 2u64.pow(bits);
     assert_eq!(blocker_permutations.len(), total_permutations as usize);
     try_to_make_table(piece, square, &magic_entry, &blocker_permutations)?;
@@ -69,8 +70,8 @@ fn try_to_make_table(
 
     for blocker in blockers {
         let attack = match piece {
-            Piece::Rook => MoveGenerator::calculate_rook_attack(square, blocker),
-            Piece::Bishop => MoveGenerator::calculate_bishop_attack(square, blocker),
+            Piece::Rook => attacks::rook(square, *blocker),
+            Piece::Bishop => attacks::bishop(square, *blocker),
             _ => panic!("Invalid piece type"),
         };
 
@@ -103,8 +104,8 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
 
     println!("Finding magic numbers for {piece}");
     for sq in 0..NumberOf::SQUARES as u8 {
-        let rook_mask = MoveGenerator::relevant_rook_bits(sq);
-        let bishop_mask = MoveGenerator::relevant_bishop_bits(sq);
+        let rook_mask = move_generation::relevant_rook_bits(sq);
+        let bishop_mask = move_generation::relevant_bishop_bits(sq);
 
         let use_mask = if piece == Piece::Rook {
             rook_mask

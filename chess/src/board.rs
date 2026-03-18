@@ -11,9 +11,7 @@ use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, MAX_REPETITION_COUNT, SPACE};
 use crate::fen::FenError;
 use crate::file::File;
-use crate::move_generation::MoveGenerator;
 use crate::move_history::BoardHistory;
-use crate::move_list::MoveList;
 use crate::moves::Move;
 use crate::rank::Rank;
 use crate::square::Square;
@@ -475,63 +473,6 @@ impl Board {
         }
     }
 
-    /// Check if the side to move is in check.
-    ///
-    /// # Arguments
-    ///
-    /// - `move_gen` - The move generator to use for generating moves.
-    ///
-    /// # Returns
-    ///
-    /// - `true` if the side to move is in check, otherwise `false`.
-    pub fn is_in_check(&self, move_gen: &MoveGenerator) -> bool {
-        // pseudo legal check
-        // check if we are in check
-        // get the kings location and check if that square is attacked by the opponent
-        let king_square = self.king_square(self.side_to_move());
-        move_gen.is_square_attacked(
-            self,
-            &Square::from_square_index(king_square),
-            self.side_to_move().opposite(),
-        )
-    }
-
-    /// Check if the side to move is in checkmate.
-    pub fn is_checkmate(&self, move_gen: &MoveGenerator) -> bool {
-        // if the side to move is not in check, it's not checkmate
-        if !self.is_in_check(move_gen) {
-            return false;
-        }
-
-        let king_sq = self.king_square(self.side_to_move());
-
-        // check mate happens when we're in check and all the legal moves are illegal but we
-        // don't want to try all the moves to check their legality
-        // instead we can get king moves only and then check if the possible squares the king can move to are attacked
-        let mut occupancy = self.all_pieces();
-        let us = self.side_to_move();
-
-        let king_attacks = move_gen.get_piece_attacks(Piece::King, king_sq, us, &occupancy);
-        let our_pieces = self.pieces(self.side_to_move());
-        let king_attacks = king_attacks & !our_pieces;
-
-        // modify occupancy to exclude the king square
-        occupancy.clear_square(king_sq);
-
-        // check if the king can move to any of the squares it's attacking
-        for sq in king_attacks.iter() {
-            if move_gen.is_square_attacked_with_occupancy(
-                self,
-                &Square::from_square_index(sq),
-                self.side_to_move().opposite(),
-                &occupancy,
-            ) {
-                return true;
-            }
-        }
-        false
-    }
-
     /// Get the color of the piece on a given square.
     ///
     /// Returns `Some(Side)` if the square is occupied, otherwise `None`.
@@ -561,23 +502,27 @@ impl Board {
     ///
     /// Returns true if the game is a draw by insufficient material, otherwise false.
     pub fn insufficient_material(&self) -> bool {
-        // if any side has a Queen, Rook or Pawn, there's sufficient material
-        let queen_bbs = *self.piece_bitboard(Piece::Queen, Side::Black)
-            | *self.piece_bitboard(Piece::Queen, Side::White);
-        let rook_bbs = *self.piece_bitboard(Piece::Rook, Side::Black)
-            | *self.piece_bitboard(Piece::Rook, Side::White);
-        let pawn_bbs = *self.piece_bitboard(Piece::Pawn, Side::Black)
-            | *self.piece_bitboard(Piece::Pawn, Side::White);
-
-        if (queen_bbs | rook_bbs | pawn_bbs).number_of_occupied_squares() > 0 {
+        // If any side has a Queen, Rook or Pawn, there's sufficient material
+        let pawns = self.piece_kind_bitboard(Piece::Pawn);
+        let rooks = self.piece_kind_bitboard(Piece::Rook);
+        let queens = self.piece_kind_bitboard(Piece::Queen);
+        if (pawns | rooks | queens).number_of_occupied_squares() > 0 {
             return false;
         }
 
+        let knights = self.piece_kind_bitboard(Piece::Knight);
+        let bishops = self.piece_kind_bitboard(Piece::Bishop);
+
+        let minor_pieces = knights | bishops;
+        if minor_pieces.number_of_occupied_squares() <= 1 {
+            return true;
+        }
+
         // check bishops and knights
-        let white_bishops = self.piece_bitboard(Piece::Bishop, Side::White);
-        let black_bishops = self.piece_bitboard(Piece::Bishop, Side::Black);
-        let white_knights = self.piece_bitboard(Piece::Knight, Side::White);
-        let black_knights = self.piece_bitboard(Piece::Knight, Side::Black);
+        let white_bishops = bishops & self.pieces(Side::White);
+        let black_bishops = bishops & self.pieces(Side::Black);
+        let white_knights = knights & self.pieces(Side::White);
+        let black_knights = knights & self.pieces(Side::Black);
 
         let wb_count = white_bishops.number_of_occupied_squares();
         let bb_count = black_bishops.number_of_occupied_squares();
@@ -595,8 +540,8 @@ impl Board {
             (0, 0, 0, 1) => true,
             (1, 1, 0, 0) => {
                 // bishops on the same color
-                Square::from_bitboard(white_bishops).color()
-                    == Square::from_bitboard(black_bishops).color()
+                Square::from_bitboard(&white_bishops).color()
+                    == Square::from_bitboard(&black_bishops).color()
             }
             _ => false,
         }
@@ -629,27 +574,6 @@ impl Board {
         }
 
         repetition_count >= 2
-    }
-
-    /// Check if a given move is legal. This function does not alter the current board state.
-    /// Instead it makes a copy of the current state and tries to make the move. There is a performance
-    /// penalty for this, so use this function sparingly.
-    pub fn is_legal(&self, mv: &Move, move_gen: &MoveGenerator) -> bool {
-        // check if a move is legal without altering the current board state
-        let mut board_copy = self.clone();
-        board_copy.make_move(mv, move_gen).is_ok()
-    }
-
-    /// Check if a list of moves are legal. This function does not alter the current board state.
-    pub fn are_legal(&self, list: &MoveList, move_gen: &MoveGenerator) -> bool {
-        // check if a list of moves are legal without altering the current board state
-        let mut board_copy = self.clone();
-        for mv in list.iter() {
-            if board_copy.make_move(mv, move_gen).is_err() {
-                return false;
-            }
-        }
-        true
     }
 
     /// Get the last move made on the board.
@@ -711,7 +635,7 @@ mod tests {
     use crate::{
         definitions::{DEFAULT_FEN, Squares},
         file::File,
-        move_generation::MoveGenerator,
+        move_generation,
         move_list::MoveList,
         moves::{MoveDescriptor, MoveType},
         rank::Rank,
@@ -778,21 +702,20 @@ mod tests {
 
     #[test]
     fn checkmate() {
-        let move_gen = MoveGenerator::new();
         {
             let board =
                 Board::from_fen("r1b1k1nr/pppp1ppp/2n5/4P3/8/2Q2N2/P1P1PPPP/RNq1KB1R w KQkq - 1 9")
                     .unwrap();
 
-            assert!(board.is_in_check(&move_gen));
-            assert!(board.is_checkmate(&move_gen));
+            assert!(move_generation::is_in_check(&board));
+            assert!(move_generation::is_checkmate(&board));
         }
         {
             let board =
                 Board::from_fen("r1b3nr/5ppp/3pk2R/8/2Q5/4R1PB/2PPPP1P/RNB1K1NR b KQ - 0 1")
                     .unwrap();
-            assert!(board.is_in_check(&move_gen));
-            assert!(board.is_checkmate(&move_gen));
+            assert!(move_generation::is_in_check(&board));
+            assert!(move_generation::is_checkmate(&board));
         }
     }
 
@@ -806,15 +729,14 @@ mod tests {
     #[test]
     fn make_and_unmake_move_changes_hash() {
         static FEN: &str = "6nr/pp3p1p/k1p5/8/1QN5/2P1P3/4KPqP/8 b - - 5 26";
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         let mut board = Board::from_fen(FEN).unwrap();
         let hash = board.zobrist_hash();
 
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         for mv in move_list.iter() {
-            let mv_ok = board.make_move(mv, &move_gen);
+            let mv_ok = board.make_move(mv);
             if mv_ok.is_ok() {
                 // legal move, check that the new hash is different
                 let move_hash = board.zobrist_hash();
@@ -913,12 +835,11 @@ mod tests {
     #[test]
     fn get_last_move() {
         let mut board = Board::default_board();
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         let first_move = move_list.iter().next().unwrap();
-        let mv_ok = board.make_move(first_move, &move_gen);
+        let mv_ok = board.make_move(first_move);
         assert!(mv_ok.is_ok());
 
         let last_move = board.last_move().unwrap();

@@ -499,15 +499,46 @@ pub fn for_piece_on_square(piece: Piece, square: u8, occupancy: Bitboard, side: 
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the possible attacks of all pieces of the given type for the given side.
-pub fn for_piece(piece: Piece, board: &Board, side: Side) -> Bitboard {
+pub fn for_piece(piece: Piece, board: &Board, occupancy: Bitboard, side: Side) -> Bitboard {
     let mut attacks_bb = Bitboard::default();
-    let occ = board.all_pieces();
     let piece_bb = board.piece_bitboard(piece, side);
     for square in piece_bb.iter() {
-        attacks_bb |= for_piece_on_square(piece, square, occ, side);
+        attacks_bb |= for_piece_on_square(piece, square, occupancy, side);
     }
 
     attacks_bb
+}
+
+pub fn all_attackers_of(
+    sq: u8,
+    board: &Board,
+    attacking_side: Side,
+    occupancy: Bitboard,
+) -> Bitboard {
+    let not_attacking = attacking_side.opposite();
+
+    // Super-piece method - project attacks from square and overlap with
+    // attacking side's piece bitboards
+    let king_attacks = attacks::for_piece_on_square(Piece::King, sq, occupancy, not_attacking);
+    let knight_attacks = attacks::for_piece_on_square(Piece::Knight, sq, occupancy, not_attacking);
+    let bishop_attacks = attacks::for_piece_on_square(Piece::Bishop, sq, occupancy, not_attacking);
+    let rook_attacks = attacks::for_piece_on_square(Piece::Rook, sq, occupancy, not_attacking);
+    let queen_attacks = attacks::for_piece_on_square(Piece::Queen, sq, occupancy, not_attacking);
+    let pawn_attacks = attacks::pawn(sq, not_attacking);
+
+    let king = *board.piece_bitboard(Piece::King, attacking_side);
+    let bishops = *board.piece_bitboard(Piece::Bishop, attacking_side);
+    let rooks = *board.piece_bitboard(Piece::Rook, attacking_side);
+    let knights = *board.piece_bitboard(Piece::Knight, attacking_side);
+    let queen = *board.piece_bitboard(Piece::Queen, attacking_side);
+    let pawns = *board.piece_bitboard(Piece::Pawn, attacking_side);
+
+    (king & king_attacks)
+        | (knights & knight_attacks)
+        | (bishops & bishop_attacks)
+        | (rooks & rook_attacks)
+        | (queen & queen_attacks)
+        | (pawns & pawn_attacks)
 }
 
 #[cfg(test)]
@@ -518,7 +549,7 @@ mod tests {
         board::Board,
         definitions::NumberOf,
         magics::{BISHOP_MAGICS, ROOK_MAGICS},
-        move_generation::MoveGenerator,
+        move_generation,
         pieces::Piece,
         side::Side,
     };
@@ -871,8 +902,8 @@ mod tests {
     fn validate_rook_attack_table() {
         for sq in 0..64_u8 {
             let magic = ROOK_MAGICS[sq as usize];
-            let relevant_bits = MoveGenerator::relevant_rook_bits(sq);
-            let blockers_list = MoveGenerator::create_blocker_permutations(relevant_bits);
+            let relevant_bits = move_generation::relevant_rook_bits(sq);
+            let blockers_list = move_generation::create_blocker_permutations(relevant_bits);
             for blockers in blockers_list {
                 let idx = magic.index(blockers);
                 let table_attack = ROOK_ATTACKS[idx];
@@ -901,8 +932,8 @@ mod tests {
     fn validate_bishop_attack_table() {
         for sq in 0..64_u8 {
             let magic = BISHOP_MAGICS[sq as usize];
-            let relevant_bits = MoveGenerator::relevant_bishop_bits(sq);
-            let blockers_list = MoveGenerator::create_blocker_permutations(relevant_bits);
+            let relevant_bits = move_generation::relevant_bishop_bits(sq);
+            let blockers_list = move_generation::create_blocker_permutations(relevant_bits);
             for blockers in blockers_list {
                 let idx = magic.index(blockers);
                 let table_attack = BISHOP_ATTACKS[idx];
@@ -1112,10 +1143,10 @@ mod tests {
     #[test]
     fn test_attacks_for_piece() {
         let board = Board::default();
-
+        let occ = board.all_pieces();
         for piece in Piece::iter() {
             for side in Side::iter() {
-                let attacks = attacks::for_piece(piece, &board, side);
+                let attacks = attacks::for_piece(piece, &board, occ, side);
                 let mut expected_attacks = Bitboard::default();
                 let piece_bb = board.piece_bitboard(piece, side);
                 let occ = board.all_pieces();

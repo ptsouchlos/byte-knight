@@ -6,910 +6,564 @@
 use crate::{
     attacks,
     bitboard::Bitboard,
+    bitboard_helpers,
     board::Board,
-    definitions::{FILE_BITBOARDS, RANK_BITBOARDS, Squares},
-    file::File,
+    move_generation::{self, enumerate::enumerate_moves},
     move_list::MoveList,
-    moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
-    non_slider_piece::NonSliderPiece,
-    piece_category::PieceCategory,
+    moves::{Move, MoveType},
     pieces::Piece,
     rank::Rank,
     rays,
     side::Side,
-    slider_pieces::SliderPiece,
     square::{self, Square},
 };
+
+pub mod castling;
+pub mod enumerate;
+pub mod square_state;
 
 pub(crate) const NORTH: u64 = 8;
 pub(crate) const SOUTH: u64 = 8;
 
-/// The MoveGenerator struct is responsible for generating moves for a given board state.
-pub struct MoveGenerator {}
+/// Calculate the "relevant" bits for rook attacks at a given square.
+///
+/// The relevant bits are the squares that the rook can attack from a given square.
+/// The returned bitboard does not include edges.
+///
+/// # Arguments
+///
+/// - square - The square to calculate the relevant bits for.
+///
+/// # Returns
+///
+/// A bitboard representing the relevant bits for the rook attacks at the given square.
+pub fn relevant_rook_bits(square: u8) -> Bitboard {
+    let mut bb = Bitboard::default();
+    bb.set_square(square);
 
-impl Default for MoveGenerator {
-    fn default() -> Self {
-        Self::new()
+    let (file, rank) = square::from_square(square);
+    let rook_rays_bb = attacks::orthogonal_ray_attacks(square, 0);
+    let edges = rays::edges(file, rank);
+
+    rook_rays_bb & !edges & !bb
+}
+
+/// Calculate the "relevant" bits for bishop attacks at a given square.
+///
+/// The relevant bits are the squares that the bishop can attack from a given square.
+/// The returned bitboard does not include edges.
+///
+/// # Arguments
+///
+/// - square - The square to calculate the relevant bits for.
+///
+/// # Returns
+///
+/// A bitboard representing the relevant bits for the bishop attacks at the given square.
+pub fn relevant_bishop_bits(square: u8) -> Bitboard {
+    let mut bb = Bitboard::default();
+    bb.set_square(square);
+
+    let (file, rank) = square::from_square(square);
+    let edges = rays::edges(file, rank);
+
+    let bishop_ray_attacks = attacks::diagonal_ray_attacks(square, 0);
+
+    bishop_ray_attacks & !edges & !bb
+}
+
+/// Generate all possible blocker permutations for a given bitboard.
+///
+/// # Arguments
+///
+/// - bb - The bitboard to generate the blocker permutations for.
+///
+/// # Returns
+///
+/// A vector of bitboards representing all possible blocker permutations for the given bitboard.
+pub fn create_blocker_permutations(bb: Bitboard) -> Vec<Bitboard> {
+    let mask = bb;
+    let mut subset = Bitboard::default();
+
+    const BASE: u64 = 2_u64;
+    let total_permutations = BASE.pow(bb.as_number().count_ones());
+
+    let mut blocker_bitboards = Vec::with_capacity(total_permutations as usize);
+    loop {
+        blocker_bitboards.push(subset);
+        subset = Bitboard::new(subset.as_number().wrapping_sub(mask.as_number())) & mask;
+        if subset == 0 {
+            break;
+        }
+    }
+    blocker_bitboards
+}
+
+/// Calculate all squares currently being attacked by a given side.
+pub(crate) fn get_attacked_squares(board: &Board, side: Side, occupancy: Bitboard) -> Bitboard {
+    Piece::iter().fold(Bitboard::default(), |acc, piece| {
+        acc | attacks::for_piece(piece, board, occupancy, side)
+    })
+}
+
+/// Generates pseudo-legal moves for the current board state.
+/// This function does not check for legality of the moves.
+pub fn generate_moves(board: &Board, move_list: &mut MoveList, move_type: MoveType) {
+    for piece in Piece::iter().filter(|p| *p != Piece::Pawn) {
+        get_piece_moves(piece, board, move_list, &move_type);
+    }
+
+    get_pawn_moves(board, move_list, &move_type);
+
+    if move_type == MoveType::All || move_type == MoveType::Quiet {
+        get_castling_moves(board, move_list);
     }
 }
 
-impl MoveGenerator {
-    pub const fn new() -> Self {
-        Self {}
-    }
+/// Calculate 'checkers' and 'pinned' bitboard masks for the current position.
+///
+/// # Arguments
+/// - board - The current board state
+/// - occupancy - The occupancy bitboard
+///
+/// # Returns
+///
+/// A [`Bitboard`] representing the squares that are checking the king.
+pub(crate) fn calculate_checkers(board: &Board, occupancy: Bitboard) -> Bitboard {
+    let us = board.side_to_move();
+    let king_bb = board.piece_bitboard(Piece::King, us);
+    let king_square = board.king_square(us);
+    let kingless_occupancy = occupancy & !(*king_bb);
 
-    fn edges(file: u8, rank: u8) -> Bitboard {
-        // need to get the rank and file of the square
-        let file_bb = FILE_BITBOARDS[file as usize];
-        let rank_bb = RANK_BITBOARDS[rank as usize];
-        // get the edges of the board
-        (FILE_BITBOARDS[File::A as usize] & !file_bb)
-            | (FILE_BITBOARDS[File::H as usize] & !file_bb)
-            | (RANK_BITBOARDS[Rank::R1 as usize] & !rank_bb)
-            | (RANK_BITBOARDS[Rank::R8 as usize] & !rank_bb)
-    }
+    attacks::all_attackers_of(king_square, board, us.opposite(), kingless_occupancy)
+}
 
-    #[allow(dead_code)]
-    pub(crate) fn edges_from_square(square: u8) -> Bitboard {
-        let (file, rank) = square::from_square(square);
-        MoveGenerator::edges(file, rank)
-    }
+/// Calculates checkers, pinned pieces, capture mask, push mask and pin rays for the current position.
+///
+/// # Arguments
+///
+/// - board - The current board state
+///
+/// # Returns
+///
+/// A tuple containing:
+/// - A [`Bitboard`] representing the squares that are checking the king
+/// - A [`Bitboard`] representing the squares can be attacked
+/// - A [`Bitboard`] representing the squares that can be pushed to
+/// - A [`Bitboard`] representing the squares that are pinned
+/// - A [`Bitboard`] representing the orthogonal pin rays
+/// - A [`Bitboard`] representing the diagonal pin rays
+///
+pub(crate) fn calculate_check_and_pin_metadata(
+    board: &Board,
+) -> (Bitboard, Bitboard, Bitboard, Bitboard, Bitboard, Bitboard) {
+    let us = board.side_to_move();
+    let them = us.opposite();
+    let occupancy = board.all_pieces();
+    let empty = !occupancy;
+    let their_pieces = board.pieces(them);
+    let our_pieces = board.pieces(us);
+    let enemy_or_empty = their_pieces | empty;
+    let king_sq = board.king_square(us);
 
-    fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
-        let mut attacks = Bitboard::default();
-        let bb = Bitboard::from_square(square);
-        let not_a_file = !FILE_BITBOARDS[File::A as usize];
-        let not_h_file = !FILE_BITBOARDS[File::H as usize];
+    let mut pinned = Bitboard::default();
+    let mut capture_mask = enemy_or_empty & !(*board.piece_bitboard(Piece::King, them));
+    let mut orthogonal_pin_rays = Bitboard::default();
+    let mut diagonal_pin_rays = Bitboard::default();
 
-        // North
-        let mut ray = bb;
-        while ray != 0 {
-            ray <<= 8;
-            attacks |= ray;
-            if ray & occupied != 0 {
-                break;
+    // Super-piece method: project attacks from king square with opposite side semantics
+    let mut checkers = *board.piece_bitboard(Piece::Knight, them) & attacks::knight(king_sq)
+        | *board.piece_bitboard(Piece::Pawn, them) & attacks::pawn(king_sq, us);
+
+    let enemy_sliding_attacks = attacks::rook(king_sq, Bitboard::default())
+        & (*board.piece_bitboard(Piece::Rook, them) | *board.piece_bitboard(Piece::Queen, them))
+        | attacks::bishop(king_sq, Bitboard::default())
+            & (*board.piece_bitboard(Piece::Bishop, them)
+                | *board.piece_bitboard(Piece::Queen, them));
+
+    for next_attacker_sq in enemy_sliding_attacks.iter() {
+        let attacker_bb = Bitboard::from_square(next_attacker_sq);
+
+        let ray = rays::between(king_sq, next_attacker_sq);
+
+        let (king_file, king_rank) = square::from_square(king_sq);
+        let (attacker_file, attacker_rank) = square::from_square(next_attacker_sq);
+        let is_orthogonal = king_file == attacker_file || king_rank == attacker_rank;
+        let is_diagonal = (king_sq as i16 - next_attacker_sq as i16).abs() % 9 == 0
+            || (king_sq as i16 - next_attacker_sq as i16).abs() % 7 == 0;
+
+        match (ray & occupancy).number_of_occupied_squares() {
+            0 => {
+                checkers |= Bitboard::from_square(next_attacker_sq);
             }
-        }
-
-        // South
-        let mut ray = bb;
-        while ray != 0 {
-            ray >>= 8;
-            attacks |= ray;
-            if ray & occupied != 0 {
-                break;
-            }
-        }
-
-        // East
-        let mut ray = bb;
-        while ray != 0 && ray & not_h_file != 0 {
-            ray <<= 1;
-            attacks |= ray;
-            if ray & occupied != 0 {
-                break;
-            }
-        }
-
-        // West
-        let mut ray = bb;
-        while ray != 0 && ray & not_a_file != 0 {
-            ray >>= 1;
-            attacks |= ray;
-            if ray & occupied != 0 {
-                break;
-            }
-        }
-
-        attacks
-    }
-
-    fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
-        let mut attacks = Bitboard::default();
-        let bb = Bitboard::from_square(square);
-        let not_a_file = !FILE_BITBOARDS[File::A as usize];
-        let not_h_file = !FILE_BITBOARDS[File::H as usize];
-
-        // Northeast
-        let mut ray = bb;
-        while ray != 0 && ray & not_h_file != 0 {
-            ray <<= 9;
-            attacks |= ray;
-            if ray & occupied != 0 {
-                break;
-            }
-        }
-
-        // Northwest
-        let mut ray = bb;
-        while ray != 0 && ray & not_a_file != 0 {
-            ray <<= 7;
-            attacks |= ray;
-            if ray & occupied != 0 {
-                break;
-            }
-        }
-
-        // Southeast
-        let mut ray = bb;
-        while ray != 0 && ray & not_h_file != 0 {
-            ray >>= 7;
-            attacks |= ray;
-            if ray & occupied != 0 {
-                break;
-            }
-        }
-
-        // Southwest
-        let mut ray = bb;
-        while ray != 0 && ray & not_a_file != 0 {
-            ray >>= 9;
-            attacks |= ray;
-            if ray & occupied != 0 {
-                break;
-            }
-        }
-
-        attacks
-    }
-
-    /// Calculate the "relevant" bits for rook attacks at a given square.
-    ///
-    /// The relevant bits are the squares that the rook can attack from a given square.
-    /// The returned bitboard does not include edges.
-    ///
-    /// # Arguments
-    ///
-    /// - square - The square to calculate the relevant bits for.
-    ///
-    /// # Returns
-    ///
-    /// A bitboard representing the relevant bits for the rook attacks at the given square.
-    pub fn relevant_rook_bits(square: u8) -> Bitboard {
-        let mut bb = Bitboard::default();
-        bb.set_square(square);
-
-        // need to get the rank and file of the square
-        let (file, rank) = square::from_square(square);
-        let rook_rays_bb = MoveGenerator::orthogonal_ray_attacks(square, 0);
-        // get the edges of the board
-        let edges = MoveGenerator::edges(file, rank);
-
-        rook_rays_bb & !edges & !bb
-    }
-
-    /// Calculate the "relevant" bits for bishop attacks at a given square.
-    ///
-    /// The relevant bits are the squares that the bishop can attack from a given square.
-    /// The returned bitboard does not include edges.
-    ///
-    /// # Arguments
-    ///
-    /// - square - The square to calculate the relevant bits for.
-    ///
-    /// # Returns
-    ///
-    /// A bitboard representing the relevant bits for the bishop attacks at the given square.
-    pub fn relevant_bishop_bits(square: u8) -> Bitboard {
-        let mut bb = Bitboard::default();
-        bb.set_square(square);
-
-        let (file, rank) = square::from_square(square);
-        let edges = MoveGenerator::edges(file, rank);
-
-        // need to calculate ray attacks for the bishop from its square
-        let bishop_ray_attacks = MoveGenerator::diagonal_ray_attacks(square, 0);
-
-        bishop_ray_attacks & !edges & !bb
-    }
-
-    /// Generate all possible blocker permutations for a given bitboard.
-    ///
-    /// # Arguments
-    ///
-    /// - bb - The bitboard to generate the blocker permutations for.
-    ///
-    /// # Returns
-    ///
-    /// A vector of bitboards representing all possible blocker permutations for the given bitboard.
-    pub fn create_blocker_permutations(bb: Bitboard) -> Vec<Bitboard> {
-        // use the carry-rippler method to cycle through all possible permutations of the given bitboard
-        let mask = bb;
-        let mut subset = Bitboard::default();
-
-        const BASE: u64 = 2_u64;
-        let total_permutations = BASE.pow(bb.as_number().count_ones());
-
-        let mut blocker_bitboards = Vec::with_capacity(total_permutations as usize);
-        loop {
-            // there could be no blockers, so start with that...
-            blocker_bitboards.push(subset);
-            // carry-rippler method to generate all possible permutations of the given bitboard
-            subset = Bitboard::new(subset.as_number().wrapping_sub(mask.as_number())) & mask;
-            if subset == 0 {
-                break;
-            }
-        }
-        blocker_bitboards
-    }
-
-    /// Generate rook attacks for all possible blocker permutations at a given square.
-    ///
-    /// # Arguments
-    /// - square - The square to generate the attacks for
-    /// - blockers - The list of blocker permutations
-    ///
-    /// # Returns
-    ///
-    /// A vector of bitboards representing the rook attacks for each blocker permutation.
-    pub fn rook_attacks(square: u8, blockers: &Vec<Bitboard>) -> Vec<Bitboard> {
-        let mut attacks = Vec::with_capacity(blockers.len());
-        for blocker in blockers {
-            attacks.push(MoveGenerator::calculate_rook_attack(square, blocker));
-        }
-        attacks
-    }
-
-    /// Calculates rook attacks from a given square with a given blocker bitboard.
-    ///
-    /// # Arguments
-    ///
-    /// - square - The square to calculate the attacks from
-    /// - blocker - The blocker bitboard
-    ///
-    /// # Returns
-    ///
-    /// A bitboard representing the rook attacks from the given square with the given blocker bitboard.
-    pub fn calculate_rook_attack(square: u8, blocker: &Bitboard) -> Bitboard {
-        // calculate ray attacks for the rook from its square
-        MoveGenerator::orthogonal_ray_attacks(square, blocker.as_number())
-    }
-
-    /// Calculates bishop attacks from a given square with a given blocker bitboard.
-    ///
-    /// # Arguments
-    ///
-    /// - square - The square to calculate the attacks from
-    /// - blocker - The blocker bitboard
-    ///
-    /// # Returns
-    ///
-    /// A vector of bitboards representing the bishop attacks from the given square with the given blocker bitboard.
-    pub fn bishop_attacks(square: u8, blockers: &Vec<Bitboard>) -> Vec<Bitboard> {
-        let mut attacks = Vec::with_capacity(blockers.len());
-        for blocker in blockers {
-            attacks.push(MoveGenerator::calculate_bishop_attack(square, blocker));
-        }
-        attacks
-    }
-
-    /// Calculates bishop attacks from a given square with a given blocker bitboard.
-    ///
-    /// # Arguments
-    ///
-    /// - square - The square to calculate the attacks from
-    /// - blocker - The blocker bitboard
-    ///
-    /// # Returns
-    ///
-    /// A bitboard representing the bishop attacks from the given square with the given blocker bitboard.
-    pub fn calculate_bishop_attack(square: u8, blocker: &Bitboard) -> Bitboard {
-        MoveGenerator::diagonal_ray_attacks(square, blocker.as_number())
-    }
-
-    /// Calculate the ray between two squares. This is simply a look up as we pre-calculate all rays between all squares.
-    pub(crate) fn ray_between(&self, from: Square, to: Square) -> Bitboard {
-        rays::between(from.to_square_index(), to.to_square_index())
-    }
-
-    /// Calculate all squares currently being attacked by a given side.
-    ///
-    /// # Arguments
-    /// - board - The current board state
-    /// - side - The side to calculate the attacked squares for
-    ///
-    /// # Returns
-    ///
-    /// A bitboard representing all squares currently being attacked by the given side.
-    pub(crate) fn get_attacked_squares(
-        &self,
-        board: &Board,
-        side: Side,
-        occupancy: &Bitboard,
-    ) -> Bitboard {
-        let mut attacks = Bitboard::default();
-
-        // get the squares attacked by each piece
-        for piece in [
-            Piece::Bishop,
-            Piece::Rook,
-            Piece::Queen,
-            Piece::King,
-            Piece::Knight,
-            Piece::Pawn,
-        ]
-        .iter()
-        {
-            let piece_bb = *board.piece_bitboard(*piece, side);
-            if piece_bb.as_number() == 0 {
-                continue;
-            }
-
-            for from_sq in piece_bb.iter() {
-                let attacks_bb = match PieceCategory::from(*piece) {
-                    PieceCategory::NonSlider(non_slider) => {
-                        self.get_non_slider_attacks(side, non_slider, from_sq)
+            1 => {
+                let overlap = ray & our_pieces;
+                if overlap.number_of_occupied_squares() == 1 {
+                    pinned |= ray & our_pieces;
+                    if is_orthogonal {
+                        orthogonal_pin_rays |= ray | attacker_bb;
+                    } else if is_diagonal {
+                        diagonal_pin_rays |= ray | attacker_bb;
                     }
-                    PieceCategory::Slider(slider) => {
-                        self.get_slider_attacks(slider, from_sq, occupancy)
-                    }
-                };
-
-                attacks |= attacks_bb;
+                }
             }
+            _ => {}
         }
-
-        attacks
     }
 
-    /// Get attacks for a given piece.
-    ///
-    /// # Arguments
-    ///
-    /// - piece - The piece to get the attacks for
-    /// - square - The square the piece is on
-    /// - attacking_side - The side that is attacking
-    /// - occupancy - The current occupancy of the board
-    pub(crate) fn get_piece_attacks(
-        &self,
-        piece: Piece,
-        square: u8,
-        attacking_side: Side,
-        occupancy: &Bitboard,
-    ) -> Bitboard {
-        match PieceCategory::from(piece) {
-            PieceCategory::Slider(slider) => self.get_slider_attacks(slider, square, occupancy),
-            PieceCategory::NonSlider(non_slider) => {
-                self.get_non_slider_attacks(attacking_side.opposite(), non_slider, square)
+    let mut push_mask = Bitboard::FULL;
+
+    if checkers.number_of_occupied_squares() >= 1 {
+        let is_single_check = checkers.number_of_occupied_squares() == 1;
+
+        capture_mask = checkers & !(*board.piece_bitboard(Piece::King, them));
+
+        if is_single_check {
+            let mut checkers_clone = checkers;
+            let checker = bitboard_helpers::next_bit(&mut checkers_clone) as u8;
+
+            let ray = rays::between(king_sq, checker as u8);
+
+            if let Some((piece, side)) = board.piece_on_square(checker as u8) {
+                debug_assert!(side == them);
+                let is_slider = piece.is_slider();
+                if is_slider {
+                    push_mask = ray;
+                } else {
+                    push_mask = Bitboard::default();
+                }
             }
         }
     }
 
-    /// Generates pseudo-legal moves for the current board state.
-    /// This function does not check for legality of the moves.
-    ///
-    /// # Arguments
-    /// - board - The current board state
-    /// - move_list - The list of moves to append to.
-    /// - move_type - The type of moves to generate
-    pub fn generate_moves(&self, board: &Board, move_list: &mut MoveList, move_type: MoveType) {
-        // get moves for each piece except pawns
-        for piece in [
-            Piece::King,
-            Piece::Knight,
-            Piece::Rook,
-            Piece::Bishop,
-            Piece::Queen,
-        ] {
-            self.get_piece_moves(piece, board, move_list, &move_type);
-        }
-        // handle pawn moves separately
-        self.get_pawn_moves(board, move_list, &move_type);
-
-        if move_type == MoveType::All || move_type == MoveType::Quiet {
-            // handle castling moves
-            self.get_castling_moves(board, move_list);
-        }
-    }
-
-    fn get_castling_moves(&self, board: &Board, move_list: &mut MoveList) {
-        /*
-         * For castling, the king and rook must not have moved.
-         * The squares between the king and rook must be empty.
-         * The squares the king moves through must not be under attack (including start and end).
-         * The king must not be in check.
-         * The king must not move through check.
-         * The king must not end up in check.
-         *
-         * FIDE Laws of Chess:
-         * 3.8.2.1 The right to castle has been lost:
-         *     3.8.2.1.1 if the king has already moved, or
-         *     3.8.2.1.2 with a rook that has already moved.
-         *
-         * 3.8.2.2 Castling is prevented temporarily:
-         *     3.8.2.2.1 if the square on which the king stands, or the square which it must cross, or the square which it is to occupy, is attacked by one or more of the opponent's pieces, or
-         *     3.8.2.2.2 if there is any piece between the king and the rook with which castling is to be effected.
-         */
-
-        let occupancy = board.all_pieces();
-
-        // white king side castling
-        if board.can_castle_kingside(Side::White) && board.side_to_move() == Side::White {
-            let king_from = Square::from_square_index(Squares::E1); // e1
-            let king_to = Square::from_square_index(Squares::G1); // g1
-            let blockers = Bitboard::from_square(Squares::F1) | Bitboard::from_square(Squares::G1);
-            let king_ray = [Squares::E1, Squares::F1, Squares::G1];
-
-            let is_blocked = (blockers & occupancy) > 0;
-            let are_any_attacked = king_ray.iter().any(|&square| {
-                self.is_square_attacked(board, &Square::from_square_index(square), Side::Black)
-            });
-
-            if !is_blocked
-                && !are_any_attacked
-                && !self.is_square_attacked(board, &king_from, Side::Black)
-                && !self.is_square_attacked(board, &king_to, Side::Black)
-            {
-                move_list.push(Move::new_castle(&king_from, &king_to));
+    let en_passant_bb = board
+        .en_passant_square()
+        .map(Bitboard::from)
+        .unwrap_or_default();
+    match board.side_to_move() {
+        Side::White => {
+            let left = en_passant_bb >> SOUTH;
+            if left & checkers != 0 {
+                capture_mask |= en_passant_bb;
             }
         }
-
-        if board.can_castle_queenside(Side::White) && board.side_to_move() == Side::White {
-            let king_from = Square::from_square_index(Squares::E1);
-            let king_to = Square::from_square_index(Squares::C1);
-            let blockers = Bitboard::from_square(Squares::D1)
-                | Bitboard::from_square(Squares::C1)
-                | Bitboard::from_square(Squares::B1);
-            let king_ray = [Squares::E1, Squares::D1, Squares::C1];
-
-            let is_blocked = (blockers & occupancy) > 0;
-            let are_any_attacked = king_ray.iter().any(|&square| {
-                self.is_square_attacked(board, &Square::from_square_index(square), Side::Black)
-            });
-
-            if !is_blocked
-                && !are_any_attacked
-                && !self.is_square_attacked(board, &king_from, Side::Black)
-                && !self.is_square_attacked(board, &king_to, Side::Black)
-            {
-                move_list.push(Move::new_castle(&king_from, &king_to));
-            }
-        }
-
-        if board.can_castle_kingside(Side::Black) && board.side_to_move() == Side::Black {
-            let king_from = Square::from_square_index(Squares::E8);
-            let king_to = Square::from_square_index(Squares::G8);
-            let blockers = Bitboard::from_square(Squares::F8) | Bitboard::from_square(Squares::G8);
-            let king_ray = [Squares::E8, Squares::F8, Squares::G8];
-            let is_blocked = (blockers & occupancy) > 0;
-            let are_any_attacked = king_ray.iter().any(|&square| {
-                self.is_square_attacked(board, &Square::from_square_index(square), Side::White)
-            });
-
-            if !is_blocked
-                && !are_any_attacked
-                && !self.is_square_attacked(board, &king_from, Side::White)
-                && !self.is_square_attacked(board, &king_to, Side::White)
-            {
-                move_list.push(Move::new_castle(&king_from, &king_to));
-            }
-        }
-
-        if board.can_castle_queenside(Side::Black) && board.side_to_move() == Side::Black {
-            let king_from = Square::from_square_index(Squares::E8);
-            let king_to = Square::from_square_index(Squares::C8);
-            let blockers = Bitboard::from_square(Squares::D8)
-                | Bitboard::from_square(Squares::C8)
-                | Bitboard::from_square(Squares::B8);
-            let king_ray = [Squares::E8, Squares::D8, Squares::C8];
-            let is_blocked = (blockers & occupancy) > 0;
-            let are_any_attacked = king_ray.iter().any(|&square| {
-                self.is_square_attacked(board, &Square::from_square_index(square), Side::White)
-            });
-
-            if !is_blocked
-                && !are_any_attacked
-                && !self.is_square_attacked(board, &king_from, Side::White)
-                && !self.is_square_attacked(board, &king_to, Side::White)
-            {
-                move_list.push(Move::new_castle(&king_from, &king_to));
+        Side::Black => {
+            let right = en_passant_bb << NORTH;
+            if right & checkers != 0 {
+                capture_mask |= en_passant_bb;
             }
         }
     }
 
-    fn get_piece_moves(
-        &self,
-        piece: Piece,
-        board: &Board,
-        move_list: &mut MoveList,
-        move_type: &MoveType,
-    ) {
-        debug_assert!(
-            piece != Piece::Pawn,
-            "Pawn move enumeration is handle separately."
+    (
+        checkers,
+        capture_mask,
+        push_mask,
+        pinned,
+        orthogonal_pin_rays,
+        diagonal_pin_rays,
+    )
+}
+
+fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
+    /*
+     * For castling, the king and rook must not have moved.
+     * The squares between the king and rook must be empty.
+     * The squares the king moves through must not be under attack (including start and end).
+     * The king must not be in check.
+     * The king must not move through check.
+     * The king must not end up in check.
+     *
+     * FIDE Laws of Chess:
+     * 3.8.2.1 The right to castle has been lost:
+     *     3.8.2.1.1 if the king has already moved, or
+     *     3.8.2.1.2 with a rook that has already moved.
+     *
+     * 3.8.2.2 Castling is prevented temporarily:
+     *     3.8.2.2.1 if the square on which the king stands, or the square which it must cross, or the square which it is to occupy, is attacked by one or more of the opponent's pieces, or
+     *     3.8.2.2.2 if there is any piece between the king and the rook with which castling is to be effected.
+     */
+    let occupancy = board.all_pieces();
+    let checkers = calculate_checkers(board, occupancy);
+    let legal_castling_mobility = move_generation::castling::legal_mobility(board, checkers);
+    let king_sq = Square::from_square_index(board.king_square(board.side_to_move()));
+    enumerate_moves(
+        &legal_castling_mobility,
+        &king_sq,
+        Piece::King,
+        board,
+        move_list,
+    );
+}
+
+fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
+    debug_assert!(
+        piece != Piece::Pawn,
+        "Pawn move enumeration is handle separately."
+    );
+
+    let us = board.side_to_move();
+    let them = us.opposite();
+    let our_pieces = board.pieces(us);
+    let their_pieces = board.pieces(them);
+    let occupancy = board.all_pieces();
+    let empty = !occupancy;
+
+    let piece_bb = *board.piece_bitboard(piece, us);
+    for from_sq in piece_bb.iter() {
+        let attack_bb = attacks::for_piece_on_square(piece, from_sq, occupancy, us);
+
+        let bb_moves = match move_type {
+            MoveType::Capture => attack_bb & their_pieces,
+            MoveType::Quiet => attack_bb & empty,
+            MoveType::All => attack_bb & !our_pieces,
+        };
+
+        enumerate::enumerate_moves(
+            &bb_moves,
+            &Square::from_square_index(from_sq),
+            piece,
+            board,
+            move_list,
         );
+    }
+}
 
-        let us = board.side_to_move();
-        let them = us.opposite();
-        let our_pieces = board.pieces(us);
-        let their_pieces = board.pieces(them);
-        let occupancy = board.all_pieces();
-        let empty = !occupancy;
+#[cfg_attr(not(debug_assertions), inline(always))]
+#[cfg_attr(debug_assertions, inline(never))]
+fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
+    let us = board.side_to_move();
+    let them = us.opposite();
+    let their_pieces = board.pieces(them);
+    let occupancy = board.all_pieces();
+    let empty = !occupancy;
+    let direction = if us == Side::White { NORTH } else { SOUTH };
+    let pawns_bb = board.piece_bitboard(Piece::Pawn, us);
 
-        let piece_bb = *board.piece_bitboard(piece, us);
-        // loop through all the pieces of the given type
-        for from_sq in piece_bb.iter() {
-            let attack_bb = match PieceCategory::from(piece) {
-                PieceCategory::Slider(slider) => {
-                    self.get_slider_attacks(slider, from_sq, &occupancy)
-                }
-                PieceCategory::NonSlider(non_slider) => {
-                    self.get_non_slider_attacks(us, non_slider, from_sq)
-                }
+    // loop through all the pawns for us
+    for from_square in pawns_bb.iter() {
+        let attack_bb = attacks::pawn(from_square, us);
+
+        let mut bb_moves = Bitboard::default();
+        let to_square = match us {
+            Side::White => from_square as u64 + direction,
+            Side::Black => from_square as u64 - direction,
+        };
+
+        // pawn non-capture moves
+        if *move_type == MoveType::All || *move_type == MoveType::Quiet {
+            let bb_push = Bitboard::new(1u64 << to_square);
+            let bb_single_push = bb_push & empty;
+            let can_double_push = match us {
+                Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
+                Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
             };
 
-            let bb_moves = match move_type {
-                MoveType::Capture => attack_bb & their_pieces,
-                MoveType::Quiet => attack_bb & empty,
-                MoveType::All => attack_bb & !our_pieces,
-            };
-
-            self.enumerate_moves(
-                &bb_moves,
-                &Square::from_square_index(from_sq),
-                piece,
-                board,
-                move_list,
-            );
-        }
-    }
-
-    fn get_non_slider_attacks(
-        &self,
-        attacking_side: Side,
-        piece: NonSliderPiece,
-        from_square: u8,
-    ) -> Bitboard {
-        match piece {
-            NonSliderPiece::King => attacks::king(from_square),
-            NonSliderPiece::Knight => attacks::knight(from_square),
-            NonSliderPiece::Pawn => attacks::pawn(from_square, attacking_side),
-        }
-    }
-
-    fn get_slider_attacks(
-        &self,
-        piece: SliderPiece,
-        from_square: u8,
-        occupancy: &Bitboard,
-    ) -> Bitboard {
-        match piece {
-            SliderPiece::Bishop => attacks::bishop(from_square, *occupancy),
-            SliderPiece::Rook => attacks::rook(from_square, *occupancy),
-            SliderPiece::Queen => attacks::queen(from_square, *occupancy),
-        }
-    }
-
-    #[cfg_attr(not(debug_assertions), inline(always))]
-    #[cfg_attr(debug_assertions, inline(never))]
-    fn get_pawn_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
-        let us = board.side_to_move();
-        let them = us.opposite();
-        let their_pieces = board.pieces(them);
-        let occupancy = board.all_pieces();
-        let empty = !occupancy;
-        let direction = if us == Side::White { NORTH } else { SOUTH };
-        let pawns_bb = board.piece_bitboard(Piece::Pawn, us);
-
-        // loop through all the pawns for us
-        for from_square in pawns_bb.iter() {
-            let attack_bb = attacks::pawn(from_square, us);
-
-            let mut bb_moves = Bitboard::default();
-            let to_square = match us {
-                Side::White => from_square as u64 + direction,
-                Side::Black => from_square as u64 - direction,
-            };
-
-            // pawn non-capture moves
-            if *move_type == MoveType::All || *move_type == MoveType::Quiet {
-                let bb_push = Bitboard::new(1u64 << to_square);
-                let bb_single_push = bb_push & empty;
-                let can_double_push = match us {
-                    Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
-                    Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
-                };
-
-                let double_push_square = if can_double_push {
-                    match us {
-                        Side::White => {
-                            let (value, did_overflow) = to_square.overflowing_add(direction);
-                            if did_overflow { None } else { Some(value) }
-                        }
-                        Side::Black => {
-                            let (value, did_overflow) = to_square.overflowing_sub(direction);
-                            if did_overflow { None } else { Some(value) }
-                        }
+            let double_push_square = if can_double_push {
+                match us {
+                    Side::White => {
+                        let (value, did_overflow) = to_square.overflowing_add(direction);
+                        if did_overflow { None } else { Some(value) }
                     }
-                } else {
-                    None
-                };
-
-                // note that the single push square has to be empty in addition to the double push square being empty
-                let is_double_push_unobstructed = if let Some(push_square) = double_push_square {
-                    !occupancy.is_square_occupied(to_square as u8)
-                        && !occupancy.is_square_occupied(push_square as u8)
-                } else {
-                    false
-                };
-
-                let bb_double_push = if can_double_push && is_double_push_unobstructed {
-                    Bitboard::new(1u64 << double_push_square.unwrap()) & empty
-                } else {
-                    Bitboard::default()
-                };
-                bb_moves |= bb_single_push | bb_double_push;
-            }
-
-            // pawn captures
-            if move_type == &MoveType::All || move_type == &MoveType::Capture {
-                let bb_capture = attack_bb & their_pieces;
-                // en passant
-                let bb_en_passant = match board.en_passant_square() {
-                    Some(en_passant_square) => {
-                        // we only want to add the en passant square if it is within range of the pawn
-                        // this means that the en passant square is within 1 rank of the pawn and the en passant square
-                        // is in the pawn's attack table
-                        let en_passant_bb = Bitboard::from_square(en_passant_square);
-                        let result = en_passant_bb & !(attack_bb);
-                        let is_in_range = result == 0;
-                        if is_in_range {
-                            en_passant_bb
-                        } else {
-                            Bitboard::default()
-                        }
+                    Side::Black => {
+                        let (value, did_overflow) = to_square.overflowing_sub(direction);
+                        if did_overflow { None } else { Some(value) }
                     }
-                    None => Bitboard::default(),
-                };
-                bb_moves |= bb_capture | bb_en_passant;
-            }
-
-            self.enumerate_moves(
-                &bb_moves,
-                &Square::from_square_index(from_square),
-                Piece::Pawn,
-                board,
-                move_list,
-            );
-        }
-    }
-
-    /// Enumerate all moves in a given bitboard and add them to the given [`MoveList`]
-    ///
-    /// # Arguments
-    ///
-    /// - bitboard - The bitboard to enumerate moves for
-    /// - from - The square the piece is moving from
-    /// - piece - The piece that is moving
-    /// - board - The current board state
-    /// - move_list - The list of moves to append to
-    #[allow(clippy::panic)]
-    pub(crate) fn enumerate_moves(
-        &self,
-        bitboard: &Bitboard,
-        from: &Square,
-        piece: Piece,
-        board: &Board,
-        move_list: &mut MoveList,
-    ) {
-        if bitboard.as_number() == 0 {
-            return;
-        }
-
-        let us = board.side_to_move();
-        let them = us.opposite();
-        let enemy_pieces = board.pieces(them);
-        let promotion_rank = Rank::promotion_rank(us);
-        for to_square in bitboard.iter() {
-            let (file, rank) = square::from_square(to_square);
-            let (from_file, _) = square::from_square(from.to_square_index());
-
-            let en_passant = match board.en_passant_square() {
-                Some(en_passant_square) => en_passant_square == to_square && piece == Piece::Pawn,
-                None => false,
-            };
-
-            let is_capture: bool = enemy_pieces.is_square_occupied(to_square) || en_passant;
-            // 2 rows = 16 squares
-            let is_double_move = piece == Piece::Pawn
-                && (to_square as i8 - from.to_square_index() as i8).abs() == 16;
-            let is_promotion =
-                piece == Piece::Pawn && square::is_square_on_rank(to_square, promotion_rank as u8);
-
-            if is_double_move && en_passant {
-                panic!("Double move and en passant should not happen");
-            }
-
-            // a castle is the only time a king can move 2 squares
-            let is_castle = piece == Piece::King && from_file.abs_diff(file) == 2;
-
-            let mut move_desc = MoveDescriptor::None;
-            if is_double_move {
-                move_desc = MoveDescriptor::PawnTwoUp;
-            } else if en_passant {
-                move_desc = MoveDescriptor::EnPassantCapture;
-            } else if is_castle {
-                move_desc = MoveDescriptor::Castle;
-            }
-
-            let capture_piece = if is_capture && !en_passant {
-                Some(board.piece_on_square(to_square).unwrap().0)
-            } else if en_passant {
-                Some(Piece::Pawn)
+                }
             } else {
                 None
             };
 
-            let to_square = square::to_square_object(file, rank);
-            if is_promotion {
-                // we have to add 4 moves for each promotion type
-                for promotion_type in [
-                    PromotionDescriptor::Queen,
-                    PromotionDescriptor::Rook,
-                    PromotionDescriptor::Bishop,
-                    PromotionDescriptor::Knight,
-                ] {
-                    let mv = Move::new(
-                        from,
-                        &to_square,
-                        move_desc,
-                        piece,
-                        capture_piece,
-                        Some(promotion_type.to_piece()),
-                    );
-                    move_list.push(mv);
-                }
-            } else if is_castle {
-                let mv = Move::new_castle(from, &to_square);
-                move_list.push(mv);
+            // note that the single push square has to be empty in addition to the double push square being empty
+            let is_double_push_unobstructed = if let Some(push_square) = double_push_square {
+                !occupancy.is_square_occupied(to_square as u8)
+                    && !occupancy.is_square_occupied(push_square as u8)
             } else {
-                let mv = Move::new(from, &to_square, move_desc, piece, capture_piece, None);
-                move_list.push(mv);
-            }
+                false
+            };
+
+            let bb_double_push = if can_double_push && is_double_push_unobstructed {
+                Bitboard::new(1u64 << double_push_square.unwrap()) & empty
+            } else {
+                Bitboard::default()
+            };
+            bb_moves |= bb_single_push | bb_double_push;
         }
-    }
 
-    /// Returns true if the given square is attacked by any piece that is on the attacking_side.
-    /// This method uses the so called "super-piece" method.
-    /// See: https://talkchess.com/viewtopic.php?t=27152
-    ///
-    /// The gist is that we treat the attacking square as the from square and we project the attacks to the same sides pieces.
-    /// If there are any collisions, then we know that a piece is attacking that square.
-    ///
-    /// # Arguments
-    /// - board: the current board state
-    /// - square: the square to check if it is attacked
-    /// - attacking_side: the side that is potentially attacking the square
-    ///
-    /// # Returns
-    /// - true if the square is attacked, false otherwise
-    pub fn is_square_attacked_with_occupancy(
-        &self,
-        board: &Board,
-        square: &Square,
-        attacking_side: Side,
-        occupancy: &Bitboard,
-    ) -> bool {
-        let king_bb = board.piece_bitboard(Piece::King, attacking_side);
-        let knight_bb = board.piece_bitboard(Piece::Knight, attacking_side);
-        let bishop_bb = board.piece_bitboard(Piece::Bishop, attacking_side);
-        let rook_bb = board.piece_bitboard(Piece::Rook, attacking_side);
-        let queen_bb = board.piece_bitboard(Piece::Queen, attacking_side);
-        let pawn_bb: &Bitboard = board.piece_bitboard(Piece::Pawn, attacking_side);
+        // pawn captures
+        if move_type == &MoveType::All || move_type == &MoveType::Capture {
+            let bb_capture = attack_bb & their_pieces;
+            // en passant
+            let bb_en_passant = match board.en_passant_square() {
+                Some(en_passant_square) => {
+                    // we only want to add the en passant square if it is within range of the pawn
+                    // this means that the en passant square is within 1 rank of the pawn and the en passant square
+                    // is in the pawn's attack table
+                    let en_passant_bb = Bitboard::from_square(en_passant_square);
+                    let result = en_passant_bb & !(attack_bb);
+                    let is_in_range = result == 0;
+                    if is_in_range {
+                        en_passant_bb
+                    } else {
+                        Bitboard::default()
+                    }
+                }
+                None => Bitboard::default(),
+            };
+            bb_moves |= bb_capture | bb_en_passant;
+        }
 
-        let king_attacks = self.get_piece_attacks(
-            Piece::King,
-            square.to_square_index(),
-            attacking_side,
-            occupancy,
+        enumerate::enumerate_moves(
+            &bb_moves,
+            &Square::from_square_index(from_square),
+            Piece::Pawn,
+            board,
+            move_list,
         );
-        let knight_attacks = self.get_piece_attacks(
-            Piece::Knight,
-            square.to_square_index(),
-            attacking_side,
-            occupancy,
-        );
-        let rook_attacks = self.get_piece_attacks(
-            Piece::Rook,
-            square.to_square_index(),
-            attacking_side,
-            occupancy,
-        );
-        let bishop_attacks = self.get_piece_attacks(
-            Piece::Bishop,
-            square.to_square_index(),
-            attacking_side,
-            occupancy,
-        );
-        let queen_attacks = rook_attacks | bishop_attacks;
-        // note we use the opposite side for the pawn attacks
-        let pawn_attacks = attacks::pawn(square.to_square_index(), attacking_side.opposite());
-
-        let is_king_attacker = (king_attacks & *king_bb) > 0;
-        let is_knight_attacker = (knight_attacks & *knight_bb) > 0;
-        let is_rook_attacker = (rook_attacks & *rook_bb) > 0;
-        let is_bishop_attacker = (bishop_attacks & *bishop_bb) > 0;
-        let is_queen_attacker = (queen_attacks & *queen_bb) > 0;
-        let is_pawn_attacker = (pawn_attacks & *pawn_bb) > 0;
-
-        is_king_attacker
-            || is_knight_attacker
-            || is_rook_attacker
-            || is_bishop_attacker
-            || is_queen_attacker
-            || is_pawn_attacker
-    }
-
-    pub fn is_square_attacked(&self, board: &Board, square: &Square, attacking_side: Side) -> bool {
-        self.is_square_attacked_with_occupancy(board, square, attacking_side, &board.all_pieces())
     }
 }
+
+/// Check if the side to move is in check.
+pub fn is_in_check(board: &Board) -> bool {
+    let king_square = board.king_square(board.side_to_move());
+    square_state::is_square_attacked(
+        board,
+        Square::from_square_index(king_square),
+        board.side_to_move().opposite(),
+    )
+}
+
+/// Check if the side to move is in checkmate.
+/// Checkmate = in check and no legal moves.
+pub fn is_checkmate(board: &Board) -> bool {
+    if !is_in_check(board) {
+        return false;
+    }
+    let mut move_list = MoveList::new();
+    generate_legal_moves(board, &mut move_list);
+    move_list.is_empty()
+}
+
+/// Check if a given move is legal. This function does not alter the board state.
+/// Instead it makes a copy of the board and tries to make the move.
+pub fn is_legal(board: &Board, mv: &Move) -> bool {
+    let mut board_copy = board.clone();
+    board_copy.make_move(mv).is_ok()
+}
+
+/// Check if a list of moves are legal. This function does not alter the board state.
+pub fn are_legal(board: &Board, list: &MoveList) -> bool {
+    let mut board_copy = board.clone();
+    for mv in list.iter() {
+        if board_copy.make_move(mv).is_err() {
+            return false;
+        }
+    }
+    true
+}
+
+/// Re-export from legal_move_generation for convenience.
+pub use crate::legal_move_generation::generate_legal_moves;
 
 #[cfg(test)]
 mod tests {
 
-    use crate::{board::Board, definitions::NumberOf, move_generation, slider_pieces::SliderPiece};
+    use crate::{
+        board::Board,
+        definitions::{NumberOf, Squares},
+        move_generation,
+    };
 
     use super::*;
 
     #[test]
-    fn check_is_square_attacked() {
-        let board = Board::default_board();
-        let move_gen = MoveGenerator::new();
-        let us = Side::White;
-        let them = us.opposite();
-        // loop through all enemy squares and check if they are attacked
-        let black_pieces = board.pieces(them);
-        for sq in black_pieces.iter() {
-            let square = Square::from_square_index(sq);
-            let is_attacked = move_gen.is_square_attacked(&board, &square, us);
-            assert!(!is_attacked);
-        }
-
-        // now generate moves and check if the squares that pieces can move to are attacked
-        let mut move_list = MoveList::new();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
-        let side_to_move = board.side_to_move();
-        // we ignore pawn two up moves because they are not "attacks"
-        for mv in move_list.iter().filter(|mv| !mv.is_pawn_two_up()) {
-            let to = mv.to();
-            let is_attacked =
-                move_gen.is_square_attacked(&board, &Square::from_square_index(to), side_to_move);
-            assert!(is_attacked, "Square {to} is not attacked by move\n\t{mv}",);
-        }
-
-        {
-            let board = Board::from_fen("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2").unwrap();
-            let king_sq = board.king_square(board.side_to_move());
-            assert_eq!(board.side_to_move(), Side::Black);
-            assert!(move_gen.is_square_attacked(
-                &board,
-                &Square::from_square_index(king_sq),
-                board.side_to_move().opposite()
-            ));
-        }
-
-        {
-            let mut board =
-                Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
-                    .unwrap();
-            move_gen.generate_moves(&board, &mut move_list, MoveType::All);
-            let mv = move_list
-                .iter()
-                .find(|mv| mv.to_long_algebraic() == "b1c3")
+    fn calculate_pinned_pieces() {
+        let board =
+            Board::from_fen("2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 3 2")
                 .unwrap();
-            assert!(board.make_move(mv, &move_gen).is_ok());
+        let occupancy = board.all_pieces();
+        let (_, _, _, pinned, _, _) = calculate_check_and_pin_metadata(&board);
+        let checkers = calculate_checkers(&board, occupancy);
+        assert_eq!(checkers, 0);
+        assert_eq!(pinned, Bitboard::from_square(Squares::D7));
+    }
 
-            // did we leave the king in check?
-            let king_sq = board.king_square(Side::White);
-            assert_eq!(board.side_to_move(), Side::Black);
-            // there should be no attacks on the king
-            assert!(!move_gen.is_square_attacked(
-                &board,
-                &Square::from_square_index(king_sq),
-                Side::Black
-            ));
-        }
+    #[test]
+    fn calculate_pinned_pieces_2() {
+        let board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1").unwrap();
+        let occupancy = board.all_pieces();
+        let (_, _, _, pinned, _, _) = calculate_check_and_pin_metadata(&board);
+        let checkers = calculate_checkers(&board, occupancy);
+        assert_eq!(checkers, 0);
+        assert_eq!(pinned, Bitboard::default());
+    }
+
+    #[test]
+    fn calculate_pinned_pieces_3() {
+        let board =
+            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQKR2 b Q - 2 8").unwrap();
+
+        let occupancy = board.all_pieces();
+        let (_, _, _, pinned, orthogonal_rays, diagonal_rays) =
+            calculate_check_and_pin_metadata(&board);
+        let pin_rays = orthogonal_rays | diagonal_rays;
+        let checkers = calculate_checkers(&board, occupancy);
+        assert_eq!(checkers, 0);
+        assert_eq!(pinned, 0);
+        assert_eq!(pin_rays, 0);
+    }
+
+    #[test]
+    fn calculate_pins() {
+        let board =
+            Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nPB5/B1P1P3/5N2/q2P1KPP/b2Q1R2 w kq - 0 3")
+                .unwrap();
+        let (_, _, _, pinned_pieces, horizontal_pin_rays, diagonal_pin_rays) =
+            calculate_check_and_pin_metadata(&board);
+
+        assert_eq!(pinned_pieces.number_of_occupied_squares(), 2);
+        println!("horizontal pin rays:\n{horizontal_pin_rays}");
+        println!("diagonal pin rays:\n{diagonal_pin_rays}");
+
+        assert!(pinned_pieces.intersects(Bitboard::from_square(Squares::C5)));
+        assert!(pinned_pieces.intersects(Bitboard::from_square(Squares::D2)));
+    }
+
+    #[test]
+    fn check_pinned_and_capture_mask() {
+        let board =
+            Board::from_fen("rnQq1k1r/pp2bppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R b KQ - 0 8").unwrap();
+        let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
+            calculate_check_and_pin_metadata(&board);
+        println!("checkers:\n{checkers}");
+        println!("check mask:\n{capture_mask}");
+        println!("push mask:\n{push_mask}");
+        println!("pinned:\n{pinned}");
+        println!("orthogonal rays:\n{orthogonal_rays}");
+        println!("diagonal rays:\n{diagonal_rays}");
+
+        assert_eq!(checkers, 0);
+        assert_eq!(pinned, Bitboard::from_square(Squares::D8));
+        println!("capture mask:\n{capture_mask}");
+        println!("push mask:\n{push_mask}");
+    }
+
+    #[test]
+    fn check_pinned_and_capture_mask_2() {
+        let board = Board::from_fen("4B1r1/2q2p2/QP4k1/3P2p1/7B/8/6K1/7R b - - 3 59").unwrap();
+        let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
+            calculate_check_and_pin_metadata(&board);
+        println!("checkers:\n{checkers}");
+        println!("check mask:\n{capture_mask}");
+        println!("push mask:\n{push_mask}");
+        println!("pinned:\n{pinned}");
+        println!("orthogonal rays:\n{orthogonal_rays}");
+        println!("diagonal rays:\n{diagonal_rays}");
+
+        assert_eq!(checkers, 0);
+        assert_eq!(pinned, Bitboard::from_square(Squares::F7));
+        assert_eq!(orthogonal_rays, 0);
+        assert!(diagonal_rays > 0);
     }
 
     #[test]
@@ -984,7 +638,7 @@ mod tests {
         let mut offset_sum: u64 = 0;
         const BASE: u64 = 2_u64;
         for (square, value) in rook_relevant_bit_expected.into_iter().enumerate() {
-            let rook_bits = move_generation::MoveGenerator::relevant_rook_bits(square as u8);
+            let rook_bits = move_generation::relevant_rook_bits(square as u8);
             assert_eq!(rook_bits.as_number(), value);
 
             offset_sum += BASE.pow(rook_bits.as_number().count_ones());
@@ -1065,7 +719,7 @@ mod tests {
         const BASE: u64 = 2_u64;
 
         for (square, value) in bishop_relevant_bit_expected.into_iter().enumerate() {
-            let bishop_bits = move_generation::MoveGenerator::relevant_bishop_bits(square as u8);
+            let bishop_bits = move_generation::relevant_bishop_bits(square as u8);
             assert_eq!(bishop_bits.as_number(), value);
 
             offset_sum += BASE.pow(bishop_bits.as_number().count_ones());
@@ -1076,7 +730,6 @@ mod tests {
 
     #[test]
     fn check_rook_attacks() {
-        let move_gen = MoveGenerator::new();
         let occupancy = Bitboard::default();
         const EXPECTED_ATTACKS: [u64; NumberOf::SQUARES] = [
             0x1010101010101fe,
@@ -1146,8 +799,7 @@ mod tests {
         ];
 
         for (sq, expected) in EXPECTED_ATTACKS.iter().enumerate() {
-            let rook_attack_bb =
-                move_gen.get_slider_attacks(SliderPiece::Rook, sq as u8, &occupancy);
+            let rook_attack_bb = attacks::rook(sq as u8, occupancy);
             // println!("{:#x},", rook_attack_bb.as_number())
             assert_eq!(rook_attack_bb.as_number(), *expected);
         }
@@ -1158,8 +810,8 @@ mod tests {
         const BASE: u64 = 2_u64;
 
         for sq in 0..NumberOf::SQUARES {
-            let rook_bb = MoveGenerator::relevant_rook_bits(sq as u8);
-            let permutations = MoveGenerator::create_blocker_permutations(rook_bb);
+            let rook_bb = relevant_rook_bits(sq as u8);
+            let permutations = create_blocker_permutations(rook_bb);
             let total_permutations = BASE.pow(rook_bb.as_number().count_ones());
             assert_eq!(permutations.len(), total_permutations as usize);
             for bb in permutations {
@@ -1175,8 +827,7 @@ mod tests {
     fn check_basic_move_gen() {
         let board = Board::default_board();
         let mut move_list = MoveList::new();
-        let move_gen = MoveGenerator::new();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        generate_moves(&board, &mut move_list, MoveType::All);
 
         for mv in move_list.iter() {
             println!("{mv}");
@@ -1188,7 +839,7 @@ mod tests {
         assert_eq!(move_list.len(), 20);
 
         move_list.clear();
-        move_gen.generate_legal_moves(&board, &mut move_list);
+        move_generation::generate_legal_moves(&board, &mut move_list);
 
         for mv in move_list.iter() {
             println!("{mv}");
@@ -1203,8 +854,7 @@ mod tests {
 
         assert_eq!(board.side_to_move(), Side::Black);
         let mut move_list = MoveList::new();
-        let move_gen = MoveGenerator::new();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        generate_moves(&board, &mut move_list, MoveType::All);
         let en_passant_move = move_list.iter().find(|mv| mv.is_en_passant_capture());
         assert!(en_passant_move.is_some());
         assert!(move_list.len() >= 8);

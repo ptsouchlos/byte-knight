@@ -9,7 +9,6 @@ use std::{
 };
 
 use chess::board::Board;
-use chess::move_generation::MoveGenerator;
 
 use crate::{
     history_table::HistoryTable,
@@ -24,7 +23,6 @@ pub struct Engine {
     transposition_table: TranspositionTable,
     history_table: HistoryTable,
     killers_table: KillerMovesTable,
-    move_gen: MoveGenerator,
     debug: bool,
 }
 
@@ -35,7 +33,6 @@ impl Engine {
             transposition_table: TranspositionTable::default(),
             history_table: HistoryTable::default(),
             killers_table: KillerMovesTable::default(),
-            move_gen: MoveGenerator::new(),
             debug: false,
         }
     }
@@ -113,7 +110,7 @@ impl Engine {
     }
 
     pub fn perft(&mut self, depth: u16) -> u64 {
-        chess::perft::perft(&mut self.board, &self.move_gen, depth as usize, false).unwrap()
+        chess::perft::perft(&mut self.board, depth as usize, false).unwrap()
     }
 
     pub fn board(&self) -> &Board {

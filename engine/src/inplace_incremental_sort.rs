@@ -98,7 +98,7 @@ mod tests {
 
     use chess::{
         board::Board,
-        move_generation::MoveGenerator,
+        move_generation,
         move_list::MoveList,
         moves::{Move, MoveType},
         pieces::Piece,
@@ -108,12 +108,11 @@ mod tests {
 
     #[test]
     fn test_incremental_sort() {
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         let board = Board::default_board();
 
         // generate moves for starting position (20)
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         let mut order = vec![
             MoveOrder::Quiet(14),
