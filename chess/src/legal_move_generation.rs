@@ -36,7 +36,7 @@ fn calculate_en_passant_bitboard(
 
     match en_passant_sq {
         Some(sq) => {
-            let en_passant_bb = en_passant_sq.map(Bitboard::from).unwrap_or_default();
+            let en_passant_bb = Bitboard::from_square(sq);
 
             let mut occupancy = board.all_pieces();
             occupancy &= !(Bitboard::from_square(from));

@@ -519,7 +519,7 @@ pub fn all_attackers_of(
 
     // Super-piece method - project attacks from square and overlap with
     // attacking side's piece bitboards
-    let king_atacks = attacks::for_piece_on_square(Piece::King, sq, occupancy, not_attacking);
+    let king_attacks = attacks::for_piece_on_square(Piece::King, sq, occupancy, not_attacking);
     let knight_attacks = attacks::for_piece_on_square(Piece::Knight, sq, occupancy, not_attacking);
     let bishop_attacks = attacks::for_piece_on_square(Piece::Bishop, sq, occupancy, not_attacking);
     let rook_attacks = attacks::for_piece_on_square(Piece::Rook, sq, occupancy, not_attacking);
@@ -533,7 +533,7 @@ pub fn all_attackers_of(
     let queen = *board.piece_bitboard(Piece::Queen, attacking_side);
     let pawns = *board.piece_bitboard(Piece::Pawn, attacking_side);
 
-    (king & king_atacks)
+    (king & king_attacks)
         | (knights & knight_attacks)
         | (bishops & bishop_attacks)
         | (rooks & rook_attacks)
