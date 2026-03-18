@@ -450,31 +450,9 @@ pub fn is_checkmate(board: &Board) -> bool {
     if !is_in_check(board) {
         return false;
     }
-
-    let king_sq = board.king_square(board.side_to_move());
-    let mut occupancy = board.all_pieces();
-    let us = board.side_to_move();
-
-    let king_attacks = attacks::king(king_sq);
-    let our_pieces = board.pieces(us);
-    let king_attacks = king_attacks & !our_pieces;
-
-    // modify occupancy to exclude the king square
-    occupancy.clear_square(king_sq);
-
-    // check if the king can move to any of the squares it's attacking
-    for sq in king_attacks.iter() {
-        if !square_state::is_square_attacked_with_occupancy(
-            board,
-            Square::from_square_index(sq),
-            us.opposite(),
-            occupancy,
-        ) {
-            return false;
-        }
-    }
-    // All espcape squares are attacked and we're in check
-    true
+    let mut move_list = MoveList::new();
+    generate_legal_moves(board, &mut move_list);
+    move_list.is_empty()
 }
 
 /// Check if a given move is legal. This function does not alter the board state.
