@@ -123,7 +123,7 @@ pub(crate) fn legal_mobility(board: &Board, checkers: Bitboard) -> Bitboard {
 
         let rook_in_place = board
             .piece_on_square(rook_from(us, true))
-            .is_some_and(|(piece, side)| return piece == Piece::Rook && side == us);
+            .is_some_and(|(piece, side)| piece == Piece::Rook && side == us);
         if (occ & travel_mask).is_empty()
             && !move_generation::square_state::is_attacked(safety_mask, them, occ, board)
             && rook_in_place
@@ -145,7 +145,7 @@ pub(crate) fn legal_mobility(board: &Board, checkers: Bitboard) -> Bitboard {
 
         let rook_in_place = board
             .piece_on_square(rook_from(us, false))
-            .is_some_and(|(piece, side)| return piece == Piece::Rook && side == us);
+            .is_some_and(|(piece, side)| piece == Piece::Rook && side == us);
 
         if (occ & travel_mask).is_empty()
             && !move_generation::square_state::is_attacked(safety_mask, them, occ, board)
