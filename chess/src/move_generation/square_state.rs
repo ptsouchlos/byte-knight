@@ -1,33 +1,13 @@
-use crate::{attacks, bitboard::Bitboard, board::Board, pieces::Piece, side::Side, square::Square};
-
-/// Returns true if the given square is attacked by any piece on the attacking_side.
-/// Uses the "super-piece" method: project attacks FROM the target square and check for collisions.
-pub fn is_square_attacked_with_occupancy(
-    board: &Board,
-    square: Square,
-    attacking_side: Side,
-    occupancy: Bitboard,
-) -> bool {
-    let sq = square.to_square_index();
-
-    let king_attacks = attacks::king(sq);
-    let knight_attacks = attacks::knight(sq);
-    let rook_attacks = attacks::rook(sq, occupancy);
-    let bishop_attacks = attacks::bishop(sq, occupancy);
-    let queen_attacks = rook_attacks | bishop_attacks;
-    // Pawn attacks use the opposite side's direction (super-piece method)
-    let pawn_attacks = attacks::pawn(sq, attacking_side.opposite());
-
-    (king_attacks & *board.piece_bitboard(Piece::King, attacking_side)) > 0
-        || (knight_attacks & *board.piece_bitboard(Piece::Knight, attacking_side)) > 0
-        || (rook_attacks & *board.piece_bitboard(Piece::Rook, attacking_side)) > 0
-        || (bishop_attacks & *board.piece_bitboard(Piece::Bishop, attacking_side)) > 0
-        || (queen_attacks & *board.piece_bitboard(Piece::Queen, attacking_side)) > 0
-        || (pawn_attacks & *board.piece_bitboard(Piece::Pawn, attacking_side)) > 0
-}
+use crate::{attacks, bitboard::Bitboard, board::Board, side::Side, square::Square};
 
 pub fn is_square_attacked(board: &Board, square: Square, attacking_side: Side) -> bool {
-    is_square_attacked_with_occupancy(board, square, attacking_side, board.all_pieces())
+    !attacks::all_attackers_of(
+        square.to_square_index(),
+        board,
+        attacking_side,
+        board.all_pieces(),
+    )
+    .is_empty()
 }
 
 pub fn is_attacked(
@@ -37,12 +17,7 @@ pub fn is_attacked(
     board: &Board,
 ) -> bool {
     for sq in squares.iter() {
-        if is_square_attacked_with_occupancy(
-            board,
-            Square::from_square_index(sq),
-            attacking_side,
-            occupancy,
-        ) {
+        if !attacks::all_attackers_of(sq, board, attacking_side, occupancy).is_empty() {
             return true;
         }
     }

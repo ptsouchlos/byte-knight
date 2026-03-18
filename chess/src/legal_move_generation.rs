@@ -160,13 +160,13 @@ fn generate_legal_pawn_mobility(
     let hv_pin_ray_mask = if is_pinned {
         orthogonal_pin_rays
     } else {
-        Bitboard::from(u64::MAX)
+        Bitboard::FULL
     };
 
     let diag_pin_ray_mask = if is_pinned {
         diagonal_pin_rays
     } else {
-        Bitboard::from(u64::MAX)
+        Bitboard::FULL
     };
 
     let legal_pushes = (pushes & !occupancy) & hv_pin_ray_mask;
@@ -238,7 +238,7 @@ fn generate_normal_piece_legal_mobility(
 
         true_ray_mask
     } else {
-        Bitboard::from(u64::MAX)
+        Bitboard::FULL
     };
 
     ((piece_attacks & capture_mask & their_pieces) | (piece_attacks & empty & push_mask))
@@ -275,7 +275,7 @@ fn generate_king_legal_mobility(
 
     let attacked_squares_occupancy = occupancy & !*king_bb;
     let attacked_squares =
-        move_generation::get_attacked_squares(board, them, &attacked_squares_occupancy);
+        move_generation::get_attacked_squares(board, them, attacked_squares_occupancy);
     let king_pushes = king_moves_bb & !attacked_squares & !our_pieces & !their_pieces;
 
     let castling_moves = move_generation::castling::legal_mobility(board, checkers);
@@ -288,12 +288,8 @@ fn generate_king_legal_mobility(
     let k_att = king_attacks;
     for capture_sq in k_att.iter() {
         let modified_occupancy = occupancy & !Bitboard::from_square(capture_sq) & !*king_bb;
-        let is_invalid_capture = move_generation::square_state::is_square_attacked_with_occupancy(
-            board,
-            Square::from_square_index(capture_sq),
-            them,
-            modified_occupancy,
-        );
+        let is_invalid_capture =
+            !attacks::all_attackers_of(capture_sq, board, them, modified_occupancy).is_empty();
         if is_invalid_capture {
             king_attacks &= !Bitboard::from_square(capture_sq);
         }

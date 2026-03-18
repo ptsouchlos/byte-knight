@@ -3,7 +3,10 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use crate::{bitboard::Bitboard, board::Board, move_generation, side::Side};
+use crate::{
+    bitboard::Bitboard, board::Board, definitions::Squares, move_generation, pieces::Piece,
+    side::Side,
+};
 
 // Credit to Hobbes author for CastleSafety and CastleTravel masks.
 /// Squares that must not be attacked when the king castles
@@ -24,6 +27,37 @@ impl CastleTravel {
     pub const WQS: Bitboard = Bitboard::new(0x000000000000000E);
     pub const BKS: Bitboard = Bitboard::new(0x6000000000000000);
     pub const BQS: Bitboard = Bitboard::new(0x0E00000000000000);
+}
+
+/// Starting square for the Rook.
+///
+/// # Arguments
+/// - `side`: The side to get the starting square for.
+/// - `kingside`: True for kingside rook, false otherwise.
+///
+/// # Returns
+/// Square index
+pub fn rook_from(side: Side, kingside: bool) -> u8 {
+    match (side, kingside) {
+        (Side::White, true) => Squares::H1,
+        (Side::White, false) => Squares::A1,
+        (Side::Black, true) => Squares::H8,
+        (Side::Black, false) => Squares::A8,
+    }
+}
+
+/// Starting square for the King.
+///
+/// # Arguments
+/// - `side`: The side to get the starting square for.
+///
+/// # Returns
+/// Square index
+pub fn king_from(side: Side) -> u8 {
+    match side {
+        Side::White => Squares::E1,
+        Side::Black => Squares::E8,
+    }
 }
 
 /// Generate legal castling moves for the king.
@@ -70,6 +104,11 @@ pub(crate) fn legal_mobility(board: &Board, checkers: Bitboard) -> Bitboard {
     let queen_side_castle = board.can_castle_queenside(us);
     let king_sq = board.king_square(us);
 
+    let is_square_in_place = king_sq == king_from(us);
+    if !is_square_in_place {
+        return Bitboard::default();
+    }
+
     if king_side_castle {
         let travel_mask = if us == Side::White {
             CastleTravel::WKS
@@ -82,8 +121,12 @@ pub(crate) fn legal_mobility(board: &Board, checkers: Bitboard) -> Bitboard {
             CastleSafety::BKS
         };
 
+        let rook_in_place = board
+            .piece_on_square(rook_from(us, true))
+            .is_some_and(|(piece, side)| return piece == Piece::Rook && side == us);
         if (occ & travel_mask).is_empty()
             && !move_generation::square_state::is_attacked(safety_mask, them, occ, board)
+            && rook_in_place
         {
             castling_moves |= Bitboard::from_square(king_sq + 2);
         }
@@ -99,8 +142,14 @@ pub(crate) fn legal_mobility(board: &Board, checkers: Bitboard) -> Bitboard {
         } else {
             CastleSafety::BQS
         };
+
+        let rook_in_place = board
+            .piece_on_square(rook_from(us, false))
+            .is_some_and(|(piece, side)| return piece == Piece::Rook && side == us);
+
         if (occ & travel_mask).is_empty()
             && !move_generation::square_state::is_attacked(safety_mask, them, occ, board)
+            && rook_in_place
         {
             castling_moves |= Bitboard::from_square(king_sq - 2);
         }

@@ -100,21 +100,10 @@ pub fn create_blocker_permutations(bb: Bitboard) -> Vec<Bitboard> {
 }
 
 /// Calculate all squares currently being attacked by a given side.
-pub(crate) fn get_attacked_squares(board: &Board, side: Side, occupancy: &Bitboard) -> Bitboard {
-    let mut attacked = Bitboard::default();
-
-    for piece in Piece::iter() {
-        let piece_bb = board.piece_bitboard(piece, side);
-        if piece_bb.as_number() == 0 {
-            continue;
-        }
-
-        for from_sq in piece_bb.iter() {
-            attacked |= attacks::for_piece_on_square(piece, from_sq, *occupancy, side);
-        }
-    }
-
-    attacked
+pub(crate) fn get_attacked_squares(board: &Board, side: Side, occupancy: Bitboard) -> Bitboard {
+    Piece::iter().fold(Bitboard::default(), |acc, piece| {
+        acc | attacks::for_piece(piece, board, occupancy, side)
+    })
 }
 
 /// Generates pseudo-legal moves for the current board state.
