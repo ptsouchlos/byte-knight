@@ -284,6 +284,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         score: Score,
         nps: f32,
         time: u64,
+        hashfull: u16,
         pv: &PrincipleVariation,
     ) {
         // create UciInfo and print it
@@ -294,6 +295,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             .score(score)
             .nps(nps.trunc())
             .time(time)
+            .hashfull(hashfull)
             .pv(pv.iter().map(|m| m.to_long_algebraic()));
         let message = UciResponse::info(info);
         let _unused = writeln!(self.output, "{message}");
@@ -406,6 +408,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32())
                         .trunc(),
                     self.parameters.start_time.elapsed().as_millis() as u64,
+                    self.transposition_table.hashfull(),
                     &best_result.pv,
                 );
             }
@@ -427,6 +430,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 best_result.score,
                 (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
                 self.parameters.start_time.elapsed().as_millis() as u64,
+                self.transposition_table.hashfull(),
                 &best_result.pv,
             );
         }
