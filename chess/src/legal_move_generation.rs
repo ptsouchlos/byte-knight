@@ -724,8 +724,7 @@ mod tests {
     #[test]
     fn tacticals_are_captures_and_queen_promotions() {
         let board =
-            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
-                .unwrap();
+            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
         let meta = move_generation::metadata::compute(&board);
 
         let mut tacticals = MoveList::new();
@@ -745,8 +744,7 @@ mod tests {
     #[test]
     fn quiets_are_non_captures_and_underpromotions() {
         let board =
-            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
-                .unwrap();
+            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
         let meta = move_generation::metadata::compute(&board);
 
         let mut quiets = MoveList::new();
@@ -779,8 +777,7 @@ mod tests {
 
     #[test]
     fn castling_is_quiet() {
-        let board =
-            Board::from_fen("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1").unwrap();
+        let board = Board::from_fen("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1").unwrap();
         let meta = move_generation::metadata::compute(&board);
 
         let mut quiets = MoveList::new();

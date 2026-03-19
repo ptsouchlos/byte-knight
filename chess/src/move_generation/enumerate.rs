@@ -143,7 +143,14 @@ mod tests {
         let bb = Bitboard::from_square(60); // e8
 
         let mut all = MoveList::new();
-        enumerate_moves(&bb, &pawn_sq, Piece::Pawn, &board, &mut all, PromotionFilter::All);
+        enumerate_moves(
+            &bb,
+            &pawn_sq,
+            Piece::Pawn,
+            &board,
+            &mut all,
+            PromotionFilter::All,
+        );
         assert_eq!(all.len(), 4); // Q, R, B, N
 
         let mut queen_only = MoveList::new();
@@ -156,9 +163,11 @@ mod tests {
             PromotionFilter::QueenOnly,
         );
         assert_eq!(queen_only.len(), 1);
-        assert!(queen_only
-            .iter()
-            .all(|mv| mv.promotion_piece() == Some(Piece::Queen)));
+        assert!(
+            queen_only
+                .iter()
+                .all(|mv| mv.promotion_piece() == Some(Piece::Queen))
+        );
 
         let mut under_only = MoveList::new();
         enumerate_moves(
@@ -170,8 +179,10 @@ mod tests {
             PromotionFilter::UnderOnly,
         );
         assert_eq!(under_only.len(), 3);
-        assert!(under_only
-            .iter()
-            .all(|mv| mv.promotion_piece() != Some(Piece::Queen)));
+        assert!(
+            under_only
+                .iter()
+                .all(|mv| mv.promotion_piece() != Some(Piece::Queen))
+        );
     }
 }
