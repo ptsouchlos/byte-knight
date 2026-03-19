@@ -366,12 +366,12 @@ pub(crate) fn generate_legal_mobility(
 ///
 /// ```
 /// use chess::board::Board;
+/// use chess::moves::MoveType;
 /// use chess::move_list::MoveList;
 /// use chess::move_generation;
 ///
 /// let board = Board::default_board();
-/// let mut move_list = MoveList::new();
-/// move_generation::generate_legal_moves(&board, &mut move_list);
+/// let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
 /// assert_eq!(20, move_list.len())
 /// ```
 pub fn generate_legal_moves(board: &Board, move_types: MoveType) -> MoveList {
