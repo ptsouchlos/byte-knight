@@ -274,6 +274,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // stop flag set
     }
 
+    /// Send UCI info to the the output.
+    #[allow(clippy::too_many_arguments)]
     fn send_info(
         &mut self,
         depth: u8,
@@ -297,6 +299,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let _unused = writeln!(self.output, "{message}");
     }
 
+    /// Write a string to the output.
     fn send_message(&mut self, message: String) {
         let info = UciInfo::default().string(message);
         let message = UciResponse::info(info);
