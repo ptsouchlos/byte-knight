@@ -109,8 +109,9 @@ pub fn compute(board: &Board) -> CheckPinMetadata {
 
     let mut push_mask = Bitboard::FULL;
 
-    if checkers.number_of_occupied_squares() >= 1 {
-        let is_single_check = checkers.number_of_occupied_squares() == 1;
+    let checkers_count = checkers.number_of_occupied_squares();
+    if checkers_count >= 1 {
+        let is_single_check = checkers_count == 1;
 
         capture_mask = checkers & !(*board.piece_bitboard(Piece::King, them));
 
