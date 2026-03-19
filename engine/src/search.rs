@@ -155,6 +155,7 @@ pub struct Search<'search_lifetime, Log> {
     history_table: &'search_lifetime mut HistoryTable,
     killers_table: &'search_lifetime mut KillerMovesTable,
     nodes: u64,
+    seldepth: ScoreType,
     parameters: SearchParameters,
     eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
@@ -184,6 +185,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             history_table,
             killers_table,
             nodes: 0,
+            seldepth: 0,
             parameters: parameters.clone(),
             eval: ByteKnightEvaluation::default(),
             stop_flag: None,
@@ -272,9 +274,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // stop flag set
     }
 
+    /// Send UCI info to the the output.
+    #[allow(clippy::too_many_arguments)]
     fn send_info(
         &mut self,
         depth: u8,
+        seldepth: ScoreType,
         nodes: u64,
         score: Score,
         nps: f32,
@@ -284,6 +289,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // create UciInfo and print it
         let info = UciInfo::new()
             .depth(depth)
+            .seldepth(seldepth)
             .nodes(nodes)
             .score(score)
             .nps(nps.trunc())
@@ -293,6 +299,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let _unused = writeln!(self.output, "{message}");
     }
 
+    /// Write a string to the output.
     fn send_message(&mut self, message: String) {
         let info = UciInfo::default().string(message);
         let message = UciResponse::info(info);
@@ -336,6 +343,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 .as_ref()
                 .is_some_and(|f| f.load(Ordering::Relaxed))
         {
+            // reset seldepth for this iteration
+            self.seldepth = 0;
+
             // create an aspiration window around the best result so far
             let mut aspiration_window =
                 AspirationWindow::around(best_result.score, best_result.depth as ScoreType);
@@ -390,6 +400,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 // send UCI info
                 self.send_info(
                     best_result.depth,
+                    self.seldepth,
                     self.nodes,
                     best_result.score,
                     (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32())
@@ -411,6 +422,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // send UCI info
             self.send_info(
                 best_result.depth,
+                self.seldepth,
                 self.nodes,
                 best_result.score,
                 (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
@@ -441,6 +453,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     {
         // increment node count
         self.nodes += 1;
+        self.seldepth = self.seldepth.max(ply);
 
         if depth <= 0 {
             return self.quiescence::<Node>(board, ply, alpha, beta, pv);
@@ -803,6 +816,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     ) -> Score {
         // Quiescence search shouldn't be called at root
         debug_assert!(ply > 0);
+
+        self.seldepth = self.seldepth.max(ply);
 
         // Are we in a draw?
         if ply > 0 && board.is_draw() {
