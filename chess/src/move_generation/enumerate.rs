@@ -15,6 +15,17 @@ use crate::{
     square::{self, Square},
 };
 
+/// Controls which promotion types are generated during move enumeration.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PromotionFilter {
+    /// Generate all 4 promotion types (Queen, Rook, Bishop, Knight).
+    All,
+    /// Generate only queen promotions. Used for tactical move generation.
+    QueenOnly,
+    /// Generate only underpromotions (Rook, Bishop, Knight). Used for quiet move generation.
+    UnderOnly,
+}
+
 /// Enumerate all moves in a given bitboard and add them to the given [`MoveList`]
 ///
 /// # Arguments
@@ -23,6 +34,7 @@ use crate::{
 /// - `piece`: The `piece` that is moving.
 /// - `board`: The current [`Board`].
 /// - `move_list`: The [`MoveList`] to push enumerated moves into.
+/// - `promotion_filter`: Controls which promotion types are generated.
 #[allow(clippy::panic)]
 pub(crate) fn enumerate_moves(
     bitboard: &Bitboard,
@@ -30,6 +42,7 @@ pub(crate) fn enumerate_moves(
     piece: Piece,
     board: &Board,
     move_list: &mut MoveList,
+    promotion_filter: PromotionFilter,
 ) {
     // Stop if the bitboard is empty.
     if bitboard.as_number() == 0 {
@@ -82,13 +95,21 @@ pub(crate) fn enumerate_moves(
 
         let to_square = square::to_square_object(file, rank);
         if is_promotion {
-            // we have to add 4 moves for each promotion type
-            for promotion_type in [
-                PromotionDescriptor::Queen,
-                PromotionDescriptor::Rook,
-                PromotionDescriptor::Bishop,
-                PromotionDescriptor::Knight,
-            ] {
+            let promotion_types: &[PromotionDescriptor] = match promotion_filter {
+                PromotionFilter::All => &[
+                    PromotionDescriptor::Queen,
+                    PromotionDescriptor::Rook,
+                    PromotionDescriptor::Bishop,
+                    PromotionDescriptor::Knight,
+                ],
+                PromotionFilter::QueenOnly => &[PromotionDescriptor::Queen],
+                PromotionFilter::UnderOnly => &[
+                    PromotionDescriptor::Rook,
+                    PromotionDescriptor::Bishop,
+                    PromotionDescriptor::Knight,
+                ],
+            };
+            for promotion_type in promotion_types {
                 let mv = Move::new(
                     from,
                     &to_square,
@@ -106,5 +127,51 @@ pub(crate) fn enumerate_moves(
             let mv = Move::new(from, &to_square, move_desc, piece, capture_piece, None);
             move_list.push(mv);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{board::Board, move_list::MoveList, pieces::Piece};
+
+    #[test]
+    fn enumerate_queen_promotion_only() {
+        // White pawn on e7, no captures — push to e8
+        let board = Board::from_fen("4k3/4P3/8/8/8/8/8/4K3 w - - 0 1").unwrap();
+        let pawn_sq = Square::from_file_rank('e', 6).unwrap(); // e7
+        let bb = Bitboard::from_square(60); // e8
+
+        let mut all = MoveList::new();
+        enumerate_moves(&bb, &pawn_sq, Piece::Pawn, &board, &mut all, PromotionFilter::All);
+        assert_eq!(all.len(), 4); // Q, R, B, N
+
+        let mut queen_only = MoveList::new();
+        enumerate_moves(
+            &bb,
+            &pawn_sq,
+            Piece::Pawn,
+            &board,
+            &mut queen_only,
+            PromotionFilter::QueenOnly,
+        );
+        assert_eq!(queen_only.len(), 1);
+        assert!(queen_only
+            .iter()
+            .all(|mv| mv.promotion_piece() == Some(Piece::Queen)));
+
+        let mut under_only = MoveList::new();
+        enumerate_moves(
+            &bb,
+            &pawn_sq,
+            Piece::Pawn,
+            &board,
+            &mut under_only,
+            PromotionFilter::UnderOnly,
+        );
+        assert_eq!(under_only.len(), 3);
+        assert!(under_only
+            .iter()
+            .all(|mv| mv.promotion_piece() != Some(Piece::Queen)));
     }
 }
