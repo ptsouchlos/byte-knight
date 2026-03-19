@@ -30,6 +30,7 @@ build config="debug":
 test config="debug":
     echo "Running tests..."
     cargo test --workspace --all-targets {{ if config == "release" { "--release" } else { "" } }} -- --include-ignored
+    cargo test --workspace --doc
 
 export LLVM_PROFILE_FILE := "./target/coverage/byte_knight-%p-%m.profraw"
 
