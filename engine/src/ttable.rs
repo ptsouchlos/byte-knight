@@ -125,6 +125,12 @@ impl TranspositionTable {
             * 100_f64
     }
 
+    pub(crate) fn hashfull(&self) -> u16 {
+        let sample = self.table.len().min(1000);
+        let used = self.table[..sample].iter().filter(|e| e.is_some()).count();
+        ((used * 1000) / sample) as u16
+    }
+
     pub(crate) fn size(&self) -> usize {
         self.table.len()
     }
