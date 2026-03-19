@@ -534,7 +534,7 @@ mod tests {
 
             for mv in all_moves.iter() {
                 assert!(
-                    staged_moves.iter().any(|sm| *sm == *mv),
+                    staged_moves.contains(mv),
                     "Move {} from full gen not found in staged gen for position: {fen}",
                     mv.to_long_algebraic()
                 );
