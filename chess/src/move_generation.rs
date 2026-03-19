@@ -166,7 +166,6 @@ fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
         Piece::King,
         board,
         move_list,
-        enumerate::PromotionFilter::All,
     );
 }
 
@@ -199,7 +198,6 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_t
             piece,
             board,
             move_list,
-            enumerate::PromotionFilter::All,
         );
     }
 }
@@ -294,7 +292,6 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType)
             Piece::Pawn,
             board,
             move_list,
-            enumerate::PromotionFilter::All,
         );
     }
 }
@@ -315,8 +312,8 @@ pub fn is_checkmate(board: &Board) -> bool {
     if !is_in_check(board) {
         return false;
     }
-    let mut move_list = MoveList::new();
-    generate_legal_moves(board, &mut move_list);
+
+    let move_list = generate_legal_moves(board, MoveType::All);
     move_list.is_empty()
 }
 
@@ -339,9 +336,7 @@ pub fn are_legal(board: &Board, list: &MoveList) -> bool {
 }
 
 /// Re-export from legal_move_generation for convenience.
-pub use crate::legal_move_generation::{
-    generate_legal_moves, generate_legal_quiets, generate_legal_tacticals,
-};
+pub use crate::legal_move_generation::generate_legal_moves;
 
 #[cfg(test)]
 mod tests {
@@ -711,7 +706,7 @@ mod tests {
         assert_eq!(move_list.len(), 20);
 
         move_list.clear();
-        move_generation::generate_legal_moves(&board, &mut move_list);
+        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
 
         for mv in move_list.iter() {
             println!("{mv}");

@@ -3,7 +3,11 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use crate::{board::Board, move_generation, move_list::MoveList, moves::Move};
+use crate::{
+    board::Board,
+    move_generation,
+    moves::{Move, MoveType},
+};
 use anyhow::{Result, bail};
 
 pub struct SplitPerftResult {
@@ -29,8 +33,7 @@ pub fn split_perft(
     depth: usize,
     print_moves: bool,
 ) -> Result<Vec<SplitPerftResult>> {
-    let mut move_list = MoveList::new();
-    move_generation::generate_legal_moves(board, &mut move_list);
+    let move_list = move_generation::generate_legal_moves(board, crate::moves::MoveType::All);
 
     let mut results = Vec::new();
     for mv in move_list.iter() {
@@ -69,8 +72,7 @@ pub fn split_perft(
 #[cfg_attr(debug_assertions, inline(never))]
 pub fn perft(board: &mut Board, depth: usize, print_moves: bool) -> Result<u64> {
     let mut nodes = 0;
-    let mut move_list = MoveList::new();
-    move_generation::generate_legal_moves(board, &mut move_list);
+    let move_list = move_generation::generate_legal_moves(board, MoveType::All);
 
     if print_moves {
         for mv in move_list.iter() {
@@ -712,9 +714,8 @@ mod tests {
     fn kz_many_moves() {
         let board =
             Board::from_fen("R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1").unwrap();
-        let mut move_list = MoveList::new();
 
-        move_generation::generate_legal_moves(&board, &mut move_list);
+        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
         assert_eq!(move_list.len(), 218);
     }
 

@@ -558,8 +558,7 @@ mod tests {
     #[test]
     fn test_making_en_passant_move() {
         let mut board = Board::from_fen("8/2k5/8/2Pp3r/K7/8/8/8 w - d6 0 1").unwrap();
-        let mut move_list = MoveList::new();
-        move_generation::generate_legal_moves(&board, &mut move_list);
+        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
 
         let en_passant_move = move_list
             .iter()
@@ -745,9 +744,8 @@ mod tests {
         {
             // start with default board
             let mut board = Board::default_board();
-
-            move_generation::generate_legal_moves(&board, &mut move_list);
-            // only move pawns and do 2 up move
+            let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+            // only move pawns and do 2 up movelet mut move_list = MoveList::new();
             let first_mv = move_list
                 .iter()
                 .find(|mv| mv.to_long_algebraic() == "e2e4")

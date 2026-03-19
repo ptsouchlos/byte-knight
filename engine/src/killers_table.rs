@@ -52,7 +52,7 @@ impl Default for KillerMovesTable {
 mod tests {
     use super::KillerMovesTable;
     use crate::defs::{MAX_DEPTH, MAX_KILLERS_PER_PLY};
-    use chess::{board::Board, move_generation, move_list::MoveList};
+    use chess::{board::Board, move_generation, moves::MoveType};
 
     #[test]
     fn initialize_killers_table() {
@@ -68,8 +68,8 @@ mod tests {
     fn killer_update_no_duplicate_in_slot0() {
         let mut kt = KillerMovesTable::new();
         let board = Board::default_board();
-        let mut move_list = MoveList::default();
-        move_generation::generate_legal_moves(&board, &mut move_list);
+
+        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
 
         let mv_a = *move_list.at(0).unwrap();
         let mv_b = *move_list.at(1).unwrap();
@@ -86,8 +86,7 @@ mod tests {
     fn killer_update_rotates_slots() {
         let mut kt = KillerMovesTable::new();
         let board = Board::default_board();
-        let mut move_list = MoveList::default();
-        move_generation::generate_legal_moves(&board, &mut move_list);
+        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
 
         let mv_a = *move_list.at(0).unwrap();
         let mv_b = *move_list.at(1).unwrap();
