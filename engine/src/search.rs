@@ -830,24 +830,19 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         };
 
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        let move_list = move_generation::generate_legal_moves(board, MoveType::All);
+        // When in check we must consider all moves; otherwise captures only.
+        let move_filter = if in_check {
+            MoveType::All
+        } else {
+            MoveType::Capture
+        };
+        let mut move_list = move_generation::generate_legal_moves(board, move_filter);
 
         let mut local_pv = PrincipleVariation::new();
         // clear the current PV because this is a new position
         pv.clear();
 
-        // When in check we must consider all moves; otherwise captures only.
-        let mut moves: Vec<Move> = if in_check {
-            move_list.iter().copied().collect()
-        } else {
-            move_list
-                .iter()
-                .filter(|mv| mv.captured_piece().is_some())
-                .copied()
-                .collect()
-        };
-
-        if moves.is_empty() {
+        if move_list.is_empty() {
             // In check with no legal moves: checkmate
             if in_check {
                 return Score::new_mated() + ply;
@@ -880,7 +875,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let classify_res = MoveOrder::classify_all(
             ply as u8,
             board.side_to_move(),
-            moves.as_slice(),
+            move_list.as_slice(),
             &tt_move,
             self.history_table,
             self.killers_table,
@@ -890,7 +885,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // TODO(PT): Should we log a message to the CLI or a log?
         assert!(classify_res.is_ok());
 
-        let moves_slice = moves.as_mut_slice();
+        let moves_slice = move_list.as_mut_slice();
         let move_iter = InplaceIncrementalSort::new(moves_slice, &mut move_order_list);
 
         // When in check there is no stand-pat floor, so begin from -INF.
