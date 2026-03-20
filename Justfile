@@ -93,9 +93,15 @@ perft-epd: (build-target-release "byte-knight")
 [doc('Run perft benchmark over the EPD test suite')]
 [group('chess')]
 [group('performance')]
-perft-bench: (build-target-release "perft-bench")
+perft-bench file='data/standard.epd': (build-target-release "perft-bench")
     echo "Running perft benchmark..."
-    target/release/perft-bench -e data/standard.epd
+    target/release/perft-bench -e {{ file }}
+
+[doc('Run criterion benchmarks')]
+[group('chess')]
+[group('performance')]
+bench:
+    cargo bench -p chess
 
 [doc('Generate magic numbers use for magic bitboards')]
 [group('chess')]

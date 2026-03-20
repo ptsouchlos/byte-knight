@@ -126,7 +126,7 @@ checksum = "1628fb46dfa0b37568d12e5edd512553eccf6a22a78e8bde00bb4aed84d5bdbf"
 
 [[package]]
 name = "byte-knight"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "chess",
  "clap",
@@ -488,7 +488,7 @@ checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 
 [[package]]
 name = "engine"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "anyhow",
  "arrayvec",
