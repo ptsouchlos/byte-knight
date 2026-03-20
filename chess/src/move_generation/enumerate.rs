@@ -15,6 +15,17 @@ use crate::{
     square::{self, Square},
 };
 
+/// Controls which promotion types are generated during move enumeration.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PromotionFilter {
+    /// Generate all 4 promotion types (Queen, Rook, Bishop, Knight).
+    All,
+    /// Generate only queen promotions. Used for tactical move generation.
+    QueenOnly,
+    /// Generate only underpromotions (Rook, Bishop, Knight). Used for quiet move generation.
+    UnderOnly,
+}
+
 /// Enumerate all moves in a given bitboard and add them to the given [`MoveList`]
 ///
 /// # Arguments
@@ -23,6 +34,7 @@ use crate::{
 /// - `piece`: The `piece` that is moving.
 /// - `board`: The current [`Board`].
 /// - `move_list`: The [`MoveList`] to push enumerated moves into.
+/// - `promotion_filter`: Controls which promotion types are generated.
 #[allow(clippy::panic)]
 pub(crate) fn enumerate_moves(
     bitboard: &Bitboard,
@@ -36,13 +48,15 @@ pub(crate) fn enumerate_moves(
         return;
     }
 
+    let from_sq_idx = from.to_square_index();
+    let (from_file, _from_rank) = square::from_square(from_sq_idx);
+
     let us = board.side_to_move();
     let them = us.opposite();
     let enemy_pieces = board.pieces(them);
     let promotion_rank = Rank::promotion_rank(us);
     for to_square in bitboard.iter() {
         let (file, rank) = square::from_square(to_square);
-        let (from_file, _) = square::from_square(from.to_square_index());
 
         let en_passant = match board.en_passant_square() {
             Some(en_passant_square) => en_passant_square == to_square && piece == Piece::Pawn,
@@ -52,7 +66,7 @@ pub(crate) fn enumerate_moves(
         let is_capture: bool = enemy_pieces.is_square_occupied(to_square) || en_passant;
         // 2 rows = 16 squares
         let is_double_move =
-            piece == Piece::Pawn && (to_square as i8 - from.to_square_index() as i8).abs() == 16;
+            piece == Piece::Pawn && (to_square as i8 - from_sq_idx as i8).abs() == 16;
         let is_promotion =
             piece == Piece::Pawn && square::is_square_on_rank(to_square, promotion_rank as u8);
 
@@ -82,13 +96,13 @@ pub(crate) fn enumerate_moves(
 
         let to_square = square::to_square_object(file, rank);
         if is_promotion {
-            // we have to add 4 moves for each promotion type
-            for promotion_type in [
+            let promotion_types: &[PromotionDescriptor] = &[
                 PromotionDescriptor::Queen,
                 PromotionDescriptor::Rook,
                 PromotionDescriptor::Bishop,
                 PromotionDescriptor::Knight,
-            ] {
+            ];
+            for promotion_type in promotion_types {
                 let mv = Move::new(
                     from,
                     &to_square,

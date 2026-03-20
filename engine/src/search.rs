@@ -17,8 +17,11 @@ use std::{
 use anyhow::{Result, bail};
 use arrayvec::ArrayVec;
 use chess::{
-    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation, move_list::MoveList,
-    moves::Move, pieces::Piece,
+    board::Board,
+    definitions::MAX_MOVE_LIST_SIZE,
+    move_generation,
+    moves::{Move, MoveType},
+    pieces::Piece,
 };
 use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
@@ -218,8 +221,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             self.send_message(format!("searching {}", self.parameters));
         }
 
-        let mut ml = MoveList::new();
-        move_generation::generate_legal_moves(board, &mut ml);
+        let ml = move_generation::generate_legal_moves(board, MoveType::All);
         let mut result = match ml.len() {
             0 => {
                 // Draw or something else?
@@ -331,9 +333,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     fn iterative_deepening(&mut self, board: &mut Board) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::default();
-        let mut move_list = MoveList::new();
 
-        move_generation::generate_legal_moves(board, &mut move_list);
+        let move_list = move_generation::generate_legal_moves(board, MoveType::All);
         if !move_list.is_empty() {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
@@ -512,9 +513,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         // get all legal moves
-        let mut move_list = MoveList::new();
         let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        move_generation::generate_legal_moves(board, &mut move_list);
+        let mut move_list =
+            move_generation::generate_legal_moves(board, chess::moves::MoveType::All);
 
         // do we have moves?
         if move_list.is_empty() {
@@ -847,26 +848,20 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             alpha
         };
 
-        let mut move_list = MoveList::new();
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        move_generation::generate_legal_moves(board, &mut move_list);
+        // When in check we must consider all moves; otherwise captures only.
+        let move_filter = if in_check {
+            MoveType::All
+        } else {
+            MoveType::Capture
+        };
+        let mut move_list = move_generation::generate_legal_moves(board, move_filter);
 
         let mut local_pv = PrincipleVariation::new();
         // clear the current PV because this is a new position
         pv.clear();
 
-        // When in check we must consider all moves; otherwise captures only.
-        let mut moves: Vec<Move> = if in_check {
-            move_list.iter().copied().collect()
-        } else {
-            move_list
-                .iter()
-                .filter(|mv| mv.captured_piece().is_some())
-                .copied()
-                .collect()
-        };
-
-        if moves.is_empty() {
+        if move_list.is_empty() {
             // In check with no legal moves: checkmate
             if in_check {
                 return Score::new_mated() + ply;
@@ -899,7 +894,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let classify_res = MoveOrder::classify_all(
             ply as u8,
             board.side_to_move(),
-            moves.as_slice(),
+            move_list.as_slice(),
             &tt_move,
             self.history_table,
             self.killers_table,
@@ -909,7 +904,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // TODO(PT): Should we log a message to the CLI or a log?
         assert!(classify_res.is_ok());
 
-        let moves_slice = moves.as_mut_slice();
+        let moves_slice = move_list.as_mut_slice();
         let move_iter = InplaceIncrementalSort::new(moves_slice, &mut move_order_list);
 
         // When in check there is no stand-pat floor, so begin from -INF.

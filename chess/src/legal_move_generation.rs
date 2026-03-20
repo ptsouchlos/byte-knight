@@ -8,7 +8,10 @@ use crate::definitions::RANK_BITBOARDS;
 use crate::move_generation;
 use crate::move_generation::NORTH;
 use crate::move_generation::SOUTH;
+use crate::move_generation::enumerate::enumerate_moves;
+use crate::move_generation::metadata::CheckPinMetadata;
 use crate::move_list::MoveList;
+use crate::moves::MoveType;
 use crate::rays;
 use crate::square;
 use crate::{
@@ -82,7 +85,7 @@ fn calculate_en_passant_bitboard(
 ///
 /// These moves need to be enumerated to get the actual moves. See [`move_generation::enumerate_moves`]
 #[allow(clippy::too_many_arguments)]
-fn generate_legal_pawn_mobility(
+pub(crate) fn generate_legal_pawn_mobility(
     board: &Board,
     square: Square,
     pinned_pieces: Bitboard,
@@ -197,7 +200,7 @@ fn generate_legal_pawn_mobility(
 ///
 /// These moves need to be enumerated to get the actual moves. See [`move_generation::enumerate_moves`]
 #[allow(clippy::too_many_arguments)]
-fn generate_normal_piece_legal_mobility(
+pub(crate) fn generate_normal_piece_legal_mobility(
     piece: Piece,
     square: Square,
     board: &Board,
@@ -257,7 +260,7 @@ fn generate_normal_piece_legal_mobility(
 /// # Returns
 ///
 /// A [`Bitboard`] of legal moves for the king
-fn generate_king_legal_mobility(
+pub(crate) fn generate_king_legal_mobility(
     square: Square,
     board: &Board,
     capture_mask: Bitboard,
@@ -317,43 +320,42 @@ fn generate_king_legal_mobility(
 ///
 /// A [`Bitboard`] of legal moves for the piece that can them be enumerated.
 #[allow(clippy::too_many_arguments)]
-fn generate_legal_mobility(
+pub(crate) fn generate_legal_mobility(
     piece: Piece,
     square: Square,
     board: &Board,
-    pinned_mask: Bitboard,
-    capture_mask: Bitboard,
-    push_mask: Bitboard,
-    orthogonal_pin_rays: Bitboard,
-    diagonal_pin_rays: Bitboard,
-    checkers: Bitboard,
+    metadata: &CheckPinMetadata,
 ) -> Bitboard {
     match piece {
         Piece::Pawn => generate_legal_pawn_mobility(
             board,
             square,
-            pinned_mask,
-            capture_mask,
-            push_mask,
-            orthogonal_pin_rays,
-            diagonal_pin_rays,
-            checkers,
+            metadata.pinned,
+            metadata.capture_mask,
+            metadata.push_mask,
+            metadata.orthogonal_pin_rays,
+            metadata.diagonal_pin_rays,
+            metadata.checkers,
         ),
-        Piece::King => generate_king_legal_mobility(square, board, capture_mask, checkers),
+        Piece::King => {
+            generate_king_legal_mobility(square, board, metadata.capture_mask, metadata.checkers)
+        }
         _ => generate_normal_piece_legal_mobility(
             piece,
             square,
             board,
-            capture_mask,
-            pinned_mask,
-            push_mask,
-            orthogonal_pin_rays,
-            diagonal_pin_rays,
+            metadata.capture_mask,
+            metadata.pinned,
+            metadata.push_mask,
+            metadata.orthogonal_pin_rays,
+            metadata.diagonal_pin_rays,
         ),
     }
 }
 
 /// Generate all legal moves for the current [`Board`] state.
+///
+/// This is a convenience wrapper that generates tacticals followed by quiets.
 ///
 /// # Arguments
 ///
@@ -364,62 +366,63 @@ fn generate_legal_mobility(
 ///
 /// ```
 /// use chess::board::Board;
+/// use chess::moves::MoveType;
 /// use chess::move_list::MoveList;
 /// use chess::move_generation;
 ///
 /// let board = Board::default_board();
-/// let mut move_list = MoveList::new();
-/// move_generation::generate_legal_moves(&board, &mut move_list);
+/// let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
 /// assert_eq!(20, move_list.len())
 /// ```
-pub fn generate_legal_moves(board: &Board, move_list: &mut MoveList) {
+pub fn generate_legal_moves(board: &Board, move_types: MoveType) -> MoveList {
     let us = board.side_to_move();
+    let them = us.opposite();
     let our_pieces = board.pieces(us);
+    let their_pieces = board.pieces(them);
+    let filter = match move_types {
+        MoveType::All => Bitboard::FULL,
+        MoveType::Capture => their_pieces,
+        MoveType::Quiet => !their_pieces,
+    };
 
-    let king_bb = board.piece_bitboard(Piece::King, us);
-    let king_square = board.king_square(us);
+    let king_sq_idx = board.king_square(us);
+    let king_sq = Square::from_square_index(king_sq_idx);
+    let king_bb = Bitboard::from_square(king_sq_idx);
 
-    let (checkers, capture_mask, push_mask, pinned, orthogonal_pin_rays, diagonal_pin_rays) =
-        move_generation::calculate_check_and_pin_metadata(board);
+    let mut move_list = MoveList::new();
+    let meta = move_generation::metadata::compute(board);
 
-    let king_sq = Square::from_square_index(king_square);
-    let king_moves = generate_king_legal_mobility(king_sq, board, capture_mask, checkers);
-
-    move_generation::enumerate::enumerate_moves(
-        &king_moves,
-        &king_sq,
-        Piece::King,
+    // King moves first
+    let king_moves = generate_king_legal_mobility(
+        Square::from_square_index(king_sq_idx),
         board,
-        move_list,
-    );
+        meta.capture_mask,
+        meta.checkers,
+    ) & filter;
 
-    let num_checkers = checkers.as_number().count_ones();
-    if num_checkers > 1 {
-        return;
+    enumerate_moves(&king_moves, &king_sq, Piece::King, board, &mut move_list);
+
+    // Return early if in double check since only king moves are legal
+    if meta.num_checkers() > 1 {
+        return move_list;
     }
 
-    let moveable_pieces = our_pieces & !(*king_bb);
-    for from_sq in moveable_pieces.iter() {
-        let piece = match board.piece_on_square(from_sq) {
+    // Proceed with non-king pieces
+    let moveable_pieces = our_pieces & !king_bb;
+
+    for from_sq_idx in moveable_pieces.iter() {
+        let piece = match board.piece_on_square(from_sq_idx) {
             Some((piece, _)) => piece,
             None => continue,
         };
 
-        let from_square = Square::from_square_index(from_sq);
-        let moves = generate_legal_mobility(
-            piece,
-            from_square,
-            board,
-            pinned,
-            capture_mask,
-            push_mask,
-            orthogonal_pin_rays,
-            diagonal_pin_rays,
-            checkers,
-        );
+        let from_sq = Square::from_square_index(from_sq_idx);
+        let moves = generate_legal_mobility(piece, from_sq, board, &meta) & filter;
 
-        move_generation::enumerate::enumerate_moves(&moves, &from_square, piece, board, move_list);
+        enumerate_moves(&moves, &from_sq, piece, board, &mut move_list);
     }
+
+    move_list
 }
 
 #[cfg(test)]
@@ -428,12 +431,14 @@ mod tests {
 
     use super::*;
 
+    fn generate_moves_for_fen(fen: &str) -> MoveList {
+        let board = Board::from_fen(fen).unwrap();
+        generate_legal_moves(&board, MoveType::All)
+    }
+
     #[test]
     fn en_passant_capture_causes_discovered_check() {
-        let board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1").unwrap();
-        let mut move_list = MoveList::new();
-        generate_legal_moves(&board, &mut move_list);
-
+        let move_list = generate_moves_for_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1");
         for mv in move_list.iter() {
             println!("{mv}");
         }
@@ -443,27 +448,19 @@ mod tests {
 
     #[test]
     fn king_cannot_move_away_from_slider() {
-        let board = Board::from_fen("4k3/8/8/8/4R3/8/8/4K3 b - - 0 1").unwrap();
-
-        let mut move_list = MoveList::new();
-        generate_legal_moves(&board, &mut move_list);
+        let move_list = generate_moves_for_fen("4k3/8/8/8/4R3/8/8/4K3 b - - 0 1");
         assert_eq!(move_list.len(), 4);
     }
 
     #[test]
     fn king_cannot_slide_away_from_bishop() {
-        let board = Board::from_fen("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2").unwrap();
-
-        let mut move_list = MoveList::new();
-        generate_legal_moves(&board, &mut move_list);
+        let move_list = generate_moves_for_fen("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2");
         assert_eq!(move_list.len(), 8);
     }
 
     #[test]
     fn evade_check_with_en_passant_capture() {
-        let board = Board::from_fen("8/8/8/2k5/3Pp3/8/8/4K3 b - d3 0 1").unwrap();
-        let mut move_list = MoveList::new();
-        generate_legal_moves(&board, &mut move_list);
+        let move_list = generate_moves_for_fen("8/8/8/2k5/3Pp3/8/8/4K3 b - d3 0 1");
 
         for mv in move_list.iter() {
             println!("{mv}");
@@ -497,5 +494,51 @@ mod tests {
 
         let ray = rays::between(Squares::A1, Squares::C2);
         assert!(ray == Bitboard::default());
+    }
+
+    #[test]
+    fn staged_generation_equals_full_generation() {
+        let positions = [
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+            "r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2",
+            "8/8/8/2k5/2pP4/8/B7/4K3 b - d3 0 3",
+            "4k3/4P3/8/8/8/8/8/4K3 w - - 0 1",
+            "r3k2r/p1pp1pb1/bn2Qnp1/2qPN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQkq - 3 2",
+        ];
+
+        for fen in &positions {
+            let board = Board::from_fen(fen).unwrap();
+
+            let all_moves = generate_legal_moves(&board, MoveType::All);
+            let captures = generate_legal_moves(&board, MoveType::Capture);
+            let quiets = generate_legal_moves(&board, MoveType::Quiet);
+
+            let staged_moves = captures
+                .iter()
+                .chain(quiets.iter())
+                .cloned()
+                .collect::<Vec<_>>();
+
+            assert_eq!(
+                all_moves.len(),
+                staged_moves.len(),
+                "Move count mismatch for position: {fen}\nAll: {}\nStaged: {}",
+                all_moves.len(),
+                staged_moves.len()
+            );
+
+            for mv in all_moves.iter() {
+                assert!(
+                    staged_moves.contains(mv),
+                    "Move {} from full gen not found in staged gen for position: {fen}",
+                    mv.to_long_algebraic()
+                );
+            }
+        }
     }
 }
