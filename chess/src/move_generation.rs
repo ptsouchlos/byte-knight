@@ -162,7 +162,7 @@ fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
     let king_sq = Square::from_square_index(board.king_square(board.side_to_move()));
     enumerate_moves(
         &legal_castling_mobility,
-        &king_sq,
+        king_sq,
         Piece::King,
         board,
         move_list,
@@ -194,7 +194,7 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_t
 
         enumerate::enumerate_moves(
             &bb_moves,
-            &Square::from_square_index(from_sq),
+            Square::from_square_index(from_sq),
             piece,
             board,
             move_list,
@@ -266,12 +266,12 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType)
         // pawn captures
         if move_type == &MoveType::All || move_type == &MoveType::Capture {
             let bb_capture = attack_bb & their_pieces;
-            // en passant
+            // En passant
             let bb_en_passant = match board.en_passant_square() {
                 Some(en_passant_square) => {
-                    // we only want to add the en passant square if it is within range of the pawn
-                    // this means that the en passant square is within 1 rank of the pawn and the en passant square
-                    // is in the pawn's attack table
+                    // We only want to add the en passant square if it is within range of the pawn.
+                    // This means that the en passant square is within 1 rank of the pawn and the en passant square
+                    // is in the pawn's attack table.
                     let en_passant_bb = Bitboard::from_square(en_passant_square);
                     let result = en_passant_bb & !(attack_bb);
                     let is_in_range = result == 0;
@@ -288,7 +288,7 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType)
 
         enumerate::enumerate_moves(
             &bb_moves,
-            &Square::from_square_index(from_square),
+            Square::from_square_index(from_square),
             Piece::Pawn,
             board,
             move_list,
