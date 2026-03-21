@@ -291,7 +291,7 @@ mod tests {
     #[test]
     fn capacity() {
         let tt = TranspositionTable::from_size_in_mb(16);
-        // Meaas
+        // Measured emperically. If the TT entry size changes, this test will fail.
         assert_eq!(tt.size(), 1048576);
         println!("{} entries", tt.size());
     }
