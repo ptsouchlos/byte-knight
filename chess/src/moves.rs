@@ -46,13 +46,17 @@ impl MoveFlag {
         }
     }
 
+    #[allow(clippy::panic)]
     pub fn from_promotion_piece(piece: Piece) -> Self {
         match piece {
             Piece::Queen => MoveFlag::PromotionQueen,
             Piece::Rook => MoveFlag::PromotionRook,
             Piece::Bishop => MoveFlag::PromotionBishop,
             Piece::Knight => MoveFlag::PromotionKnight,
-            _ => panic!("Invalid promotion piece given to MoveFlag"),
+            _ => panic!(
+                "Invalid promotion piece: {:?} cannot be used for promotion",
+                piece
+            ),
         }
     }
 

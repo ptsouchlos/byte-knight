@@ -35,10 +35,12 @@ impl MovePieceInfo {
         }
     }
 
+    #[allow(clippy::expect_used)]
     pub(crate) fn piece(&self) -> Piece {
         Piece::try_from(self.piece).expect("Previous move must be stored with a piece.")
     }
 
+    #[allow(clippy::expect_used)]
     pub(crate) fn captured_piece(&self) -> Option<Piece> {
         self.captured_piece.map(|p| {
             Piece::try_from(p).expect("If captured piece is Some, piece value must be valid.")

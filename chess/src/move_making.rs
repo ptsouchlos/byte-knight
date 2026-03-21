@@ -117,9 +117,9 @@ impl Board {
         let maybe_captured_piece = self.piece_on_square(to);
 
         // we don't handle en passant captures here
-        if maybe_captured_piece.is_some() && !mv.is_en_passant_capture() {
-            let (captured_piece, cap_side) = maybe_captured_piece.unwrap();
-
+        if !mv.is_en_passant_capture()
+            && let Some((captured_piece, cap_side)) = maybe_captured_piece
+        {
             // check that the capture piece matches and is not our own
             if cap_side != them {
                 bail!("Invalid captured piece on square");
@@ -370,9 +370,10 @@ impl Board {
         if chess_move == Move::default() {
             // Unmaking a null move so we just need to switch the side back and restore the en passant square if needed. There are no pieces to move or capture to restore.
             // Note that we don't need to update the zobrist hash here as it is restored from the game state.
-            state
-                .en_passant_square
-                .map(|sq| self.set_en_passant_square(Some(sq)));
+            if let Some(sq) = state.en_passant_square {
+                self.set_en_passant_square(Some(sq));
+            }
+
             return Ok(());
         }
 

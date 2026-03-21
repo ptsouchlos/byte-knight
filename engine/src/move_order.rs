@@ -149,6 +149,7 @@ mod tests {
         ttable::{EntryFlag, TranspositionTable, TranspositionTableEntry},
     };
 
+    #[allow(clippy::expect_used)]
     fn piece_for_move(board: &Board, mv: &Move) -> Piece {
         board
             .piece_on_square(mv.from())
