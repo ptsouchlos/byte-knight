@@ -15,17 +15,6 @@ use crate::{
     square::{self, Square},
 };
 
-/// Controls which promotion types are generated during move enumeration.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum PromotionFilter {
-    /// Generate all 4 promotion types (Queen, Rook, Bishop, Knight).
-    All,
-    /// Generate only queen promotions. Used for tactical move generation.
-    QueenOnly,
-    /// Generate only underpromotions (Rook, Bishop, Knight). Used for quiet move generation.
-    UnderOnly,
-}
-
 /// Enumerate all moves in a given bitboard and add them to the given [`MoveList`]
 ///
 /// # Arguments
