@@ -151,13 +151,12 @@ impl Board {
             )
         })?;
 
-        let maybe_captured_piece = self.piece_on_square(to);
+        let captured = self.captured(mv);
 
         let mut current_state = *self.board_state();
         current_state.next_move = *mv;
         // Store move info that'll we'll need for undoing
-        current_state.next_move_info =
-            MovePieceInfo::new_with_piece(piece, maybe_captured_piece.map(|(pc, _)| pc));
+        current_state.next_move_info = MovePieceInfo::new_with_piece(piece, captured);
         // update history before modifying the current state
         self.history.push(current_state);
 
@@ -168,10 +167,8 @@ impl Board {
 
         // en passant capture is handled separately
         if !mv.is_en_passant_capture()
-            && let Some((cap, side)) = maybe_captured_piece
+            && let Some(cap) = captured
         {
-            debug_assert!(side == them, "Captured piece must be on the opposite side");
-
             // remove the captured piece from the board
             self.remove_piece(them, cap, to, update_zobrist_hash);
             // reset half move clock
@@ -251,7 +248,7 @@ impl Board {
             }
             // just move the piece
             self.move_piece(us, piece, from, to, update_zobrist_hash);
-            if maybe_captured_piece.is_none() {
+            if captured.is_none() {
                 self.set_half_move_clock(self.half_move_clock() + 1);
             }
         }

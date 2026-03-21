@@ -86,12 +86,12 @@ impl MoveOrder {
             .piece_on_square(mv.from())
             .map(|(pc, _)| pc)
             .expect("From piece must exist.");
-        let maybe_capture_piece = board.piece_on_square(mv.to());
+        let maybe_capture_piece = board.captured(mv);
         let is_capture = maybe_capture_piece.is_some();
 
         if is_capture {
-            let (victim, enemy_side) = maybe_capture_piece.expect("Capture move without victim");
-            debug_assert!(enemy_side == stm.opposite(), "Victim is not an enemy");
+            // We can unwrap here because we know it's a capture move, so there must be a captured piece.
+            let victim = maybe_capture_piece.unwrap();
             return Self::Capture(victim, piece);
         }
 

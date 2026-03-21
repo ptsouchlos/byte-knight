@@ -562,7 +562,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let is_in_check = move_generation::is_in_check(board);
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
-            let is_quiet = board.piece_on_square(mv.to()).is_none();
+            let is_quiet = board.piece_on_square(mv.to()).is_none() & !mv.is_en_passant_capture();
             let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
 
             // Move-loop pruning techniques
@@ -662,11 +662,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             bonus as LargeScoreType,
                         );
 
-                        // apply a penalty to all quiets searched so far
+                        // Apply a penalty to all quiets searched so far.
                         for mv in move_list
                             .iter()
                             .take(loop_counter)
-                            .filter(|mv| board.piece_on_square(mv.to()).is_none())
+                            .filter(|mv| board.captured(mv).is_none())
                         {
                             let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
                             self.history_table.update(

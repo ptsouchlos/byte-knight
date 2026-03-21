@@ -12,16 +12,6 @@ use crate::{
     square::Square,
 };
 
-// Bit masks for move information
-const MOVE_INFO_TO_MASK: u16 = 0b111111; // 6 bits for from square
-const MOVE_INFO_FROM_MASK: u16 = 0b111111000000;
-const MOVE_INFO_DESCRIPTOR_MASK: u16 = 0b1111000000000000;
-
-// Shifts for move information
-const MOVE_INFO_FROM_SHIFT: u16 = 6;
-const MOVE_INFO_TO_SHIFT: u16 = 0;
-const MOVE_INFO_MOVE_DESCRIPTOR_SHIFT: u16 = 12;
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum MoveFlag {
     Standard = 0,
@@ -121,14 +111,25 @@ pub enum MoveType {
     All,
 }
 
+// Bit masks for move information
+const MOVE_INFO_TO_MASK: u16 = 0b111111;
+const MOVE_INFO_FROM_MASK: u16 = 0b111111000000;
+const MOVE_INFO_DESCRIPTOR_MASK: u16 = 0b1111000000000000;
+
+// Shifts for move information
+const MOVE_INFO_TO_SHIFT: u16 = 0;
+const MOVE_INFO_FROM_SHIFT: u16 = 6;
+const MOVE_INFO_MOVE_DESCRIPTOR_SHIFT: u16 = 12;
+
 /// Compact 16-bit move representation. Inspired by Hobbes and Carp.
 ///
-///     +--------+-----------+------------+
-///     v  Type  v   From    v     To     v
-///     +--------|-----------|------------+
+/// ```ignore
+///      -------- ----------- ------------
+///     |  Type  |   From    |     To     |
+///      --------|-----------|------------
 ///     | 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 |
-/// MSB +--------|-----------|------------+ LSB
-///
+/// MSB  --------|-----------|------------ LSB
+/// ```
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Move {
     /// The move information, from LSB to MSB:
