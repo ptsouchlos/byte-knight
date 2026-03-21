@@ -629,6 +629,15 @@ impl Board {
         flipped
     }
 
+    /// Helper to get the captured piece for a given move.
+    /// Use this instead of checking piece_on_square for the move's destination square,
+    /// as this will correctly handle en passant captures and castling moves.
+    ///
+    /// # Arguments
+    /// - `mv` - The move for which to get the captured piece.
+    ///
+    /// # Returns
+    /// - `Some(Piece)` if the move is a capture, otherwise `None`.
     #[inline]
     pub fn captured(&self, mv: &Move) -> Option<Piece> {
         if mv.is_castle() {
