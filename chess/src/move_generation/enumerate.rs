@@ -67,10 +67,10 @@ pub(crate) fn enumerate_moves(
         let to_square = square::to_square_object(file, rank);
         if is_promotion {
             let flags: &[MoveFlag] = &[
+                MoveFlag::PromotionQueen,
+                MoveFlag::PromotionRook,
                 MoveFlag::PromotionBishop,
                 MoveFlag::PromotionKnight,
-                MoveFlag::PromotionRook,
-                MoveFlag::PromotionQueen,
             ];
             for flg in flags {
                 let mv = Move::new(from, to_square, *flg);
