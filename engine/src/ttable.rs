@@ -192,8 +192,7 @@ mod tests {
     use super::{EntryFlag, TranspositionTable, TranspositionTableEntry};
     use crate::score::Score;
     use chess::{
-        moves::{Move, MoveDescriptor},
-        pieces::Piece,
+        moves::{Move, MoveFlag},
         square::Square,
     };
     use itertools::Itertools;
@@ -236,28 +235,19 @@ mod tests {
         let hash2 = 2423498723999_u64;
         let hash3 = 2423623733999_u64;
         let mv1 = Move::new(
-            &Square::from_square_index(3),
-            &Square::from_square_index(4),
-            MoveDescriptor::None,
-            Piece::Knight,
-            None,
-            None,
+            Square::from_square_index(3),
+            Square::from_square_index(4),
+            MoveFlag::Standard,
         );
         let mv2 = Move::new(
-            &Square::from_square_index(7),
-            &Square::from_square_index(10),
-            MoveDescriptor::None,
-            Piece::Knight,
-            None,
-            None,
+            Square::from_square_index(7),
+            Square::from_square_index(10),
+            MoveFlag::Standard,
         );
         let mv3 = Move::new(
-            &Square::from_square_index(7),
-            &Square::from_square_index(11),
-            MoveDescriptor::None,
-            Piece::Bishop,
-            Some(Piece::Pawn),
-            None,
+            Square::from_square_index(7),
+            Square::from_square_index(11),
+            MoveFlag::Standard,
         );
 
         // our tt implementation always overwrites, so let's make sure that's the case.

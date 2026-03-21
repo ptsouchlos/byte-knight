@@ -528,7 +528,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         let classify_res = MoveOrder::classify_all(
             ply as u8,
-            board.side_to_move(),
+            board,
             move_list.as_slice(),
             &tt_move,
             self.history_table,
@@ -562,6 +562,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let is_in_check = move_generation::is_in_check(board);
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
+            let is_quiet = board.piece_on_square(mv.to()).is_none();
+            let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
 
             // Move-loop pruning techniques
 
@@ -594,7 +596,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 } else {
                     let is_killer = self.killers_table.get(ply as u8).iter().any(|maybe_mv|maybe_mv.is_some_and(|klr|klr == mv));
                     // No LMR reduction for killer moves
-                    let reduction = if mv.is_quiet() && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
+                    let reduction = if is_quiet && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
                         if is_killer {
                             // Reduce less if the move is a killer
                             (lmr_reduction-1).max(1)
@@ -647,7 +649,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 // Did we fail high?
                 if alpha >= beta {
                     // update history table for quiets
-                    if mv.is_quiet() {
+                    if is_quiet {
                         // Update the killers table
                         self.killers_table.update(ply as u8, mv);
 
@@ -655,7 +657,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         let bonus = history_table::calculate_bonus_for_depth(depth);
                         self.history_table.update(
                             board.side_to_move(),
-                            mv.piece(),
+                            piece,
                             mv.to(),
                             bonus as LargeScoreType,
                         );
@@ -664,11 +666,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         for mv in move_list
                             .iter()
                             .take(loop_counter)
-                            .filter(|mv| mv.is_quiet())
+                            .filter(|mv| board.piece_on_square(mv.to()).is_none())
                         {
+                            let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
                             self.history_table.update(
                                 board.side_to_move(),
-                                mv.piece(),
+                                piece,
                                 mv.to(),
                                 -bonus as LargeScoreType,
                             );
@@ -893,7 +896,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // sort moves by MVV/LVA
         let classify_res = MoveOrder::classify_all(
             ply as u8,
-            board.side_to_move(),
+            board,
             move_list.as_slice(),
             &tt_move,
             self.history_table,
