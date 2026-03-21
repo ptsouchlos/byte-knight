@@ -259,16 +259,12 @@ impl Move {
 
     /// Returns the [`Piece`] that the move promotes to if any. Can be `None`.
     pub fn promotion_piece(&self) -> Option<Piece> {
-        if self.is_promote_to_queen() {
-            Some(Piece::Queen)
-        } else if self.is_promote_to_knight() {
-            Some(Piece::Knight)
-        } else if self.is_promote_to_rook() {
-            Some(Piece::Rook)
-        } else if self.is_promote_to_bishop() {
-            Some(Piece::Bishop)
-        } else {
-            None
+        match self.flag() {
+            MoveFlag::PromotionQueen => Some(Piece::Queen),
+            MoveFlag::PromotionRook => Some(Piece::Rook),
+            MoveFlag::PromotionBishop => Some(Piece::Bishop),
+            MoveFlag::PromotionKnight => Some(Piece::Knight),
+            _ => None,
         }
     }
 
