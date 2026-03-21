@@ -698,7 +698,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             };
 
             self.transposition_table
-                .store_entry(TranspositionTableEntry::new(
+                .store_entry(board.zobrist_hash(), TranspositionTableEntry::new(
                     board.zobrist_hash(),
                     depth as u8,
                     best_score.remove_ply_bias(ply),
@@ -965,7 +965,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             };
 
             self.transposition_table
-                .store_entry(TranspositionTableEntry::new(
+                .store_entry(board.zobrist_hash(), TranspositionTableEntry::new(
                     board.zobrist_hash(),
                     0u8,
                     best.remove_ply_bias(ply),

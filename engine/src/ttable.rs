@@ -12,24 +12,33 @@ use crate::{
 
 const BYTES_PER_MB: usize = 1024 * 1024;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[repr(u8)]
 pub enum EntryFlag {
+    #[default]
     Exact,
     LowerBound,
     UpperBound,
 }
 
 /// A transposition table entry.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
+#[repr(C)]
 pub(crate) struct TranspositionTableEntry {
-    pub zobrist: u64,
+    pub zobrist_key: u16,
     pub score: Score,
     pub board_move: Move,
     pub depth: u8,
     pub flag: EntryFlag,
 }
 
+const _: () = assert!(std::mem::size_of::<TranspositionTableEntry>() == 8);
+
 impl TranspositionTableEntry {
+    pub fn is_empty(&self) -> bool {
+        self.zobrist_key == 0
+    }
+
     #[allow(dead_code)]
     pub fn new(
         zobrist: u64,
@@ -39,18 +48,22 @@ impl TranspositionTableEntry {
         mv: Move,
     ) -> TranspositionTableEntry {
         TranspositionTableEntry {
-            zobrist,
+            zobrist_key: (zobrist >> 48) as u16,
             depth,
             score,
             flag,
             board_move: mv,
         }
     }
+
+    pub const fn validate_key(&self, zobrist: u64) -> bool {
+        self.zobrist_key == (zobrist & 0xFFFF) as u16
+    }
 }
 
 /// A transposition table used to store the results of previous searches.
 pub struct TranspositionTable {
-    table: Vec<Option<TranspositionTableEntry>>,
+    table: Vec<TranspositionTableEntry>,
     pub(crate) collisions: usize,
     pub(crate) accesses: usize,
     pub(crate) hits: usize,
@@ -83,7 +96,7 @@ pub(crate) enum ProbeResult {
 impl TranspositionTable {
     pub(crate) fn from_capacity(capacity: usize) -> Self {
         Self {
-            table: vec![None; capacity],
+            table: vec![TranspositionTableEntry::default(); capacity],
             collisions: 0,
             accesses: 0,
             hits: 0,
@@ -101,17 +114,18 @@ impl TranspositionTable {
 
     pub(crate) fn get_entry(&self, zobrist: u64) -> Option<TranspositionTableEntry> {
         let index = self.get_index(zobrist);
-        self.table[index]
+        let entry = self.table[index];
+        if entry.is_empty() { None } else { Some(entry) }
     }
 
-    pub(crate) fn store_entry(&mut self, entry: TranspositionTableEntry) {
-        let index = self.get_index(entry.zobrist);
-        self.table[index] = Some(entry);
+    pub(crate) fn store_entry(&mut self, zobrist: u64, entry: TranspositionTableEntry) {
+        let index = self.get_index(zobrist);
+        self.table[index] = entry;
     }
 
     pub(crate) fn clear(&mut self) {
         self.table.iter_mut().for_each(|element| {
-            *element = None;
+            *element = TranspositionTableEntry::default();
         });
 
         // reset stats as well
@@ -121,13 +135,17 @@ impl TranspositionTable {
     }
 
     pub(crate) fn fullness(&self) -> f64 {
-        (self.table.iter().filter(|entry| entry.is_some()).count() as f64 / self.table.len() as f64)
+        (self.table.iter().filter(|entry| !entry.is_empty()).count() as f64
+            / self.table.len() as f64)
             * 100_f64
     }
 
     pub(crate) fn hashfull(&self) -> u16 {
         let sample = self.table.len().min(1000);
-        let used = self.table[..sample].iter().filter(|e| e.is_some()).count();
+        let used = self.table[..sample]
+            .iter()
+            .filter(|e| !e.is_empty())
+            .count();
         ((used * 1000) / sample) as u16
     }
 
@@ -157,9 +175,8 @@ impl TranspositionTable {
     ) -> ProbeResult {
         if let Some(entry) = self.get_entry(zobrist) {
             self.accesses += 1;
-            // verify the zobrist hash as we could have collisions due to using modulo as a hash function
-            // and the fact that we are using a fixed size table.
-            if entry.zobrist == zobrist {
+            // verify the partial zobrist key to detect collisions
+            if entry.zobrist_key == (zobrist >> 48) as u16 {
                 self.hits += 1;
                 if entry.depth >= depth as u8 {
                     // can we cut off?
@@ -200,6 +217,11 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
+    fn entry_size() {
+        assert_eq!(std::mem::size_of::<TranspositionTableEntry>(), 8);
+    }
+
+    #[test]
     fn get_index() {
         let tt = TranspositionTable::from_size_in_mb(32);
         let mut rng = rand::rng();
@@ -231,9 +253,10 @@ mod tests {
     #[test]
     fn store_and_retrieve() {
         let mut tt = TranspositionTable::from_size_in_mb(16);
-        let hash1 = 1234512341999_u64;
-        let hash2 = 2423498723999_u64;
-        let hash3 = 2423623733999_u64;
+        // Use hashes with non-zero upper 16 bits (realistic zobrist hash values).
+        let hash1 = 0xDEAD_BEEF_1234_5678_u64;
+        let hash2 = 0xCAFE_BABE_ABCD_EF01_u64;
+        let hash3 = 0x1234_ABCD_5678_EF01_u64;
         let mv1 = Move::new(
             Square::from_square_index(3),
             Square::from_square_index(4),
@@ -251,37 +274,28 @@ mod tests {
         );
 
         // our tt implementation always overwrites, so let's make sure that's the case.
-        tt.store_entry(TranspositionTableEntry::new(
+        tt.store_entry(
             hash1,
-            3,
-            Score::new(-123),
-            EntryFlag::Exact,
-            mv1,
-        ));
+            TranspositionTableEntry::new(hash1, 3, Score::new(-123), EntryFlag::Exact, mv1),
+        );
 
         let stored_entry1 = tt.get_entry(hash1);
         assert!(stored_entry1.is_some());
         assert_eq!(stored_entry1.unwrap().board_move, mv1);
 
-        tt.store_entry(TranspositionTableEntry::new(
+        tt.store_entry(
             hash2,
-            3,
-            Score::new(123),
-            EntryFlag::Exact,
-            mv2,
-        ));
+            TranspositionTableEntry::new(hash2, 3, Score::new(123), EntryFlag::Exact, mv2),
+        );
 
         let stored_entry2 = tt.get_entry(hash2);
         assert!(stored_entry2.is_some());
         assert_eq!(stored_entry2.unwrap().board_move, mv2);
 
-        tt.store_entry(TranspositionTableEntry::new(
+        tt.store_entry(
             hash3,
-            3,
-            Score::new(123),
-            EntryFlag::Exact,
-            mv3,
-        ));
+            TranspositionTableEntry::new(hash3, 3, Score::new(123), EntryFlag::Exact, mv3),
+        );
 
         let stored_entry3 = tt.get_entry(hash3);
         assert!(stored_entry3.is_some());
@@ -292,7 +306,7 @@ mod tests {
     fn capacity() {
         let tt = TranspositionTable::from_size_in_mb(16);
         // Measured emperically. If the TT entry size changes, this test will fail.
-        assert_eq!(tt.size(), 1048576);
+        assert_eq!(tt.size(), 2097152);
         println!("{} entries", tt.size());
     }
 }
