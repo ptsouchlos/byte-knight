@@ -287,4 +287,12 @@ mod tests {
         assert!(stored_entry3.is_some());
         assert_eq!(stored_entry3.unwrap().board_move, mv3);
     }
+
+    #[test]
+    fn capacity() {
+        let tt = TranspositionTable::from_size_in_mb(16);
+        // Meaas
+        assert_eq!(tt.size(), 1048576);
+        println!("{} entries", tt.size());
+    }
 }
