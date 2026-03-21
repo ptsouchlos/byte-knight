@@ -367,7 +367,7 @@ impl Board {
         // this is move that we're unmaking
         let chess_move = state.next_move;
 
-        if chess_move == Move::default() {
+        if chess_move.is_null_move() {
             // Unmaking a null move so we just need to switch the side back and restore the en passant square if needed. There are no pieces to move or capture to restore.
             // Note that we don't need to update the zobrist hash here as it is restored from the game state.
             if let Some(sq) = state.en_passant_square {
