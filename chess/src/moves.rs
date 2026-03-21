@@ -5,56 +5,112 @@
 
 use std::fmt::Display;
 
+use anyhow::{Result, bail};
+
 use crate::{
     pieces::{PIECE_SHORT_NAMES, Piece, SQUARE_NAME},
     square::Square,
 };
-const MOVE_INFO_CAPTURED_PIECE_SHIFT: u32 = 20;
-const MOVE_INFO_PIECE_SHIFT: u32 = 17;
-const MOVE_INFO_FROM_SHIFT: u32 = 11;
-const MOVE_INFO_TO_SHIFT: u32 = 5;
-const MOVE_INFO_PROMOTION_DESCRIPTOR_SHIFT: u32 = 3;
-const MOVE_INFO_IS_PROMOTION_SHIFT: u32 = 2;
 
-const MOVE_INFO_FROM_MASK: u32 = 0b11111100000000000;
-const MOVE_INFO_TO_MASK: u32 = 0b11111100000;
-const MOVE_PROMOTION_DESCRIPTOR_MASK: u32 = 0b11000;
+// Bit masks for move information
+const MOVE_INFO_TO_MASK: u16 = 0b111111; // 6 bits for from square
+const MOVE_INFO_FROM_MASK: u16 = 0b111111000000;
+const MOVE_INFO_DESCRIPTOR_MASK: u16 = 0b1111000000000000;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum MoveDescriptor {
-    None = 0,
-    EnPassantCapture,
-    Castle,
-    PawnTwoUp,
+// Shifts for move information
+const MOVE_INFO_FROM_SHIFT: u16 = 6;
+const MOVE_INFO_TO_SHIFT: u16 = 0;
+const MOVE_INFO_MOVE_DESCRIPTOR_SHIFT: u16 = 12;
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum MoveFlag {
+    Standard = 0,
+    DoublePush = 1,
+    EnPassant = 2,
+    CastleK = 3,
+    CastleQ = 4,
+    PromotionQueen = 5,
+    PromotionRook = 6,
+    PromotionBishop = 7,
+    PromotionKnight = 8,
 }
 
-impl Display for MoveDescriptor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl MoveFlag {
+    pub fn is_promotion(&self) -> bool {
+        matches!(
+            self,
+            MoveFlag::PromotionQueen
+                | MoveFlag::PromotionRook
+                | MoveFlag::PromotionBishop
+                | MoveFlag::PromotionKnight
+        )
+    }
+
+    pub fn promotion_piece(&self) -> Option<Piece> {
         match self {
-            MoveDescriptor::None => write!(f, "None"),
-            MoveDescriptor::EnPassantCapture => write!(f, "EnPassantCapture"),
-            MoveDescriptor::Castle => write!(f, "Castle"),
-            MoveDescriptor::PawnTwoUp => write!(f, "PawnTwoUp"),
+            MoveFlag::PromotionQueen => Some(Piece::Queen),
+            MoveFlag::PromotionRook => Some(Piece::Rook),
+            MoveFlag::PromotionBishop => Some(Piece::Bishop),
+            MoveFlag::PromotionKnight => Some(Piece::Knight),
+            _ => None,
         }
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum PromotionDescriptor {
-    Queen,
-    Knight,
-    Rook,
-    Bishop,
-}
-
-impl PromotionDescriptor {
-    pub(crate) fn to_piece(self) -> Piece {
-        match self {
-            PromotionDescriptor::Queen => Piece::Queen,
-            PromotionDescriptor::Knight => Piece::Knight,
-            PromotionDescriptor::Rook => Piece::Rook,
-            PromotionDescriptor::Bishop => Piece::Bishop,
+    pub fn from_promotion_piece(piece: Piece) -> Self {
+        match piece {
+            Piece::Queen => MoveFlag::PromotionQueen,
+            Piece::Rook => MoveFlag::PromotionRook,
+            Piece::Bishop => MoveFlag::PromotionBishop,
+            Piece::Knight => MoveFlag::PromotionKnight,
+            _ => panic!("Invalid promotion piece given to MoveFlag"),
         }
+    }
+
+    pub fn validate(&self, moving_piece: Piece) -> Result<()> {
+        match self {
+            MoveFlag::PromotionBishop
+            | MoveFlag::PromotionKnight
+            | MoveFlag::PromotionQueen
+            | MoveFlag::PromotionRook => {
+                if moving_piece != Piece::Pawn {
+                    bail!(
+                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                        self,
+                        moving_piece
+                    );
+                }
+            }
+            MoveFlag::DoublePush => {
+                if moving_piece != Piece::Pawn {
+                    bail!(
+                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                        self,
+                        moving_piece
+                    );
+                }
+            }
+            MoveFlag::EnPassant => {
+                if moving_piece != Piece::Pawn {
+                    bail!(
+                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                        self,
+                        moving_piece
+                    );
+                }
+            }
+            MoveFlag::CastleK | MoveFlag::CastleQ => {
+                if moving_piece != Piece::King {
+                    bail!(
+                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                        self,
+                        moving_piece
+                    );
+                }
+            }
+            _ => {}
+        }
+
+        Ok(())
     }
 }
 
@@ -65,36 +121,30 @@ pub enum MoveType {
     All,
 }
 
-/// Compact, 32-bit move representation
-/// Taken from <https://github.com/SebLague/Chess-Challenge/blob/main/Chess-Challenge/src/Framework/Chess/Board/Move.cs>
-/// Also inspired by Rustic's move representation: <https://github.com/mvanthoor/rustic/blob/master/src/movegen/defs.rs>
+/// Compact 16-bit move representation. Inspired by Hobbes and Carp.
+///
+///     +--------+-----------+------------+
+///     v  Type  v   From    v     To     v
+///     +--------|-----------|------------+
+///     | 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 |
+/// MSB +--------|-----------|------------+ LSB
+///
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Move {
     /// The move information, from LSB to MSB:
-    /// The first 2 bits represent the move descriptor.
-    /// The next 1 bit tells us if the move is a promotion or not.
-    /// The next 2 bits represent the promotion descriptor.
-    /// The next 6 bits represent the to square.
-    /// The next 6 bits represent the from square.
-    /// The next 3 bits represent the piece doing the move.
-    /// The next 3 bits represent the captured piece (if any).
-    /// The last 9 bits are unused.
-    /// 000 000 000 ccc ppp fffff tttttt pp P mm
-    move_info: u32,
+    /// - The first 6 bits represent the from square (0-63).
+    /// - Next 6 bits represent the to square (0-63).
+    /// - Final 4 bits represent the move descriptor (0-15).
+    move_info: u16,
 }
 
 impl Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}, type: {}, piece: {}, cap: {}, promo: {}",
+            "{}, type: {}",
             self.to_long_algebraic(),
-            self.move_descriptor() as u8,
-            self.piece(),
-            self.captured_piece()
-                .map_or("".to_string(), |p| p.to_string()),
-            self.promotion_piece()
-                .map_or("".to_string(), |p| p.to_string()),
+            self.flag() as u8,
         )
     }
 }
@@ -113,35 +163,12 @@ impl PartialOrd for Move {
 
 impl Move {
     /// Creates a new [`Move`].
-    pub fn new(
-        from: &Square,
-        to: &Square,
-        descriptor: MoveDescriptor,
-        piece: Piece,
-        captured_piece: Option<Piece>,
-        promotion_piece: Option<Piece>,
-    ) -> Self {
-        let from_index = from.to_square_index() as u32;
-        let to_index = to.to_square_index() as u32;
-
-        let is_promotion = promotion_piece.is_some();
-        let promotion_descriptor = match promotion_piece {
-            Some(Piece::Queen) => PromotionDescriptor::Queen as u32,
-            Some(Piece::Knight) => PromotionDescriptor::Knight as u32,
-            Some(Piece::Rook) => PromotionDescriptor::Rook as u32,
-            Some(Piece::Bishop) => PromotionDescriptor::Bishop as u32,
-            None => 0,
-            _ => 0,
-        };
-        let move_info = ((captured_piece.map_or(Piece::NONE, |cp| cp as u32))
-            << MOVE_INFO_CAPTURED_PIECE_SHIFT)
-            | ((piece as u32) << MOVE_INFO_PIECE_SHIFT)
-            | (from_index << MOVE_INFO_FROM_SHIFT)
-            | (to_index << MOVE_INFO_TO_SHIFT)
-            | (promotion_descriptor << MOVE_INFO_PROMOTION_DESCRIPTOR_SHIFT)
-            | ((is_promotion as u32) << MOVE_INFO_IS_PROMOTION_SHIFT)
-            | descriptor as u32;
-        Self { move_info }
+    pub fn new(from: Square, to: Square, descriptor: MoveFlag) -> Self {
+        Self {
+            move_info: (to.to_square_index() as u16)
+                | ((from.to_square_index() as u16) << MOVE_INFO_FROM_SHIFT)
+                | ((descriptor as u16) << MOVE_INFO_MOVE_DESCRIPTOR_SHIFT),
+        }
     }
 
     /// Checks if the underlying move information is valid (i.e. non-zero).
@@ -150,31 +177,14 @@ impl Move {
     }
 
     /// Create a new castle move
-    pub fn new_castle(king_from: &Square, king_to: &Square) -> Self {
-        Self::new(
-            king_from,
-            king_to,
-            MoveDescriptor::Castle,
-            Piece::King,
-            None,
-            None,
-        )
-    }
+    pub fn new_castle(king_from: Square, king_to: Square) -> Self {
+        let flag = if king_to.file > king_from.file {
+            MoveFlag::CastleK
+        } else {
+            MoveFlag::CastleQ
+        };
 
-    /// Create a new king move.
-    pub fn new_king_move(
-        king_from: &Square,
-        king_to: &Square,
-        captured_piece: Option<Piece>,
-    ) -> Self {
-        Self::new(
-            king_from,
-            king_to,
-            MoveDescriptor::None,
-            Piece::King,
-            captured_piece,
-            None,
-        )
+        Self::new(king_from, king_to, flag)
     }
 
     /// Returns the from [`Square`] of the move.
@@ -187,68 +197,59 @@ impl Move {
         ((self.move_info & MOVE_INFO_TO_MASK) >> MOVE_INFO_TO_SHIFT) as u8
     }
 
-    /// Returns the [`MoveDescriptor`] of the move.
-    pub fn move_descriptor(&self) -> MoveDescriptor {
-        match self.move_info & 0b11 {
-            0 => MoveDescriptor::None,
-            1 => MoveDescriptor::EnPassantCapture,
-            2 => MoveDescriptor::Castle,
-            3 => MoveDescriptor::PawnTwoUp,
-            _ => MoveDescriptor::None,
+    pub fn flag(&self) -> MoveFlag {
+        match (self.move_info & MOVE_INFO_DESCRIPTOR_MASK) >> MOVE_INFO_MOVE_DESCRIPTOR_SHIFT {
+            0 => MoveFlag::Standard,
+            1 => MoveFlag::DoublePush,
+            2 => MoveFlag::EnPassant,
+            3 => MoveFlag::CastleK,
+            4 => MoveFlag::CastleQ,
+            5 => MoveFlag::PromotionQueen,
+            6 => MoveFlag::PromotionRook,
+            7 => MoveFlag::PromotionBishop,
+            8 => MoveFlag::PromotionKnight,
+            _ => MoveFlag::Standard, // default to standard if somehow invalid
         }
     }
 
     /// Checks if the move is an en passant capture.
     pub fn is_en_passant_capture(&self) -> bool {
-        self.move_descriptor() == MoveDescriptor::EnPassantCapture
+        self.flag() == MoveFlag::EnPassant
     }
 
     /// Checks if the move is a castle move.
     pub fn is_castle(&self) -> bool {
-        self.move_descriptor() == MoveDescriptor::Castle
+        self.flag() == MoveFlag::CastleK || self.flag() == MoveFlag::CastleQ
     }
 
     /// Checks if the move is a pawn two up move.
     pub fn is_pawn_two_up(&self) -> bool {
-        self.move_descriptor() == MoveDescriptor::PawnTwoUp
-    }
-
-    /// Returns the promotion descriptor of the move.
-    pub fn promotion_description(&self) -> PromotionDescriptor {
-        match (self.move_info & MOVE_PROMOTION_DESCRIPTOR_MASK)
-            >> MOVE_INFO_PROMOTION_DESCRIPTOR_SHIFT
-        {
-            0 => PromotionDescriptor::Queen,
-            1 => PromotionDescriptor::Knight,
-            2 => PromotionDescriptor::Rook,
-            3 => PromotionDescriptor::Bishop,
-            _ => PromotionDescriptor::Queen,
-        }
+        self.flag() == MoveFlag::DoublePush
     }
 
     /// Checks if the move is a promotion move and promotes to a queen.
     pub fn is_promote_to_queen(&self) -> bool {
-        self.is_promotion() && self.promotion_description() == PromotionDescriptor::Queen
+        self.flag() == MoveFlag::PromotionQueen
     }
 
     /// Checks if the move is a promotion move and promotes to a knight.
     pub fn is_promote_to_knight(&self) -> bool {
-        self.is_promotion() && self.promotion_description() == PromotionDescriptor::Knight
+        self.flag() == MoveFlag::PromotionKnight
     }
 
     /// Checks if the move is a promotion move and promotes to a rook.
     pub fn is_promote_to_rook(&self) -> bool {
-        self.is_promotion() && self.promotion_description() == PromotionDescriptor::Rook
+        self.flag() == MoveFlag::PromotionRook
     }
 
     /// Checks if the move is a promotion move and promotes to a bishop.
     pub fn is_promote_to_bishop(&self) -> bool {
-        self.is_promotion() && self.promotion_description() == PromotionDescriptor::Bishop
+        self.flag() == MoveFlag::PromotionBishop
     }
 
     /// Checks if the move is a promotion move.
     pub fn is_promotion(&self) -> bool {
-        (self.move_info >> MOVE_INFO_IS_PROMOTION_SHIFT) & 0b1 == 1
+        self.flag().is_promotion()
     }
 
     /// Returns the [`Piece`] that the move promotes to if any. Can be `None`.
@@ -264,39 +265,6 @@ impl Move {
         } else {
             None
         }
-    }
-
-    pub fn is_quiet(&self) -> bool {
-        let mv_desc = self.move_descriptor();
-        mv_desc != MoveDescriptor::EnPassantCapture
-            && self.captured_piece_value() == Piece::NONE
-            && !self.is_promotion()
-    }
-
-    pub fn is_capture(&self) -> bool {
-        self.captured_piece_value() != Piece::NONE || self.is_en_passant_capture()
-    }
-
-    fn captured_piece_value(&self) -> u32 {
-        (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111
-    }
-
-    /// Returns the captured [`Piece`] if any. Can be `None`.
-    pub fn captured_piece(&self) -> Option<Piece> {
-        // shift right and then mask 3 bits
-        let piece_value = self.captured_piece_value();
-        if piece_value == Piece::NONE {
-            return None;
-        }
-
-        Some(Piece::try_from(piece_value as u8).unwrap())
-    }
-
-    /// Returns the [`Piece`] that is moving.
-    pub fn piece(&self) -> Piece {
-        // shift right and then mask 3 bits
-        let piece_value = (self.move_info >> MOVE_INFO_PIECE_SHIFT) & 0b111_u32;
-        Piece::try_from(piece_value as u8).unwrap()
     }
 
     /// Return true if the move is a null move
@@ -326,7 +294,7 @@ impl Move {
 #[cfg(test)]
 mod tests {
     use crate::file::File;
-    use crate::moves::{Move, MoveDescriptor};
+    use crate::moves::{Move, MoveFlag};
     use crate::pieces::Piece;
     use crate::rank::Rank;
     use crate::square::Square;
@@ -335,138 +303,75 @@ mod tests {
         {
             let from = Square::new(File::B, Rank::R1);
             let to = Square::new(File::C, Rank::R2);
-            let m = Move::new(&from, &to, MoveDescriptor::None, Piece::Pawn, None, None);
+            let m = Move::new(from, to, MoveFlag::Standard);
             assert_eq!(m.from(), 1);
             assert_eq!(m.to(), 10);
             assert!(!m.is_promotion());
-            assert_eq!(m.captured_piece(), None);
-            assert!(m.is_quiet());
-            assert_eq!(m.piece(), Piece::Pawn);
         }
+
         {
             let from = Square::new(File::H, Rank::R8);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(
-                &from,
-                &to,
-                MoveDescriptor::None,
-                Piece::Queen,
-                Some(Piece::Rook),
-                None,
-            );
+            let m = Move::new(from, to, MoveFlag::Standard);
             assert_eq!(m.from(), 63);
             assert_eq!(m.to(), 56);
             assert!(!m.is_promotion());
-            assert_eq!(m.captured_piece().unwrap(), Piece::Rook);
-            assert!(!m.is_quiet());
-            assert_eq!(m.piece(), Piece::Queen);
         }
+
         {
             let from = Square::new(File::F, Rank::R4);
             let to = Square::new(File::E, Rank::R6);
-            let m = Move::new(
-                &from,
-                &to,
-                MoveDescriptor::EnPassantCapture,
-                Piece::Pawn,
-                Some(Piece::Pawn),
-                None,
-            );
+            let m = Move::new(from, to, MoveFlag::EnPassant);
             assert_eq!(m.from(), from.to_square_index());
             assert_eq!(m.to(), to.to_square_index());
             assert!(!m.is_pawn_two_up());
             assert!(!m.is_castle());
             assert!(m.is_en_passant_capture());
-            assert_eq!(m.captured_piece().unwrap(), Piece::Pawn);
-            assert_eq!(m.piece(), Piece::Pawn);
         }
         {
             let from = Square::new(File::A, Rank::R2);
             let to = Square::new(File::A, Rank::R4);
-            let m = Move::new(
-                &from,
-                &to,
-                MoveDescriptor::PawnTwoUp,
-                Piece::Pawn,
-                None,
-                None,
-            );
+            let m = Move::new(from, to, MoveFlag::DoublePush);
             assert_eq!(m.from(), 8);
             assert_eq!(m.to(), 24);
             assert!(!m.is_castle());
             assert!(!m.is_en_passant_capture());
             assert!(m.is_pawn_two_up());
-            assert!(m.captured_piece().is_none());
-            assert_eq!(m.piece(), Piece::Pawn);
         }
         {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(
-                &from,
-                &to,
-                MoveDescriptor::None,
-                Piece::Pawn,
-                None,
-                Some(Piece::Queen),
-            );
+            let m = Move::new(from, to, MoveFlag::PromotionQueen);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_queen());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Queen);
-            assert_eq!(m.captured_piece(), None);
-            assert_eq!(m.piece(), Piece::Pawn);
         }
         {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(
-                &from,
-                &to,
-                MoveDescriptor::None,
-                Piece::Pawn,
-                None,
-                Some(Piece::Knight),
-            );
+            let m = Move::new(from, to, MoveFlag::PromotionKnight);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_knight());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Knight);
-            assert_eq!(m.captured_piece(), None);
-            assert_eq!(m.piece(), Piece::Pawn);
         }
         {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(
-                &from,
-                &to,
-                MoveDescriptor::None,
-                Piece::Pawn,
-                None,
-                Some(Piece::Rook),
-            );
+            let m = Move::new(from, to, MoveFlag::PromotionRook);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_rook());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Rook);
-            assert_eq!(m.captured_piece(), None);
-            assert_eq!(m.piece(), Piece::Pawn);
         }
         {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(
-                &from,
-                &to,
-                MoveDescriptor::None,
-                Piece::Pawn,
-                None,
-                Some(Piece::Bishop),
-            );
+            let m = Move::new(from, to, MoveFlag::PromotionBishop);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_bishop());
@@ -475,8 +380,6 @@ mod tests {
             assert!(!m.is_promote_to_knight());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Bishop);
-            assert_eq!(m.captured_piece(), None);
-            assert_eq!(m.piece(), Piece::Pawn);
         }
     }
 
@@ -485,41 +388,24 @@ mod tests {
         let from = Square::new(File::A, Rank::R2);
         let to = Square::new(File::A, Rank::R4);
 
-        let mut mv = Move::new(
-            &from,
-            &to,
-            MoveDescriptor::None,
-            Piece::Pawn,
-            Some(Piece::Pawn),
-            None,
-        );
+        let mut mv = Move::new(from, to, MoveFlag::Standard);
 
-        assert!(!mv.is_quiet());
         assert!(!mv.is_en_passant_capture());
         assert!(!mv.is_pawn_two_up());
         assert!(!mv.is_castle());
         assert!(!mv.is_promotion());
         assert!(!mv.is_null_move());
-        assert!(mv.move_descriptor() == MoveDescriptor::None);
         assert_eq!(mv.from(), from.to_square_index());
         assert_eq!(mv.to(), to.to_square_index());
 
-        mv = Move::new(
-            &from,
-            &to,
-            MoveDescriptor::PawnTwoUp,
-            Piece::Pawn,
-            None,
-            None,
-        );
+        mv = Move::new(from, to, MoveFlag::DoublePush);
 
-        assert!(mv.is_quiet());
         assert!(!mv.is_en_passant_capture());
         assert!(mv.is_pawn_two_up());
         assert!(!mv.is_castle());
         assert!(!mv.is_promotion());
         assert!(!mv.is_null_move());
-        assert!(mv.move_descriptor() == MoveDescriptor::PawnTwoUp);
+        assert!(mv.flag() == MoveFlag::DoublePush);
         assert_eq!(mv.from(), from.to_square_index());
         assert_eq!(mv.to(), to.to_square_index());
     }
