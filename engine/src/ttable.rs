@@ -48,7 +48,7 @@ impl TranspositionTableEntry {
         mv: Move,
     ) -> TranspositionTableEntry {
         TranspositionTableEntry {
-            zobrist_key: (zobrist >> 48) as u16,
+            zobrist_key: zobrist as u16,
             depth,
             score,
             flag,
@@ -176,7 +176,7 @@ impl TranspositionTable {
         if let Some(entry) = self.get_entry(zobrist) {
             self.accesses += 1;
             // verify the partial zobrist key to detect collisions
-            if entry.zobrist_key == (zobrist >> 48) as u16 {
+            if entry.validate_key(zobrist) {
                 self.hits += 1;
                 if entry.depth >= depth as u8 {
                     // can we cut off?
