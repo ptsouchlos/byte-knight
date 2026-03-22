@@ -668,6 +668,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             .take(loop_counter)
                             .filter(|mv| board.captured(mv).is_none() && !mv.is_promotion())
                         {
+                            // The board is already in the parent state (we already unmade the move)
+                            // so it's save to look up the piece on the board using mv.from().
                             let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
                             self.history_table.update(
                                 board.side_to_move(),
