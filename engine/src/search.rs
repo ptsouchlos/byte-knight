@@ -594,7 +594,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if moves_seen == 0 {
                     -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
                 } else {
-                    let is_killer = self.killers_table.get(ply as u8).iter().any(|maybe_mv|maybe_mv.is_some_and(|klr|klr == mv));
+                    let is_killer = self.killers_table.get(ply as u8).iter().any(|entry|entry.is_some_and(|k|k.matches(mv, piece)));
                     // No LMR reduction for killer moves
                     let reduction = if is_quiet && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
                         if is_killer {
@@ -651,7 +651,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     // update history table for quiets
                     if is_quiet {
                         // Update the killers table
-                        self.killers_table.update(ply as u8, mv);
+                        self.killers_table.update(ply as u8, mv, piece);
 
                         // calculate history bonus
                         let bonus = history_table::calculate_bonus_for_depth(depth);
