@@ -628,6 +628,26 @@ impl Board {
         flipped.state.zobrist_hash = flipped.initialize_zobrist_hash();
         flipped
     }
+
+    /// Helper to get the captured piece for a given move.
+    /// Use this instead of checking piece_on_square for the move's destination square,
+    /// as this will correctly handle en passant captures and castling moves.
+    ///
+    /// # Arguments
+    /// - `mv` - The move for which to get the captured piece.
+    ///
+    /// # Returns
+    /// - `Some(Piece)` if the move is a capture, otherwise `None`.
+    #[inline]
+    pub fn captured(&self, mv: &Move) -> Option<Piece> {
+        if mv.is_castle() {
+            return None;
+        }
+        if mv.is_en_passant_capture() {
+            return Some(Piece::Pawn);
+        }
+        self.piece_on_square(mv.to()).map(|(piece, _side)| piece)
+    }
 }
 
 #[cfg(test)]
@@ -637,7 +657,7 @@ mod tests {
         file::File,
         move_generation,
         move_list::MoveList,
-        moves::{MoveDescriptor, MoveType},
+        moves::{MoveFlag, MoveType},
         rank::Rank,
         side::Side,
         square,
@@ -654,41 +674,12 @@ mod tests {
         let wq_square_1 = Square::from_square_index(Squares::B6);
         let wq_square_2 = Square::from_square_index(Squares::C5);
 
-        let white_queen_move = Move::new(
-            &wq_square_1,
-            &wq_square_2,
-            MoveDescriptor::None,
-            Piece::Queen,
-            None,
-            None,
-        );
+        let white_queen_move = Move::new(wq_square_1, wq_square_2, MoveFlag::Standard);
+        let while_queen_reverse_move = Move::new(wq_square_2, wq_square_1, MoveFlag::Standard);
 
-        let while_queen_reverse_move = Move::new(
-            &wq_square_2,
-            &wq_square_1,
-            MoveDescriptor::None,
-            Piece::Queen,
-            None,
-            None,
-        );
+        let black_king_move = Move::new(bk_square_1, bk_square_2, MoveFlag::Standard);
 
-        let black_king_move = Move::new(
-            &bk_square_1,
-            &bk_square_2,
-            MoveDescriptor::None,
-            Piece::King,
-            None,
-            None,
-        );
-
-        let black_king_reverse_move = Move::new(
-            &bk_square_2,
-            &bk_square_1,
-            MoveDescriptor::None,
-            Piece::King,
-            None,
-            None,
-        );
+        let black_king_reverse_move = Move::new(bk_square_2, bk_square_1, MoveFlag::Standard);
 
         for _i in 0..2 {
             assert!(board.make_move_unchecked(&white_queen_move).is_ok());

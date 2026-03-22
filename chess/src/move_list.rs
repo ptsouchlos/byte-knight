@@ -71,7 +71,7 @@ impl MoveList {
 
 #[cfg(test)]
 mod tests {
-    use crate::square::Square;
+    use crate::{moves::MoveFlag, square::Square};
 
     use super::*;
 
@@ -88,10 +88,10 @@ mod tests {
         assert_eq!(move_list.len(), 0);
         assert!(move_list.is_empty());
 
-        let mv = Move::new_king_move(
-            &Square::from_square_index(8),
-            &Square::from_square_index(16),
-            None,
+        let mv = Move::new(
+            Square::from_square_index(8),
+            Square::from_square_index(16),
+            MoveFlag::Standard,
         );
         move_list.push(mv);
         assert_eq!(move_list.len(), 1);
@@ -109,10 +109,10 @@ mod tests {
         assert!(move_list.is_empty());
 
         for _ in 0..MAX_MOVE_LIST_SIZE {
-            let mv = Move::new_king_move(
-                &Square::from_square_index(3_u8),
-                &Square::from_square_index(13_u8),
-                None,
+            let mv = Move::new(
+                Square::from_square_index(3_u8),
+                Square::from_square_index(13_u8),
+                MoveFlag::Standard,
             );
             move_list.push(mv);
         }
@@ -120,10 +120,10 @@ mod tests {
         assert!(!move_list.is_empty());
 
         // This will panic
-        let mv = Move::new_king_move(
-            &Square::from_square_index(0),
-            &Square::from_square_index(1),
-            None,
+        let mv = Move::new(
+            Square::from_square_index(0),
+            Square::from_square_index(1),
+            MoveFlag::Standard,
         );
         move_list.push(mv);
     }

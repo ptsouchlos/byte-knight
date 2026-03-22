@@ -5,9 +5,10 @@
 
 use crate::{
     board::Board,
+    board_state::MovePieceInfo,
     definitions::{CastlingAvailability, Squares},
     move_generation,
-    moves::{self, Move},
+    moves::{self, Move, MoveFlag},
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
@@ -53,9 +54,6 @@ impl Board {
         let (piece, side) = self
             .piece_on_square(from.to_square_index())
             .ok_or_else(|| anyhow::anyhow!("No piece on square"))?;
-        let captured_piece = self
-            .piece_on_square(to.to_square_index())
-            .map(|(piece, _)| piece);
 
         // now just figure out the move descriptor
         // need to check if the move is a castle, en passant, promotion or a pawn two up move
@@ -77,24 +75,24 @@ impl Board {
         if states.iter().filter(|&&x| x).count() > 1 {
             bail!("Invalid move, only 1 move state can be true");
         }
+
         let move_desc = if is_double_push {
-            moves::MoveDescriptor::PawnTwoUp
+            MoveFlag::DoublePush
         } else if is_castle {
-            moves::MoveDescriptor::Castle
+            if to.file > from.file {
+                moves::MoveFlag::CastleK
+            } else {
+                moves::MoveFlag::CastleQ
+            }
         } else if is_en_passant {
-            moves::MoveDescriptor::EnPassantCapture
+            moves::MoveFlag::EnPassant
+        } else if let Some(promotion_piece) = promotion_piece {
+            MoveFlag::from_promotion_piece(promotion_piece)
         } else {
-            moves::MoveDescriptor::None
+            moves::MoveFlag::Standard
         };
 
-        let mv = Move::new(
-            &from,
-            &to,
-            move_desc,
-            piece,
-            captured_piece,
-            promotion_piece,
-        );
+        let mv = Move::new(from, to, move_desc);
         self.make_move_unchecked(&mv)
     }
 
@@ -102,35 +100,28 @@ impl Board {
     fn check_move_preconditions(&mut self, mv: &Move) -> Result<()> {
         let from = mv.from();
         let to: u8 = mv.to();
-        let piece = mv.piece();
+        let (piece, piece_side) = self.piece_on_square(from).ok_or_else(|| {
+            anyhow::anyhow!(
+                "No piece on square {} to move from",
+                SQUARE_NAME[from as usize]
+            )
+        })?;
 
         let us = self.side_to_move();
         let them = us.opposite();
 
-        let piece_and_side = self.piece_on_square(from);
-        if piece_and_side.is_none() {
-            bail!(format!(
-                "No piece on square {} to move from",
-                SQUARE_NAME[from as usize]
-            ));
-        }
-
-        let (piece_on_square, side) = piece_and_side.unwrap();
-        if piece_on_square != piece || side != us {
+        if piece_side != us {
             bail!("Invalid piece on square");
         }
 
-        // we don't handle en passant captures here
-        if mv.captured_piece().is_some() && !mv.is_en_passant_capture() {
-            let captured_piece = mv.captured_piece().unwrap();
-            let piece_and_side = self.piece_on_square(to);
-            if piece_and_side.is_none() {
-                bail!("No piece on square for move {}", mv.to_long_algebraic());
-            }
+        let maybe_captured_piece = self.piece_on_square(to);
 
-            let (piece_on_square, side) = piece_and_side.unwrap();
+        // we don't handle en passant captures here
+        if !mv.is_en_passant_capture()
+            && let Some((captured_piece, cap_side)) = maybe_captured_piece
+        {
             // check that the capture piece matches and is not our own
-            if piece_on_square != captured_piece || side != them {
+            if cap_side != them {
                 bail!("Invalid captured piece on square");
             }
 
@@ -139,26 +130,7 @@ impl Board {
             }
         }
 
-        let move_desc = mv.move_descriptor();
-        match move_desc {
-            moves::MoveDescriptor::EnPassantCapture => {
-                if piece != Piece::Pawn {
-                    bail!("Invalid en passant, not a pawn");
-                }
-            }
-            moves::MoveDescriptor::Castle => {
-                if !self.can_castle_kingside(us) && !self.can_castle_queenside(us) {
-                    bail!("Tried to castle without castling rights");
-                }
-            }
-            moves::MoveDescriptor::PawnTwoUp => {
-                if piece != Piece::Pawn {
-                    bail!("Invalid double pawn push, not a pawn");
-                }
-            }
-            // We don't handle None, quiet moves are ok
-            _ => {}
-        }
+        mv.flag().validate(piece)?;
 
         Ok(())
     }
@@ -167,18 +139,26 @@ impl Board {
     /// This should be used with legal move generation.
     #[allow(clippy::panic)]
     pub fn make_move_unchecked(&mut self, mv: &Move) -> Result<()> {
-        // validate pre-conditions first before even bothering to go further
+        // Validate pre-conditions first before even bothering to go further
         self.check_move_preconditions(mv)?;
-
-        let mut current_state = *self.board_state();
-        current_state.next_move = *mv;
-        // update history before modifying the current state
-        self.history.push(current_state);
 
         let from = mv.from();
         let to: u8 = mv.to();
-        let piece = mv.piece();
-        let captured_piece = mv.captured_piece();
+        let (piece, _) = self.piece_on_square(from).ok_or_else(|| {
+            anyhow::anyhow!(
+                "No piece on square {} to move from",
+                SQUARE_NAME[from as usize]
+            )
+        })?;
+
+        let captured = self.captured(mv);
+
+        let mut current_state = *self.board_state();
+        current_state.next_move = *mv;
+        // Store move info that'll we'll need for undoing
+        current_state.next_move_info = MovePieceInfo::new_with_piece(piece, captured);
+        // update history before modifying the current state
+        self.history.push(current_state);
 
         let us = self.side_to_move();
         let them = us.opposite();
@@ -187,7 +167,7 @@ impl Board {
 
         // en passant capture is handled separately
         if !mv.is_en_passant_capture()
-            && let Some(cap) = captured_piece
+            && let Some(cap) = captured
         {
             // remove the captured piece from the board
             self.remove_piece(them, cap, to, update_zobrist_hash);
@@ -268,7 +248,7 @@ impl Board {
             }
             // just move the piece
             self.move_piece(us, piece, from, to, update_zobrist_hash);
-            if captured_piece.is_none() {
+            if captured.is_none() {
                 self.set_half_move_clock(self.half_move_clock() + 1);
             }
         }
@@ -387,16 +367,22 @@ impl Board {
         // this is move that we're unmaking
         let chess_move = state.next_move;
 
-        // handle null moves
         if chess_move.is_null_move() {
-            //nothing else to undo...
+            // Unmaking a null move so we just need to switch the side back and restore the en passant square if needed. There are no pieces to move or capture to restore.
+            // Note that we don't need to update the zobrist hash here as it is restored from the game state.
+            if let Some(sq) = state.en_passant_square {
+                self.set_en_passant_square(Some(sq));
+            }
+
             return Ok(());
         }
 
         let from = chess_move.from();
         let to = chess_move.to();
-        let piece = chess_move.piece();
-        let captured_piece = chess_move.captured_piece();
+
+        let move_info = state.next_move_info;
+        let piece = move_info.piece();
+        let captured_piece = move_info.captured_piece();
         let promoted_piece = chess_move.promotion_piece();
         if let Some(promoted_piece) = promoted_piece {
             // remove the promoted piece

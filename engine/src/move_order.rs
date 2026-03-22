@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 
 use anyhow::{Ok, Result};
 use arrayvec::ArrayVec;
-use chess::{definitions::MAX_MOVE_LIST_SIZE, moves::Move, pieces::Piece, side::Side};
+use chess::{board::Board, definitions::MAX_MOVE_LIST_SIZE, moves::Move, pieces::Piece};
 
 use crate::{
     evaluation::Evaluation, hce_values::ByteKnightValues, history_table, killers_table,
@@ -71,7 +71,7 @@ impl MoveOrder {
     #[allow(clippy::expect_used)]
     pub fn classify(
         ply: u8,
-        stm: Side,
+        board: &Board,
         mv: &Move,
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
@@ -81,17 +81,25 @@ impl MoveOrder {
             return Self::TtMove;
         }
 
-        if mv.is_capture() {
-            let victim = mv.captured_piece().expect("Capture move without victim");
-            let attacker = mv.piece();
-            return Self::Capture(victim, attacker);
+        let stm = board.side_to_move();
+        let piece = board
+            .piece_on_square(mv.from())
+            .map(|(pc, _)| pc)
+            .expect("From piece must exist.");
+        let maybe_capture_piece = board.captured(mv);
+        let is_capture = maybe_capture_piece.is_some();
+
+        if is_capture {
+            // We can unwrap here because we know it's a capture move, so there must be a captured piece.
+            let victim = maybe_capture_piece.unwrap();
+            return Self::Capture(victim, piece);
         }
 
-        let score = history_table.get(stm, mv.piece(), mv.to());
+        let score = history_table.get(stm, piece, mv.to());
         if killers_table
             .get(ply)
             .iter()
-            .any(|killer_mv| killer_mv.is_some_and(|klr| klr == *mv))
+            .any(|entry| entry.is_some_and(|k| k.matches(*mv, piece)))
         {
             return Self::Killer(score);
         }
@@ -101,7 +109,7 @@ impl MoveOrder {
 
     pub fn classify_all(
         ply: u8,
-        stm: Side,
+        board: &Board,
         moves: &[Move],
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
@@ -113,7 +121,7 @@ impl MoveOrder {
         for mv in moves.iter() {
             move_order.try_push(Self::classify(
                 ply,
-                stm,
+                board,
                 mv,
                 tt_move,
                 history_table,
@@ -131,6 +139,7 @@ mod tests {
         board::Board,
         move_generation,
         moves::{Move, MoveType},
+        pieces::Piece,
     };
     use itertools::Itertools;
 
@@ -139,6 +148,14 @@ mod tests {
         score::Score,
         ttable::{EntryFlag, TranspositionTable, TranspositionTableEntry},
     };
+
+    #[allow(clippy::expect_used)]
+    fn piece_for_move(board: &Board, mv: &Move) -> Piece {
+        board
+            .piece_on_square(mv.from())
+            .map(|(pc, _)| pc)
+            .expect("From piece must exist.")
+    }
 
     #[test]
     fn verify_move_ordering() {
@@ -164,23 +181,25 @@ mod tests {
         ));
 
         let second_mv = move_list.at(2).unwrap();
+        let second_piece = piece_for_move(&board, second_mv);
         history_table.update(
             board.side_to_move(),
-            second_mv.piece(),
+            second_piece,
             second_mv.to(),
             300 * depth - 250,
         );
 
         // This will be our "killer" move
         let third_mv = move_list.at(3).unwrap();
+        let third_piece = piece_for_move(&board, third_mv);
         // We need a entry in the history table first
         history_table.update(
             board.side_to_move(),
-            third_mv.piece(),
+            third_piece,
             third_mv.to(),
             300 * depth - 250,
         );
-        killers_table.update(ply, *third_mv);
+        killers_table.update(ply, *third_mv, third_piece);
 
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = tt_entry.board_move;
@@ -190,7 +209,7 @@ mod tests {
             .sorted_by_key(|mv| {
                 MoveOrder::classify(
                     ply,
-                    board.side_to_move(),
+                    &board,
                     mv,
                     &Some(tt_move),
                     &history_table,

@@ -400,7 +400,7 @@ pub fn generate_legal_moves(board: &Board, move_types: MoveType) -> MoveList {
         meta.checkers,
     ) & filter;
 
-    enumerate_moves(&king_moves, &king_sq, Piece::King, board, &mut move_list);
+    enumerate_moves(&king_moves, king_sq, Piece::King, board, &mut move_list);
 
     // Return early if in double check since only king moves are legal
     if meta.num_checkers() > 1 {
@@ -419,7 +419,7 @@ pub fn generate_legal_moves(board: &Board, move_types: MoveType) -> MoveList {
         let from_sq = Square::from_square_index(from_sq_idx);
         let moves = generate_legal_mobility(piece, from_sq, board, &meta) & filter;
 
-        enumerate_moves(&moves, &from_sq, piece, board, &mut move_list);
+        enumerate_moves(&moves, from_sq, piece, board, &mut move_list);
     }
 
     move_list

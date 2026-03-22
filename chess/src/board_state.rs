@@ -3,8 +3,50 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use crate::{definitions::CastlingAvailability, moves::Move, side::Side, zobrist::ZobristHash};
+use crate::{
+    definitions::CastlingAvailability, moves::Move, pieces::Piece, side::Side, zobrist::ZobristHash,
+};
 use std::fmt::Display;
+
+#[derive(Debug, Clone, Copy)]
+pub struct MovePieceInfo {
+    piece: u8,
+    captured_piece: Option<u8>,
+}
+
+impl Default for MovePieceInfo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MovePieceInfo {
+    pub(crate) fn new() -> Self {
+        MovePieceInfo {
+            piece: Piece::NONE as u8,
+            captured_piece: None,
+        }
+    }
+
+    pub(crate) fn new_with_piece(piece: Piece, captured_piece: Option<Piece>) -> Self {
+        MovePieceInfo {
+            piece: piece as u8,
+            captured_piece: captured_piece.map(|p| p as u8),
+        }
+    }
+
+    #[allow(clippy::expect_used)]
+    pub(crate) fn piece(&self) -> Piece {
+        Piece::try_from(self.piece).expect("Previous move must be stored with a piece.")
+    }
+
+    #[allow(clippy::expect_used)]
+    pub(crate) fn captured_piece(&self) -> Option<Piece> {
+        self.captured_piece.map(|p| {
+            Piece::try_from(p).expect("If captured piece is Some, piece value must be valid.")
+        })
+    }
+}
 
 /// Represents the state of the board at a given point in time.
 /// This includes the half move clock, full move number, side to move,
@@ -19,6 +61,7 @@ pub struct BoardState {
     pub en_passant_square: Option<u8>,
     pub castling_rights: u8,
     pub zobrist_hash: ZobristHash,
+    pub next_move_info: MovePieceInfo,
     pub next_move: Move,
 }
 
@@ -37,7 +80,8 @@ impl BoardState {
             en_passant_square: None,
             castling_rights: CastlingAvailability::NONE,
             zobrist_hash: 0,
-            next_move: Move::default(),
+            next_move_info: Default::default(),
+            next_move: Default::default(),
         }
     }
 }
