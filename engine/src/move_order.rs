@@ -99,7 +99,7 @@ impl MoveOrder {
         if killers_table
             .get(ply)
             .iter()
-            .any(|killer_mv| killer_mv.is_some_and(|klr| klr == *mv))
+            .any(|entry| entry.is_some_and(|k| k.matches(*mv, piece)))
         {
             return Self::Killer(score);
         }
@@ -199,7 +199,7 @@ mod tests {
             third_mv.to(),
             300 * depth - 250,
         );
-        killers_table.update(ply, *third_mv);
+        killers_table.update(ply, *third_mv, third_piece);
 
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = tt_entry.board_move;
