@@ -16,6 +16,7 @@ const BYTES_PER_MB: usize = 1024 * 1024;
 #[repr(u8)]
 pub enum EntryFlag {
     #[default]
+    None,
     Exact,
     LowerBound,
     UpperBound,
@@ -36,7 +37,7 @@ const _: () = assert!(std::mem::size_of::<TranspositionTableEntry>() == 8);
 
 impl TranspositionTableEntry {
     pub fn is_empty(&self) -> bool {
-        self.zobrist_key == 0
+        self.flag == EntryFlag::None
     }
 
     #[allow(dead_code)]
