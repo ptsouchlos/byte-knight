@@ -282,28 +282,19 @@ mod tests {
         );
 
         // our tt implementation always overwrites, so let's make sure that's the case.
-        tt.store_entry(
-            hash1,
-            TranspositionTableEntry::new(hash1, 3, Score::new(-123), EntryFlag::Exact, mv1),
-        );
+        tt.store_entry(hash1, 3, Score::new(-123), EntryFlag::Exact, mv1);
 
         let stored_entry1 = tt.get_entry(hash1);
         assert!(stored_entry1.is_some());
         assert_eq!(stored_entry1.unwrap().board_move, mv1);
 
-        tt.store_entry(
-            hash2,
-            TranspositionTableEntry::new(hash2, 3, Score::new(123), EntryFlag::Exact, mv2),
-        );
+        tt.store_entry(hash2, 3, Score::new(123), EntryFlag::Exact, mv2);
 
         let stored_entry2 = tt.get_entry(hash2);
         assert!(stored_entry2.is_some());
         assert_eq!(stored_entry2.unwrap().board_move, mv2);
 
-        tt.store_entry(
-            hash3,
-            TranspositionTableEntry::new(hash3, 3, Score::new(123), EntryFlag::Exact, mv3),
-        );
+        tt.store_entry(hash3, 3, Score::new(123), EntryFlag::Exact, mv3);
 
         let stored_entry3 = tt.get_entry(hash3);
         assert!(stored_entry3.is_some());
