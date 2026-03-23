@@ -118,8 +118,16 @@ impl TranspositionTable {
         if entry.is_empty() { None } else { Some(entry) }
     }
 
-    pub(crate) fn store_entry(&mut self, zobrist: u64, entry: TranspositionTableEntry) {
+    pub(crate) fn store_entry(
+        &mut self,
+        zobrist: u64,
+        depth: u8,
+        score: Score,
+        flag: EntryFlag,
+        mv: Move,
+    ) {
         let index = self.get_index(zobrist);
+        let entry = TranspositionTableEntry::new(zobrist, depth, score, flag, mv);
         self.table[index] = entry;
     }
 
