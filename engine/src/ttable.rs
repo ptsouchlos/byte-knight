@@ -127,6 +127,11 @@ impl TranspositionTable {
         flag: EntryFlag,
         mv: Move,
     ) {
+        debug_assert_ne!(
+            flag,
+            EntryFlag::None,
+            "cannot store an entry with EntryFlag::None"
+        );
         let index = self.get_index(zobrist);
         let entry = TranspositionTableEntry::new(zobrist, depth, score, flag, mv);
         self.table[index] = entry;
