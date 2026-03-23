@@ -146,7 +146,7 @@ mod tests {
     use crate::{
         move_order::MoveOrder,
         score::Score,
-        ttable::{EntryFlag, TranspositionTable, TranspositionTableEntry},
+        ttable::{EntryFlag, TranspositionTable},
     };
 
     #[allow(clippy::expect_used)]
@@ -172,13 +172,13 @@ mod tests {
         let ply = 3u8;
 
         let first_mv = move_list.at(4).unwrap();
-        tt.store_entry(TranspositionTableEntry::new(
+        tt.store_entry(
             board.zobrist_hash(),
             depth as u8,
             Score::new(1234),
             EntryFlag::Exact,
             *first_mv,
-        ));
+        );
 
         let second_mv = move_list.at(2).unwrap();
         let second_piece = piece_for_move(&board, second_mv);

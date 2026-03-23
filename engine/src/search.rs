@@ -40,7 +40,7 @@ use crate::{
     score::{LargeScoreType, Score, ScoreType},
     table::Table,
     traits::Eval,
-    ttable::{self, TranspositionTableEntry},
+    ttable,
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, LMR_MIN_DEPTH,
         LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET,
@@ -699,14 +699,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 ttable::EntryFlag::Exact
             };
 
-            self.transposition_table
-                .store_entry(TranspositionTableEntry::new(
-                    board.zobrist_hash(),
-                    depth as u8,
-                    best_score.remove_ply_bias(ply),
-                    flag,
-                    bm,
-                ));
+            self.transposition_table.store_entry(
+                board.zobrist_hash(),
+                depth as u8,
+                best_score.remove_ply_bias(ply),
+                flag,
+                bm,
+            );
         }
         best_score
     }
@@ -966,14 +965,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 ttable::EntryFlag::Exact
             };
 
-            self.transposition_table
-                .store_entry(TranspositionTableEntry::new(
-                    board.zobrist_hash(),
-                    0u8,
-                    best.remove_ply_bias(ply),
-                    flag,
-                    bm,
-                ));
+            self.transposition_table.store_entry(
+                board.zobrist_hash(),
+                0u8,
+                best.remove_ply_bias(ply),
+                flag,
+                bm,
+            );
         }
 
         best
