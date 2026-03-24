@@ -190,10 +190,13 @@ impl TranspositionTable {
 
         let tt_age = self.age;
         let bucket = &mut self.table[index];
+
+        // Find the target entry: prefer key match or empty slot,
+        // otherwise pick the lowest-quality entry as the replacement victim.
+        // We follow the same logic here (basically) as stockfish though we don't take into account PV.
         let mut replace_index = 0;
         let mut min_quality = i32::MAX;
         for (i, entry) in bucket.entries.iter().enumerate() {
-            // Replace the entry if the keys match or the entry is empty
             if entry.validate_key(zobrist) || entry.is_empty() {
                 replace_index = i;
                 break;
@@ -207,19 +210,29 @@ impl TranspositionTable {
         }
 
         let entry = &mut bucket.entries[replace_index];
-        if !(entry.validate_key(zobrist)
-            || flag == EntryFlag::Exact
-            || depth as i32 + 4 > entry.depth as i32
-            || entry.age() != tt_age)
-        {
-            return;
+        let key_match = entry.validate_key(zobrist);
+
+        // Preserve the existing move if we have a key match and no new move.
+        // In practice mv is always valid, but this mirrors Stockfish's logic.
+        if !mv.is_null_move() || !key_match {
+            entry.board_move = mv;
         }
 
-        entry.zobrist_key = zobrist as u16;
-        entry.depth = depth;
-        entry.score = score;
-        entry.flags = Flags::new(flag, tt_age);
-        entry.board_move = mv;
+        // Overwrite the entry if any of these hold (cheapest checks first):
+        //  1. New entry is exact
+        //  2. Different position (includes empty slots, which have key=0)
+        //  3. New depth is close enough to the stored depth (within -4)
+        //  4. Stored entry is from a previous generation (stale)
+        if flag == EntryFlag::Exact
+            || !key_match
+            || depth as i32 + 4 > entry.depth as i32
+            || entry.relative_age(tt_age) != 0
+        {
+            entry.zobrist_key = zobrist as u16;
+            entry.depth = depth;
+            entry.score = score;
+            entry.flags = Flags::new(flag, tt_age);
+        }
     }
 
     pub(crate) fn clear(&mut self) {
