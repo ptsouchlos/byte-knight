@@ -326,20 +326,23 @@ impl TranspositionTable {
 
     pub fn prefetch(&self, zobrist: u64) {
         #[cfg(target_arch = "x86_64")]
-        {
+        unsafe {
             use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
-            unsafe {
-                let index = self.get_index(zobrist);
-                let ptr = self.table.as_ptr().add(index);
-                _mm_prefetch(ptr as *const _, _MM_HINT_T0);
-            }
+            use std::ptr;
+
+            let index = self.get_index(zobrist);
+            let ptr = ptr::from_ref(&self.table[index]).cast();
+            _mm_prefetch(ptr, _MM_HINT_T0);
         }
+
         #[cfg(all(nightly, target_arch = "aarch64"))]
         unsafe {
             use std::arch::aarch64::{_PREFETCH_LOCALITY3, _PREFETCH_READ, _prefetch};
+            use std::ptr;
+
             let index = self.get_index(zobrist);
-            let ptr = self.table.as_ptr().add(index);
-            _prefetch(ptr as *const _, _PREFETCH_READ, _PREFETCH_LOCALITY3);
+            let ptr = ptr::from_ref(&self.table[index]).cast();
+            _prefetch(ptr, _PREFETCH_READ, _PREFETCH_LOCALITY3);
         }
     }
 }
