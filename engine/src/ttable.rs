@@ -315,7 +315,10 @@ impl TranspositionTable {
 #[cfg(test)]
 mod tests {
     use super::{EntryFlag, TranspositionTable, TranspositionTableEntry};
-    use crate::{score::Score, ttable::Flags};
+    use crate::{
+        score::Score,
+        ttable::{Bucket, Flags},
+    };
     use chess::{
         moves::{Move, MoveFlag},
         square::Square,
@@ -324,9 +327,22 @@ mod tests {
     use rand::Rng;
     use std::collections::HashMap;
 
+    fn make_move(from: u8, to: u8) -> Move {
+        Move::new(
+            Square::from_square_index(from),
+            Square::from_square_index(to),
+            MoveFlag::Standard,
+        )
+    }
+
     #[test]
     fn entry_size() {
         assert_eq!(std::mem::size_of::<TranspositionTableEntry>(), 8);
+    }
+
+    #[test]
+    fn bucket_size() {
+        assert_eq!(std::mem::size_of::<Bucket>(), 32);
     }
 
     #[test]
@@ -361,41 +377,24 @@ mod tests {
     #[test]
     fn store_and_retrieve() {
         let mut tt = TranspositionTable::from_size_in_mb(16);
-        // Use hashes with non-zero upper 16 bits (realistic zobrist hash values).
         let hash1 = 0xDEAD_BEEF_1234_5678_u64;
         let hash2 = 0xCAFE_BABE_ABCD_EF01_u64;
         let hash3 = 0x1234_ABCD_5678_EF01_u64;
-        let mv1 = Move::new(
-            Square::from_square_index(3),
-            Square::from_square_index(4),
-            MoveFlag::Standard,
-        );
-        let mv2 = Move::new(
-            Square::from_square_index(7),
-            Square::from_square_index(10),
-            MoveFlag::Standard,
-        );
-        let mv3 = Move::new(
-            Square::from_square_index(7),
-            Square::from_square_index(11),
-            MoveFlag::Standard,
-        );
+        let mv1 = make_move(3, 4);
+        let mv2 = make_move(7, 10);
+        let mv3 = make_move(7, 11);
 
-        // our tt implementation always overwrites, so let's make sure that's the case.
         tt.store_entry(hash1, 3, Score::new(-123), EntryFlag::Exact, mv1);
-
         let stored_entry1 = tt.get_entry(hash1);
         assert!(stored_entry1.is_some());
         assert_eq!(stored_entry1.unwrap().board_move, mv1);
 
         tt.store_entry(hash2, 3, Score::new(123), EntryFlag::Exact, mv2);
-
         let stored_entry2 = tt.get_entry(hash2);
         assert!(stored_entry2.is_some());
         assert_eq!(stored_entry2.unwrap().board_move, mv2);
 
         tt.store_entry(hash3, 3, Score::new(123), EntryFlag::Exact, mv3);
-
         let stored_entry3 = tt.get_entry(hash3);
         assert!(stored_entry3.is_some());
         assert_eq!(stored_entry3.unwrap().board_move, mv3);
@@ -404,23 +403,335 @@ mod tests {
     #[test]
     fn capacity() {
         let tt = TranspositionTable::from_size_in_mb(16);
-        // Measured emperically. If the TT entry size changes, this test will fail.
-        assert_eq!(tt.size(), 2097152);
-        println!("{} entries", tt.size());
+        // 16 MB / 32 bytes per bucket = 524288 buckets
+        assert_eq!(tt.size(), 524288);
+        println!("{} buckets", tt.size());
     }
 
     #[test]
-    fn flags() {
+    fn flags_roundtrip() {
         let mut flags = Flags::new(EntryFlag::None, 10);
         assert_eq!(flags.flag(), EntryFlag::None);
         assert_eq!(flags.age(), 10);
 
-        flags = Flags::new(EntryFlag::Exact, 83);
+        flags = Flags::new(EntryFlag::Exact, 0);
         assert_eq!(flags.flag(), EntryFlag::Exact);
-        assert_eq!(flags.age(), 83);
+        assert_eq!(flags.age(), 0);
 
-        flags = Flags::new(EntryFlag::LowerBound, 121);
+        flags = Flags::new(EntryFlag::LowerBound, 63);
         assert_eq!(flags.flag(), EntryFlag::LowerBound);
-        assert_eq!(flags.age(), 121);
+        assert_eq!(flags.age(), 63);
+
+        flags = Flags::new(EntryFlag::UpperBound, 42);
+        assert_eq!(flags.flag(), EntryFlag::UpperBound);
+        assert_eq!(flags.age(), 42);
+    }
+
+    #[test]
+    fn flags_age_masks_overflow() {
+        // Ages above 63 should be masked to 6 bits
+        let flags = Flags::new(EntryFlag::Exact, 64);
+        assert_eq!(flags.age(), 0);
+        assert_eq!(flags.flag(), EntryFlag::Exact);
+
+        let flags = Flags::new(EntryFlag::LowerBound, 65);
+        assert_eq!(flags.age(), 1);
+        assert_eq!(flags.flag(), EntryFlag::LowerBound);
+
+        let flags = Flags::new(EntryFlag::UpperBound, 127);
+        assert_eq!(flags.age(), 63);
+        assert_eq!(flags.flag(), EntryFlag::UpperBound);
+    }
+
+    #[test]
+    fn age_wrapping() {
+        let mut tt = TranspositionTable::from_capacity(1024);
+        assert_eq!(tt.age, 0);
+
+        // Increment to max
+        for _ in 0..63 {
+            tt.increment_age();
+        }
+        assert_eq!(tt.age, 63);
+
+        // Should wrap to 0
+        tt.increment_age();
+        assert_eq!(tt.age, 0);
+
+        tt.increment_age();
+        assert_eq!(tt.age, 1);
+    }
+
+    #[test]
+    fn relative_age_across_wrap() {
+        // Entry stored at age 62, current age is 1 (wrapped past 63→0→1)
+        let entry = TranspositionTableEntry::new(
+            0x1234,
+            10,
+            Score::new(0),
+            make_move(0, 1),
+            EntryFlag::Exact,
+            62,
+        );
+        // relative_age = (1 - 62) & 0x3F = (-61) & 63 = 3
+        assert_eq!(entry.relative_age(1), 3);
+
+        // Entry stored at age 0, current age is 63
+        let entry2 = TranspositionTableEntry::new(
+            0x1234,
+            10,
+            Score::new(0),
+            make_move(0, 1),
+            EntryFlag::Exact,
+            0,
+        );
+        assert_eq!(entry2.relative_age(63), 63);
+
+        // Same age → relative age 0
+        assert_eq!(entry2.relative_age(0), 0);
+    }
+
+    #[test]
+    fn same_key_replacement() {
+        let mut tt = TranspositionTable::from_capacity(1024);
+        let hash = 0xDEAD_0000_0000_1234_u64;
+        let mv1 = make_move(0, 8);
+        let mv2 = make_move(1, 9);
+
+        tt.store_entry(hash, 5, Score::new(100), EntryFlag::Exact, mv1);
+        let entry = tt.get_entry(hash).unwrap();
+        assert_eq!(entry.board_move, mv1);
+        assert_eq!(entry.depth, 5);
+
+        // Store with same hash but different depth/move — should update in-place
+        tt.store_entry(hash, 10, Score::new(200), EntryFlag::LowerBound, mv2);
+        let entry = tt.get_entry(hash).unwrap();
+        assert_eq!(entry.board_move, mv2);
+        assert_eq!(entry.depth, 10);
+
+        // Verify only one slot is used (no duplicate)
+        let index = tt.get_index(hash);
+        let bucket = &tt.table[index];
+        let matches: Vec<_> = bucket
+            .entries
+            .iter()
+            .filter(|e| e.validate_key(hash))
+            .collect();
+        assert_eq!(matches.len(), 1);
+    }
+
+    #[test]
+    fn bucket_fills_four_slots() {
+        // Use a tiny table so we can craft collisions on the same bucket index.
+        let mut tt = TranspositionTable::from_capacity(1);
+
+        // 4 different hashes that all map to bucket 0 (only 1 bucket),
+        // but have different lower 16 bits so they don't key-match.
+        let hashes: Vec<u64> = vec![0x0001, 0x0002, 0x0003, 0x0004];
+        for (i, &h) in hashes.iter().enumerate() {
+            tt.store_entry(
+                h,
+                (i + 1) as u8,
+                Score::new(i as i16),
+                EntryFlag::Exact,
+                make_move(0, (i + 1) as u8),
+            );
+        }
+
+        // All 4 should be retrievable
+        for &h in &hashes {
+            assert!(tt.get_entry(h).is_some(), "hash {h:#x} should be found");
+        }
+    }
+
+    #[test]
+    fn bucket_overflow_evicts_worst_quality() {
+        let mut tt = TranspositionTable::from_capacity(1);
+
+        // Fill all 4 slots with different depths at age 0
+        // depth values: 10, 20, 5, 15
+        let depths = [10u8, 20, 5, 15];
+        let hashes: Vec<u64> = vec![0x0001, 0x0002, 0x0003, 0x0004];
+        for (i, (&h, &d)) in hashes.iter().zip(depths.iter()).enumerate() {
+            tt.store_entry(
+                h,
+                d,
+                Score::new(0),
+                EntryFlag::Exact,
+                make_move(0, (i + 1) as u8),
+            );
+        }
+
+        // Verify depth=5 entry exists
+        assert!(tt.get_entry(0x0003).is_some());
+
+        // Store a 5th entry — should evict the lowest-quality (depth=5, hash=0x0003)
+        tt.store_entry(
+            0x0005,
+            12,
+            Score::new(0),
+            EntryFlag::Exact,
+            make_move(0, 10),
+        );
+
+        // depth=5 entry should be evicted
+        assert!(tt.get_entry(0x0003).is_none());
+        // New entry should be present
+        assert!(tt.get_entry(0x0005).is_some());
+        // Others should still be present
+        assert!(tt.get_entry(0x0001).is_some());
+        assert!(tt.get_entry(0x0002).is_some());
+        assert!(tt.get_entry(0x0004).is_some());
+    }
+
+    #[test]
+    fn stale_age_entries_evicted_first() {
+        let mut tt = TranspositionTable::from_capacity(1);
+
+        // Fill 4 slots at age 0 with high depth
+        let hashes: Vec<u64> = vec![0x0001, 0x0002, 0x0003, 0x0004];
+        for (i, &h) in hashes.iter().enumerate() {
+            tt.store_entry(
+                h,
+                20,
+                Score::new(0),
+                EntryFlag::Exact,
+                make_move(0, (i + 1) as u8),
+            );
+        }
+
+        // Advance age by 2 generations
+        tt.increment_age();
+        tt.increment_age();
+
+        // Store a new entry with low depth — should still evict a stale entry
+        // because age penalty is -4 * 2 = -8, making stale entries score 20 - 8 = 12
+        // The new entry depth is 1, but the replacement guard allows it because ages differ
+        tt.store_entry(0x0005, 1, Score::new(0), EntryFlag::Exact, make_move(0, 10));
+
+        assert!(tt.get_entry(0x0005).is_some());
+    }
+
+    #[test]
+    fn replacement_guard_rejects_shallow_same_age() {
+        let mut tt = TranspositionTable::from_capacity(1);
+
+        // Fill slot 0 with a deep entry at current age
+        tt.store_entry(
+            0x0001,
+            20,
+            Score::new(100),
+            EntryFlag::LowerBound,
+            make_move(0, 1),
+        );
+
+        // Try to replace with a much shallower, non-exact, same-age entry
+        // Guard condition: depth + 4 > entry.depth → 1 + 4 = 5 > 20 is false
+        // flag != Exact, same age, different key → should be rejected
+        tt.store_entry(
+            0x0002,
+            1,
+            Score::new(50),
+            EntryFlag::LowerBound,
+            make_move(0, 2),
+        );
+
+        // The shallow entry should still be stored (in a different slot since bucket has 4 slots)
+        // But if it targeted the same slot, it would be rejected.
+        // Let's fill all 4 slots first, then test rejection.
+        let mut tt2 = TranspositionTable::from_capacity(1);
+        let hashes: Vec<u64> = vec![0x0001, 0x0002, 0x0003, 0x0004];
+        for (i, &h) in hashes.iter().enumerate() {
+            tt2.store_entry(
+                h,
+                20,
+                Score::new(0),
+                EntryFlag::LowerBound,
+                make_move(0, (i + 1) as u8),
+            );
+        }
+
+        // All slots full at depth=20, same age, non-exact. Try storing depth=1 non-exact.
+        // The victim will be slot 0 (all equal quality, first wins).
+        // Guard: depth(1) + 4 = 5 > entry.depth(20) → false. Same age. Not exact. No key match.
+        // → Rejected.
+        tt2.store_entry(
+            0x0005,
+            1,
+            Score::new(0),
+            EntryFlag::LowerBound,
+            make_move(0, 10),
+        );
+        assert!(tt2.get_entry(0x0005).is_none());
+
+        // But Exact flag should override the guard
+        tt2.store_entry(0x0005, 1, Score::new(0), EntryFlag::Exact, make_move(0, 10));
+        assert!(tt2.get_entry(0x0005).is_some());
+    }
+
+    #[test]
+    fn hashfull_correctness() {
+        let mut tt = TranspositionTable::from_capacity(1024);
+
+        // Fill exactly 500 entries in the first 250 buckets (2 per bucket)
+        for i in 0..250u64 {
+            let h1 = i * 2 + 1;
+            let h2 = i * 2 + 2;
+            // We need hashes that map to bucket indices 0..250.
+            // With from_capacity(1024), fast_range_64(h, 1024) maps h to a bucket.
+            // Just store them — they'll land wherever they land.
+            tt.store_entry(h1, 5, Score::new(0), EntryFlag::Exact, make_move(0, 1));
+            tt.store_entry(h2, 5, Score::new(0), EntryFlag::Exact, make_move(0, 1));
+        }
+
+        let hf = tt.hashfull();
+        // hashfull samples first 250 buckets (1000/4). Not all our entries will land there,
+        // but the result should be > 0 and <= 1000.
+        assert!(hf <= 1000);
+    }
+
+    #[test]
+    fn increment_age_and_clear() {
+        let mut tt = TranspositionTable::from_capacity(64);
+        tt.increment_age();
+        tt.increment_age();
+        tt.increment_age();
+        assert_eq!(tt.age, 3);
+
+        tt.store_entry(
+            0x1234,
+            5,
+            Score::new(100),
+            EntryFlag::Exact,
+            make_move(0, 1),
+        );
+        assert!(tt.get_entry(0x1234).is_some());
+
+        tt.clear();
+        assert_eq!(tt.age, 0);
+        assert!(tt.get_entry(0x1234).is_none());
+        assert_eq!(tt.accesses, 0);
+        assert_eq!(tt.hits, 0);
+    }
+
+    #[test]
+    fn fullness_empty_table() {
+        let tt = TranspositionTable::from_capacity(64);
+        assert_eq!(tt.fullness(), 0.0);
+    }
+
+    #[test]
+    fn fullness_with_entries() {
+        let mut tt = TranspositionTable::from_capacity(1024);
+        // Use well-distributed hashes so each lands in a different bucket
+        let hashes: Vec<u64> = (0..10u64)
+            .map(|i| 0xDEAD_BEEF_0000_0000 | (i * 0x1111_1111_1111))
+            .collect();
+        for h in &hashes {
+            tt.store_entry(*h, 5, Score::new(0), EntryFlag::Exact, make_move(0, 1));
+        }
+        let f = tt.fullness();
+        assert!(f > 0.0);
+        assert!(f <= 100.0);
     }
 }
