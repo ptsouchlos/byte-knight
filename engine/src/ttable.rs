@@ -505,7 +505,7 @@ mod tests {
     }
 
     #[test]
-    fn same_key_replacement() {
+    fn same_key_deeper_replaces() {
         let mut tt = TranspositionTable::from_capacity(1024);
         let hash = 0xDEAD_0000_0000_1234_u64;
         let mv1 = make_move(0, 8);
@@ -516,21 +516,102 @@ mod tests {
         assert_eq!(entry.board_move, mv1);
         assert_eq!(entry.depth, 5);
 
-        // Store with same hash but different depth/move — should update in-place
+        // Deeper entry on same key — should fully replace
         tt.store_entry(hash, 10, Score::new(200), EntryFlag::LowerBound, mv2);
         let entry = tt.get_entry(hash).unwrap();
         assert_eq!(entry.board_move, mv2);
         assert_eq!(entry.depth, 10);
+        assert_eq!(entry.score, Score::new(200));
 
         // Verify only one slot is used (no duplicate)
         let index = tt.get_index(hash);
         let bucket = &tt.table[index];
-        let matches: Vec<_> = bucket
+        let matches = bucket
             .entries
             .iter()
             .filter(|e| e.validate_key(hash))
-            .collect();
-        assert_eq!(matches.len(), 1);
+            .count();
+        assert_eq!(matches, 1);
+    }
+
+    #[test]
+    fn same_key_shallow_same_gen_preserves_depth_and_score() {
+        let mut tt = TranspositionTable::from_capacity(1024);
+        let hash = 0xDEAD_0000_0000_1234_u64;
+        let mv1 = make_move(0, 8);
+        let mv2 = make_move(1, 9);
+
+        // Store a deep entry at current generation
+        tt.store_entry(hash, 20, Score::new(300), EntryFlag::LowerBound, mv1);
+
+        // Shallow non-exact same-gen entry on same key.
+        // Guard: Exact? no. !key_match? no. depth(3)+4=7 > 20? no. stale? no.
+        // → Guard fails, only the move is updated.
+        tt.store_entry(hash, 3, Score::new(50), EntryFlag::UpperBound, mv2);
+        let entry = tt.get_entry(hash).unwrap();
+        assert_eq!(entry.board_move, mv2, "move should be refreshed");
+        assert_eq!(entry.depth, 20, "depth should be preserved");
+        assert_eq!(entry.score, Score::new(300), "score should be preserved");
+        assert_eq!(
+            entry.flag(),
+            EntryFlag::LowerBound,
+            "flag should be preserved"
+        );
+    }
+
+    #[test]
+    fn same_key_shallow_exact_replaces() {
+        let mut tt = TranspositionTable::from_capacity(1024);
+        let hash = 0xDEAD_0000_0000_1234_u64;
+        let mv1 = make_move(0, 8);
+        let mv2 = make_move(1, 9);
+
+        // Store a deep entry
+        tt.store_entry(hash, 20, Score::new(300), EntryFlag::LowerBound, mv1);
+
+        // Shallow but Exact on same key — should fully replace
+        tt.store_entry(hash, 3, Score::new(50), EntryFlag::Exact, mv2);
+        let entry = tt.get_entry(hash).unwrap();
+        assert_eq!(entry.board_move, mv2);
+        assert_eq!(entry.depth, 3);
+        assert_eq!(entry.score, Score::new(50));
+        assert_eq!(entry.flag(), EntryFlag::Exact);
+    }
+
+    #[test]
+    fn same_key_stale_entry_fully_replaced() {
+        let mut tt = TranspositionTable::from_capacity(1024);
+        let hash = 0xDEAD_0000_0000_1234_u64;
+
+        // Store deep entry at age 0
+        tt.store_entry(
+            hash,
+            20,
+            Score::new(100),
+            EntryFlag::LowerBound,
+            make_move(0, 1),
+        );
+
+        // Advance generation — entry is now stale
+        tt.increment_age();
+        tt.increment_age();
+
+        // Shallow non-exact on same key, but entry is stale → full overwrite
+        tt.store_entry(
+            hash,
+            1,
+            Score::new(50),
+            EntryFlag::UpperBound,
+            make_move(1, 2),
+        );
+        let entry = tt.get_entry(hash).unwrap();
+        assert_eq!(entry.age(), 2, "age should be current generation");
+        assert_eq!(
+            entry.depth, 1,
+            "depth should be overwritten (entry was stale)"
+        );
+        assert_eq!(entry.score, Score::new(50));
+        assert_eq!(entry.flag(), EntryFlag::UpperBound);
     }
 
     #[test]
@@ -626,36 +707,14 @@ mod tests {
     }
 
     #[test]
-    fn replacement_guard_rejects_shallow_same_age() {
+    fn different_key_always_replaces_victim() {
+        // In Stockfish's model, a different-key write always overwrites the
+        // victim (the `!key_match` arm of the guard). The guard only protects
+        // same-key entries from shallow non-exact same-gen overwrites.
         let mut tt = TranspositionTable::from_capacity(1);
-
-        // Fill slot 0 with a deep entry at current age
-        tt.store_entry(
-            0x0001,
-            20,
-            Score::new(100),
-            EntryFlag::LowerBound,
-            make_move(0, 1),
-        );
-
-        // Try to replace with a much shallower, non-exact, same-age entry
-        // Guard condition: depth + 4 > entry.depth → 1 + 4 = 5 > 20 is false
-        // flag != Exact, same age, different key → should be rejected
-        tt.store_entry(
-            0x0002,
-            1,
-            Score::new(50),
-            EntryFlag::LowerBound,
-            make_move(0, 2),
-        );
-
-        // The shallow entry should still be stored (in a different slot since bucket has 4 slots)
-        // But if it targeted the same slot, it would be rejected.
-        // Let's fill all 4 slots first, then test rejection.
-        let mut tt2 = TranspositionTable::from_capacity(1);
         let hashes: Vec<u64> = vec![0x0001, 0x0002, 0x0003, 0x0004];
         for (i, &h) in hashes.iter().enumerate() {
-            tt2.store_entry(
+            tt.store_entry(
                 h,
                 20,
                 Score::new(0),
@@ -664,22 +723,20 @@ mod tests {
             );
         }
 
-        // All slots full at depth=20, same age, non-exact. Try storing depth=1 non-exact.
-        // The victim will be slot 0 (all equal quality, first wins).
-        // Guard: depth(1) + 4 = 5 > entry.depth(20) → false. Same age. Not exact. No key match.
-        // → Rejected.
-        tt2.store_entry(
+        // All slots full at depth=20, same age. Store depth=1 with a different key.
+        // The victim is the lowest-quality entry (all equal, so first slot).
+        // Guard: !key_match → true → overwrites.
+        tt.store_entry(
             0x0005,
             1,
             Score::new(0),
             EntryFlag::LowerBound,
             make_move(0, 10),
         );
-        assert!(tt2.get_entry(0x0005).is_none());
-
-        // But Exact flag should override the guard
-        tt2.store_entry(0x0005, 1, Score::new(0), EntryFlag::Exact, make_move(0, 10));
-        assert!(tt2.get_entry(0x0005).is_some());
+        assert!(
+            tt.get_entry(0x0005).is_some(),
+            "different-key should always replace the victim"
+        );
     }
 
     #[test]
