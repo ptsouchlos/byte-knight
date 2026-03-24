@@ -88,6 +88,8 @@ impl Engine {
         stop_flag: Arc<AtomicBool>,
         output: &mut dyn Write,
     ) -> SearchResult {
+        // Increment the age of the TT
+        self.transposition_table.increment_age();
         if self.debug {
             Search::<LogDebug>::new(
                 &params,
