@@ -3,8 +3,6 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::i32;
-
 use chess::moves::Move;
 
 use crate::{
@@ -30,15 +28,14 @@ pub struct Flags {
 }
 
 const TT_FLAG_MASK: u8 = 0b11;
-const TT_AGE_MASK: u8 = 0b1111100;
-
-const TT_FLAG_SHIFT: u8 = 0;
+const TT_AGE_MASK: u8 = 0b11111100;
 const TT_AGE_SHIFT: u8 = 2;
+const MAX_AGE: u8 = 0x3F;
 
 impl Flags {
     pub fn new(tt_flag: EntryFlag, age: u8) -> Self {
         Self {
-            data: (tt_flag as u8) | (age << TT_AGE_SHIFT),
+            data: (tt_flag as u8) | ((age & MAX_AGE) << TT_AGE_SHIFT),
         }
     }
 
@@ -92,7 +89,7 @@ impl TranspositionTableEntry {
     }
 
     pub fn relative_age(&self, age: u8) -> u8 {
-        (age - self.flags.age()) & 0x3F
+        age.wrapping_sub(self.flags.age()) & 0x3F
     }
 
     pub fn flag(&self) -> EntryFlag {
@@ -173,7 +170,7 @@ impl TranspositionTable {
             .entries
             .iter()
             .find(|&entry| entry.validate_key(zobrist))
-            .map(|&ent| ent)
+            .copied()
     }
 
     pub(crate) fn store_entry(
@@ -194,14 +191,14 @@ impl TranspositionTable {
         let tt_age = self.age;
         let bucket = &mut self.table[index];
         let mut replace_index = 0;
-        for (i, entry) in bucket.entries.iter_mut().enumerate() {
+        let mut min_quality = i32::MAX;
+        for (i, entry) in bucket.entries.iter().enumerate() {
             // Replace the entry if the keys match or the entry is empty
             if entry.validate_key(zobrist) || entry.is_empty() {
                 replace_index = i;
                 break;
             }
 
-            let mut min_quality = i32::MAX;
             let quality = entry.depth as i32 - 4 * entry.relative_age(tt_age) as i32;
             if quality < min_quality {
                 min_quality = quality;
@@ -209,12 +206,11 @@ impl TranspositionTable {
             }
         }
 
-        // let new_entry = TranspositionTableEntry::new(zobrist, depth, score, mv, flag, self.age);
         let entry = &mut bucket.entries[replace_index];
         if !(entry.validate_key(zobrist)
             || flag == EntryFlag::Exact
             || depth as i32 + 4 > entry.depth as i32
-            || entry.flags.age() != tt_age)
+            || entry.age() != tt_age)
         {
             return;
         }
@@ -239,20 +235,22 @@ impl TranspositionTable {
     }
 
     pub(crate) fn fullness(&self) -> f64 {
-        (self
+        let total_entries = self.table.len() * ENTRIES_PER_BUCKET;
+        let used = self
             .table
             .iter()
-            .map(|bucket| bucket.entries.iter().filter(|entry| entry.is_empty()))
-            .count() as f64
-            / self.table.len() as f64)
-            * 100_f64
+            .flat_map(|bucket| bucket.entries.iter())
+            .filter(|entry| !entry.is_empty())
+            .count();
+        (used as f64 / total_entries as f64) * 100_f64
     }
 
+    /// Returns hashfull output for UCI purposes. Only considers non-empty entries in the first 1000 entries.
     pub(crate) fn hashfull(&self) -> u16 {
         let mut fill = 0;
         for bucket in self.table.iter().take(1000 / ENTRIES_PER_BUCKET) {
             for entry in &bucket.entries {
-                if entry.flags.flag() == EntryFlag::None {
+                if entry.flags.flag() != EntryFlag::None {
                     fill += 1;
                 }
             }
@@ -260,12 +258,14 @@ impl TranspositionTable {
         fill
     }
 
+    /// Returns the size of the transposition table (number of buckets).
     pub(crate) fn size(&self) -> usize {
         self.table.len()
     }
 
+    /// Increments the age of the transposition table.
     pub(crate) fn increment_age(&mut self) {
-        self.age += 1;
+        self.age = (self.age + 1) & MAX_AGE;
     }
 
     /// Probes the transposition table for a potential entry/cutoff.
@@ -290,30 +290,22 @@ impl TranspositionTable {
     ) -> ProbeResult {
         if let Some(entry) = self.get_entry(zobrist) {
             self.accesses += 1;
-            // verify the partial zobrist key to detect collisions
-            if entry.validate_key(zobrist) {
-                self.hits += 1;
-                if entry.depth >= depth as u8 {
-                    // can we cut off?
-                    // cutoff can only happen if the entry depth >= current depth and 1 of the following:
-                    // - the entry type is exact
-                    // - the entry type is lower bound and the score >= beta
-                    // - the entry type is upper bound and the score <= alpha
-                    // see https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
-                    let ply_relative_score = entry.score.ply_relative(ply);
-                    if entry.flag() == EntryFlag::Exact
-                        || ((entry.flag() == EntryFlag::LowerBound && ply_relative_score >= beta)
-                            || (entry.flag() == EntryFlag::UpperBound
-                                && ply_relative_score <= alpha))
-                    {
-                        return ProbeResult::CutOff(entry);
-                    }
+            self.hits += 1;
+            if entry.depth >= depth as u8 {
+                // Cutoff can only happen if the entry depth >= current depth and 1 of the following:
+                // - the entry type is exact
+                // - the entry type is lower bound and the score >= beta
+                // - the entry type is upper bound and the score <= alpha
+                // see https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+                let ply_relative_score = entry.score.ply_relative(ply);
+                if entry.flag() == EntryFlag::Exact
+                    || ((entry.flag() == EntryFlag::LowerBound && ply_relative_score >= beta)
+                        || (entry.flag() == EntryFlag::UpperBound && ply_relative_score <= alpha))
+                {
+                    return ProbeResult::CutOff(entry);
                 }
-                return ProbeResult::Hit(entry);
-            } else {
-                // collision
-                self.collisions += 1;
             }
+            return ProbeResult::Hit(entry);
         }
 
         ProbeResult::Empty
