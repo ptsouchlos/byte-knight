@@ -585,6 +585,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // make the move
             board.make_move_unchecked(&mv).unwrap();
+            self.transposition_table.prefetch(board.zobrist_hash());
             let mut score = Score::DRAW;
 
             // Don't bother searching drawn positions
@@ -922,6 +923,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             local_pv.clear();
 
             board.make_move_unchecked(&mv).unwrap();
+            self.transposition_table.prefetch(board.zobrist_hash());
+
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
