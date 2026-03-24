@@ -89,7 +89,7 @@ impl TranspositionTableEntry {
     }
 
     pub fn relative_age(&self, age: u8) -> u8 {
-        age.wrapping_sub(self.flags.age()) & 0x3F
+        age.wrapping_sub(self.age()) & 0x3F
     }
 
     pub fn flag(&self) -> EntryFlag {
