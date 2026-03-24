@@ -6,6 +6,10 @@
 #![deny(clippy::unused_result_ok)]
 #![deny(clippy::panic)]
 #![deny(clippy::expect_used)]
+#![cfg_attr(
+    all(nightly, target_arch = "aarch64"),
+    feature(stdarch_aarch64_prefetch)
+)]
 
 pub mod aspiration_window;
 pub mod defs;
