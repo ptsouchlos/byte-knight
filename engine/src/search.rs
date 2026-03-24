@@ -585,6 +585,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // make the move
             board.make_move_unchecked(&mv).unwrap();
+            self.transposition_table.prefetch(board.zobrist_hash());
             let mut score = Score::DRAW;
 
             // Don't bother searching drawn positions
@@ -784,6 +785,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let null_move_depth = depth - NMP_DEPTH_REDUCTION - 1;
             let mut null_board = board.clone();
             null_board.null_move();
+            self.transposition_table.prefetch(null_board.zobrist_hash());
             let mut nmp_pv = PrincipleVariation::new();
             let null_score = -self.negamax::<NonPvNode>(
                 &mut null_board,
@@ -922,6 +924,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             local_pv.clear();
 
             board.make_move_unchecked(&mv).unwrap();
+            self.transposition_table.prefetch(board.zobrist_hash());
+
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
