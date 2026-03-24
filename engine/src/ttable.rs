@@ -3,6 +3,8 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
+use std::i32;
+
 use chess::moves::Move;
 
 use crate::{
@@ -22,6 +24,33 @@ pub enum EntryFlag {
     UpperBound,
 }
 
+#[derive(Clone, Debug, Default, Copy)]
+pub struct Flags {
+    data: u8,
+}
+
+const TT_FLAG_MASK: u8 = 0b11;
+const TT_AGE_MASK: u8 = 0b1111100;
+
+const TT_FLAG_SHIFT: u8 = 0;
+const TT_AGE_SHIFT: u8 = 2;
+
+impl Flags {
+    pub fn new(tt_flag: EntryFlag, age: u8) -> Self {
+        Self {
+            data: (tt_flag as u8) | (age << TT_AGE_SHIFT),
+        }
+    }
+
+    pub fn flag(&self) -> EntryFlag {
+        unsafe { std::mem::transmute(self.data & TT_FLAG_MASK) }
+    }
+
+    pub fn age(&self) -> u8 {
+        (self.data & TT_AGE_MASK) >> TT_AGE_SHIFT
+    }
+}
+
 /// A transposition table entry.
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
@@ -30,14 +59,14 @@ pub(crate) struct TranspositionTableEntry {
     pub score: Score,
     pub board_move: Move,
     pub depth: u8,
-    pub flag: EntryFlag,
+    pub flags: Flags,
 }
 
 const _: () = assert!(std::mem::size_of::<TranspositionTableEntry>() == 8);
 
 impl TranspositionTableEntry {
     pub fn is_empty(&self) -> bool {
-        self.flag == EntryFlag::None
+        self.flags.flag() == EntryFlag::None
     }
 
     #[allow(dead_code)]
@@ -45,29 +74,52 @@ impl TranspositionTableEntry {
         zobrist: u64,
         depth: u8,
         score: Score,
-        flag: EntryFlag,
         mv: Move,
+        flag: EntryFlag,
+        age: u8,
     ) -> TranspositionTableEntry {
         TranspositionTableEntry {
             zobrist_key: zobrist as u16,
             depth,
             score,
-            flag,
             board_move: mv,
+            flags: Flags::new(flag, age),
         }
     }
 
     pub const fn validate_key(&self, zobrist: u64) -> bool {
         self.zobrist_key == (zobrist & 0xFFFF) as u16
     }
+
+    pub fn relative_age(&self, age: u8) -> u8 {
+        (age - self.flags.age()) & 0x3F
+    }
+
+    pub fn flag(&self) -> EntryFlag {
+        self.flags.flag()
+    }
+
+    pub fn age(&self) -> u8 {
+        self.flags.age()
+    }
+}
+
+const ENTRIES_PER_BUCKET: usize = 4;
+
+// The size of a Bucket should divide the size of a cache line for best performance (prefetch).
+#[derive(Default, Clone)]
+#[repr(align(32))]
+struct Bucket {
+    entries: [TranspositionTableEntry; ENTRIES_PER_BUCKET],
 }
 
 /// A transposition table used to store the results of previous searches.
 pub struct TranspositionTable {
-    table: Vec<TranspositionTableEntry>,
+    table: Vec<Bucket>,
     pub(crate) collisions: usize,
     pub(crate) accesses: usize,
     pub(crate) hits: usize,
+    pub(crate) age: u8,
 }
 
 pub const MAX_TABLE_SIZE_MB: usize = 1024;
@@ -97,15 +149,16 @@ pub(crate) enum ProbeResult {
 impl TranspositionTable {
     pub(crate) fn from_capacity(capacity: usize) -> Self {
         Self {
-            table: vec![TranspositionTableEntry::default(); capacity],
+            table: vec![Bucket::default(); capacity],
             collisions: 0,
             accesses: 0,
             hits: 0,
+            age: 0,
         }
     }
 
     pub(crate) fn from_size_in_mb(mb: usize) -> Self {
-        let capacity = mb * BYTES_PER_MB / std::mem::size_of::<TranspositionTableEntry>();
+        let capacity = mb * BYTES_PER_MB / std::mem::size_of::<Bucket>();
         Self::from_capacity(capacity)
     }
 
@@ -115,8 +168,12 @@ impl TranspositionTable {
 
     pub(crate) fn get_entry(&self, zobrist: u64) -> Option<TranspositionTableEntry> {
         let index = self.get_index(zobrist);
-        let entry = self.table[index];
-        if entry.is_empty() { None } else { Some(entry) }
+        let bucket = &self.table[index];
+        bucket
+            .entries
+            .iter()
+            .find(|&entry| entry.validate_key(zobrist))
+            .map(|&ent| ent)
     }
 
     pub(crate) fn store_entry(
@@ -133,38 +190,82 @@ impl TranspositionTable {
             "cannot store an entry with EntryFlag::None"
         );
         let index = self.get_index(zobrist);
-        let entry = TranspositionTableEntry::new(zobrist, depth, score, flag, mv);
-        self.table[index] = entry;
+
+        let tt_age = self.age;
+        let bucket = &mut self.table[index];
+        let mut replace_index = 0;
+        for (i, entry) in bucket.entries.iter_mut().enumerate() {
+            // Replace the entry if the keys match or the entry is empty
+            if entry.validate_key(zobrist) || entry.is_empty() {
+                replace_index = i;
+                break;
+            }
+
+            let mut min_quality = i32::MAX;
+            let quality = entry.depth as i32 - 4 * entry.relative_age(tt_age) as i32;
+            if quality < min_quality {
+                min_quality = quality;
+                replace_index = i;
+            }
+        }
+
+        // let new_entry = TranspositionTableEntry::new(zobrist, depth, score, mv, flag, self.age);
+        let entry = &mut bucket.entries[replace_index];
+        if !(entry.validate_key(zobrist)
+            || flag == EntryFlag::Exact
+            || depth as i32 + 4 > entry.depth as i32
+            || entry.flags.age() != tt_age)
+        {
+            return;
+        }
+
+        entry.zobrist_key = zobrist as u16;
+        entry.depth = depth;
+        entry.score = score;
+        entry.flags = Flags::new(flag, tt_age);
+        entry.board_move = mv;
     }
 
     pub(crate) fn clear(&mut self) {
         self.table.iter_mut().for_each(|element| {
-            *element = TranspositionTableEntry::default();
+            *element = Bucket::default();
         });
 
         // reset stats as well
         self.collisions = 0;
         self.accesses = 0;
         self.hits = 0;
+        self.age = 0;
     }
 
     pub(crate) fn fullness(&self) -> f64 {
-        (self.table.iter().filter(|entry| !entry.is_empty()).count() as f64
+        (self
+            .table
+            .iter()
+            .map(|bucket| bucket.entries.iter().filter(|entry| entry.is_empty()))
+            .count() as f64
             / self.table.len() as f64)
             * 100_f64
     }
 
     pub(crate) fn hashfull(&self) -> u16 {
-        let sample = self.table.len().min(1000);
-        let used = self.table[..sample]
-            .iter()
-            .filter(|e| !e.is_empty())
-            .count();
-        ((used * 1000) / sample) as u16
+        let mut fill = 0;
+        for bucket in self.table.iter().take(1000 / ENTRIES_PER_BUCKET) {
+            for entry in &bucket.entries {
+                if entry.flags.flag() == EntryFlag::None {
+                    fill += 1;
+                }
+            }
+        }
+        fill
     }
 
     pub(crate) fn size(&self) -> usize {
         self.table.len()
+    }
+
+    pub(crate) fn increment_age(&mut self) {
+        self.age += 1;
     }
 
     /// Probes the transposition table for a potential entry/cutoff.
@@ -200,9 +301,10 @@ impl TranspositionTable {
                     // - the entry type is upper bound and the score <= alpha
                     // see https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
                     let ply_relative_score = entry.score.ply_relative(ply);
-                    if entry.flag == EntryFlag::Exact
-                        || ((entry.flag == EntryFlag::LowerBound && ply_relative_score >= beta)
-                            || (entry.flag == EntryFlag::UpperBound && ply_relative_score <= alpha))
+                    if entry.flag() == EntryFlag::Exact
+                        || ((entry.flag() == EntryFlag::LowerBound && ply_relative_score >= beta)
+                            || (entry.flag() == EntryFlag::UpperBound
+                                && ply_relative_score <= alpha))
                     {
                         return ProbeResult::CutOff(entry);
                     }
@@ -221,7 +323,7 @@ impl TranspositionTable {
 #[cfg(test)]
 mod tests {
     use super::{EntryFlag, TranspositionTable, TranspositionTableEntry};
-    use crate::score::Score;
+    use crate::{score::Score, ttable::Flags};
     use chess::{
         moves::{Move, MoveFlag},
         square::Square,
@@ -313,5 +415,20 @@ mod tests {
         // Measured emperically. If the TT entry size changes, this test will fail.
         assert_eq!(tt.size(), 2097152);
         println!("{} entries", tt.size());
+    }
+
+    #[test]
+    fn flags() {
+        let mut flags = Flags::new(EntryFlag::None, 10);
+        assert_eq!(flags.flag(), EntryFlag::None);
+        assert_eq!(flags.age(), 10);
+
+        flags = Flags::new(EntryFlag::Exact, 83);
+        assert_eq!(flags.flag(), EntryFlag::Exact);
+        assert_eq!(flags.age(), 83);
+
+        flags = Flags::new(EntryFlag::LowerBound, 121);
+        assert_eq!(flags.flag(), EntryFlag::LowerBound);
+        assert_eq!(flags.age(), 121);
     }
 }
