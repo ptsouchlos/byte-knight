@@ -7,7 +7,7 @@ use crate::{
     attacks,
     bitboard::Bitboard,
     board::Board,
-    move_generation::{self, enumerate::enumerate_moves},
+    move_generation::{self, enumerate::enumerate_moves, legal::MoveFilter},
     move_list::MoveList,
     moves::{Move, MoveType},
     pieces::Piece,
@@ -19,6 +19,7 @@ use crate::{
 
 pub mod castling;
 pub mod enumerate;
+pub mod legal;
 pub mod metadata;
 pub mod square_state;
 
@@ -139,23 +140,6 @@ pub(crate) fn calculate_checkers(board: &Board, occupancy: Bitboard) -> Bitboard
 }
 
 fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
-    /*
-     * For castling, the king and rook must not have moved.
-     * The squares between the king and rook must be empty.
-     * The squares the king moves through must not be under attack (including start and end).
-     * The king must not be in check.
-     * The king must not move through check.
-     * The king must not end up in check.
-     *
-     * FIDE Laws of Chess:
-     * 3.8.2.1 The right to castle has been lost:
-     *     3.8.2.1.1 if the king has already moved, or
-     *     3.8.2.1.2 with a rook that has already moved.
-     *
-     * 3.8.2.2 Castling is prevented temporarily:
-     *     3.8.2.2.1 if the square on which the king stands, or the square which it must cross, or the square which it is to occupy, is attacked by one or more of the opponent's pieces, or
-     *     3.8.2.2.2 if there is any piece between the king and the rook with which castling is to be effected.
-     */
     let occupancy = board.all_pieces();
     let checkers = calculate_checkers(board, occupancy);
     let legal_castling_mobility = move_generation::castling::legal_mobility(board, checkers);
@@ -165,6 +149,7 @@ fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
         king_sq,
         Piece::King,
         board,
+        MoveFilter::All,
         move_list,
     );
 }
@@ -197,6 +182,7 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_t
             Square::from_square_index(from_sq),
             piece,
             board,
+            MoveFilter::All,
             move_list,
         );
     }
@@ -291,6 +277,7 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType)
             Square::from_square_index(from_square),
             Piece::Pawn,
             board,
+            MoveFilter::All,
             move_list,
         );
     }
@@ -313,7 +300,7 @@ pub fn is_checkmate(board: &Board) -> bool {
         return false;
     }
 
-    let move_list = generate_legal_moves(board, MoveType::All);
+    let move_list = legal::generate_moves(board, MoveFilter::All);
     move_list.is_empty()
 }
 
@@ -334,9 +321,6 @@ pub fn are_legal(board: &Board, list: &MoveList) -> bool {
     }
     true
 }
-
-/// Re-export from legal_move_generation for convenience.
-pub use crate::legal_move_generation::generate_legal_moves;
 
 #[cfg(test)]
 mod tests {
@@ -706,7 +690,7 @@ mod tests {
         assert_eq!(move_list.len(), 20);
 
         move_list.clear();
-        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+        let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
 
         for mv in move_list.iter() {
             println!("{mv}");

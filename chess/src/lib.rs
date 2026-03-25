@@ -16,7 +16,6 @@ pub mod color;
 pub mod definitions;
 pub mod fen;
 pub mod file;
-pub mod legal_move_generation;
 pub mod magics;
 pub mod move_generation;
 pub mod move_history;

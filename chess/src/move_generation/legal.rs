@@ -11,7 +11,6 @@ use crate::move_generation::SOUTH;
 use crate::move_generation::enumerate::enumerate_moves;
 use crate::move_generation::metadata::CheckPinMetadata;
 use crate::move_list::MoveList;
-use crate::moves::MoveType;
 use crate::rays;
 use crate::square;
 use crate::{
@@ -85,7 +84,7 @@ fn calculate_en_passant_bitboard(
 ///
 /// These moves need to be enumerated to get the actual moves. See [`move_generation::enumerate_moves`]
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn generate_legal_pawn_mobility(
+fn generate_legal_pawn_mobility(
     board: &Board,
     square: Square,
     pinned_pieces: Bitboard,
@@ -200,7 +199,7 @@ pub(crate) fn generate_legal_pawn_mobility(
 ///
 /// These moves need to be enumerated to get the actual moves. See [`move_generation::enumerate_moves`]
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn generate_normal_piece_legal_mobility(
+fn generate_normal_piece_legal_mobility(
     piece: Piece,
     square: Square,
     board: &Board,
@@ -260,7 +259,7 @@ pub(crate) fn generate_normal_piece_legal_mobility(
 /// # Returns
 ///
 /// A [`Bitboard`] of legal moves for the king
-pub(crate) fn generate_king_legal_mobility(
+fn generate_king_legal_mobility(
     square: Square,
     board: &Board,
     capture_mask: Bitboard,
@@ -320,7 +319,7 @@ pub(crate) fn generate_king_legal_mobility(
 ///
 /// A [`Bitboard`] of legal moves for the piece that can them be enumerated.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn generate_legal_mobility(
+fn generate_legal_mobility(
     piece: Piece,
     square: Square,
     board: &Board,
@@ -353,7 +352,15 @@ pub(crate) fn generate_legal_mobility(
     }
 }
 
-/// Generate all legal moves for the current [`Board`] state.
+#[derive(Debug, Clone, Copy)]
+pub enum MoveFilter {
+    All,
+    Tacticals,
+    Captures,
+    Quiets,
+}
+
+/// Generate legal moves for the current [`Board`] state.
 ///
 /// This is a convenience wrapper that generates tacticals followed by quiets.
 ///
@@ -366,23 +373,29 @@ pub(crate) fn generate_legal_mobility(
 ///
 /// ```
 /// use chess::board::Board;
-/// use chess::moves::MoveType;
 /// use chess::move_list::MoveList;
 /// use chess::move_generation;
+/// use chess::move_generation::legal::MoveFilter;
 ///
 /// let board = Board::default_board();
-/// let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+/// let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
 /// assert_eq!(20, move_list.len())
 /// ```
-pub fn generate_legal_moves(board: &Board, move_types: MoveType) -> MoveList {
+pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
     let us = board.side_to_move();
     let them = us.opposite();
     let our_pieces = board.pieces(us);
     let their_pieces = board.pieces(them);
-    let filter = match move_types {
-        MoveType::All => Bitboard::FULL,
-        MoveType::Capture => their_pieces,
-        MoveType::Quiet => !their_pieces,
+    let filter = match move_filter {
+        MoveFilter::All => Bitboard::FULL,
+        MoveFilter::Captures | MoveFilter::Tacticals => their_pieces,
+        MoveFilter::Quiets => !their_pieces,
+    };
+    let pawn_filter = match move_filter {
+        MoveFilter::All => Bitboard::FULL,
+        MoveFilter::Captures => their_pieces,
+        MoveFilter::Tacticals => their_pieces | Rank::promotion_rank(us).to_bitboard(),
+        MoveFilter::Quiets => !their_pieces,
     };
 
     let king_sq_idx = board.king_square(us);
@@ -400,7 +413,14 @@ pub fn generate_legal_moves(board: &Board, move_types: MoveType) -> MoveList {
         meta.checkers,
     ) & filter;
 
-    enumerate_moves(&king_moves, king_sq, Piece::King, board, &mut move_list);
+    enumerate_moves(
+        &king_moves,
+        king_sq,
+        Piece::King,
+        board,
+        move_filter,
+        &mut move_list,
+    );
 
     // Return early if in double check since only king moves are legal
     if meta.num_checkers() > 1 {
@@ -417,12 +437,20 @@ pub fn generate_legal_moves(board: &Board, move_types: MoveType) -> MoveList {
         };
 
         let from_sq = Square::from_square_index(from_sq_idx);
-        let moves = generate_legal_mobility(piece, from_sq, board, &meta) & filter;
+        let use_filter = match piece {
+            Piece::Pawn => pawn_filter,
+            _ => filter,
+        };
+        let moves = generate_legal_mobility(piece, from_sq, board, &meta) & use_filter;
 
-        enumerate_moves(&moves, from_sq, piece, board, &mut move_list);
+        enumerate_moves(&moves, from_sq, piece, board, move_filter, &mut move_list);
     }
 
     move_list
+}
+
+pub fn generate_all_moves(board: &Board) -> MoveList {
+    generate_moves(board, MoveFilter::All)
 }
 
 #[cfg(test)]
@@ -433,7 +461,7 @@ mod tests {
 
     fn generate_moves_for_fen(fen: &str) -> MoveList {
         let board = Board::from_fen(fen).unwrap();
-        generate_legal_moves(&board, MoveType::All)
+        generate_moves(&board, MoveFilter::All)
     }
 
     #[test]
@@ -514,9 +542,9 @@ mod tests {
         for fen in &positions {
             let board = Board::from_fen(fen).unwrap();
 
-            let all_moves = generate_legal_moves(&board, MoveType::All);
-            let captures = generate_legal_moves(&board, MoveType::Capture);
-            let quiets = generate_legal_moves(&board, MoveType::Quiet);
+            let all_moves = generate_moves(&board, MoveFilter::All);
+            let captures = generate_moves(&board, MoveFilter::Captures);
+            let quiets = generate_moves(&board, MoveFilter::Quiets);
 
             let staged_moves = captures
                 .iter()
@@ -539,6 +567,32 @@ mod tests {
                     mv.to_long_algebraic()
                 );
             }
+        }
+    }
+
+    fn validate_tacticals_for_board(board: &Board) {
+        let tacticals = move_generation::legal::generate_moves(&board, MoveFilter::Tacticals);
+        let captures = move_generation::legal::generate_moves(&board, MoveFilter::Captures);
+
+        assert_ne!(tacticals.len(), captures.len());
+        for mv in tacticals.iter() {
+            assert!(
+                board.captured(mv).is_some()
+                    || (mv.is_promotion()
+                        && mv.promotion_piece().is_some_and(|pc| pc == Piece::Queen))
+            );
+        }
+    }
+
+    #[test]
+    fn tactical_movegen_includes_queen_promos() {
+        let fens = &[
+            "6n1/4PP2/8/6k1/K7/4p3/2p5/8 w - - 0 1",
+            "6n1/4PP2/8/6k1/K7/4p3/2p5/8 b - - 0 1",
+        ];
+        for fen in fens {
+            let board = Board::from_fen(fen).unwrap();
+            validate_tacticals_for_board(&board);
         }
     }
 }
