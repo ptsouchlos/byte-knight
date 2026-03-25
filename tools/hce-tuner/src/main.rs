@@ -292,7 +292,7 @@ fn print_params(params: &Parameters) {
         for file in 0..NumberOf::FILES {
             let idx = Offsets::offset_for_rook_rank(file, is_king_ahead);
             let val = params.as_slice()[idx];
-            println!("    {val:?}");
+            println!("    {val:?},");
         }
         println!("  ],")
     }
