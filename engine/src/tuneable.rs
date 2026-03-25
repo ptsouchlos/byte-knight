@@ -5,6 +5,85 @@
 
 use crate::score::ScoreType;
 
+// Credit to Akimbo author for the implementation
+#[macro_export]
+macro_rules! tunable_params {
+    ($($name:ident = $val:expr, $min:expr, $max:expr, $step:expr, $spsa:expr;)*) => {
+        #[cfg(feature = "tuning")]
+        use std::sync::atomic::Ordering;
+
+        #[cfg(feature = "tuning")]
+        pub fn list_params() {
+            $(
+                println!(
+                    "option name {} type spin default {} min {} max {}",
+                    stringify!($name),
+                    $name(),
+                    $min,
+                    $max,
+                );
+            )*
+        }
+
+        #[cfg(feature = "tuning")]
+        pub fn set_param(name: &str, val: i32) {
+            match name {
+                $(
+                    stringify!($name) => vals::$name.store(val, Ordering::Relaxed),
+                )*
+                _ => println!("info error unknown option"),
+            }
+        }
+
+        #[cfg(feature = "tuning")]
+        pub fn print_params_ob() {
+            $(
+                if $spsa {
+                    let step = ($max - $min) / 20;
+                    println!(
+                        "{}, int, {}.0, {}.0, {}.0, {}, 0.002",
+                        stringify!($name),
+                        $name(),
+                        $min,
+                        $max,
+                        step,
+                    );
+                }
+            )*
+        }
+
+        #[cfg(feature = "tuning")]
+        mod vals {
+            use std::sync::atomic::AtomicI32;
+            $(
+            #[allow(non_upper_case_globals)]
+            pub static $name: AtomicI32 = AtomicI32::new($val);
+            )*
+        }
+
+        $(
+        #[cfg(feature = "tuning")]
+        #[inline]
+        pub fn $name() -> i32 {
+            vals::$name.load(Ordering::Relaxed)
+        }
+
+        #[cfg(not(feature = "tuning"))]
+        #[inline]
+        pub fn $name() -> i32 {
+            $val
+        }
+        )*
+    };
+}
+
+#[rustfmt::skip]
+tunable_params!(
+    lmp_max_depth                = 6, 6, 10, 1,               false;
+    lmp_base                     = 2, 1, 5, 1,                false;
+    lmp_scale                    = 11, 10, 100, 20,           true;
+);
+
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
 pub(crate) const ASPIRATION_WINDOW: ScoreType = 50;
 
@@ -21,9 +100,6 @@ pub(crate) const LMR_OFFSET: f64 = 0.2;
 pub(crate) const LMR_SCALING_FACTOR: f64 = 2.0;
 pub(crate) const LMR_MIN_DEPTH: i16 = 3;
 pub(crate) const LMR_MIN_MOVES_SEEN: usize = 3;
-
-// Minimum threshold depth for LMP to be considered
-pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 6;
 
 pub(crate) const RAZORING_SCALING: ScoreType = 400;
 pub(crate) const RAZORING_OFFSET: ScoreType = 500;

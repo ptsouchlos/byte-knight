@@ -3,6 +3,8 @@ name = "engine"
 version = "4.0.0"
 edition = "2024"
 
+[features]
+tuning = []
 
 [dependencies]
 chess = { workspace = true }
