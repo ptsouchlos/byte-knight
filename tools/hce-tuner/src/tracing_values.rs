@@ -146,7 +146,7 @@ impl EvalValues for TracingValues {
         enemy_king_square: u8,
         side: Side,
     ) -> Self::ReturnScore {
-        let (rook_rank, rook_file) = square::from_square(rook_square);
+        let (rook_file, rook_rank) = square::from_square(rook_square);
         let bonus_rank = match side {
             Side::White => Rank::R7,
             Side::Black => Rank::R2,
