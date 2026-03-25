@@ -391,11 +391,15 @@ pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
         MoveFilter::Captures | MoveFilter::Tacticals => their_pieces,
         MoveFilter::Quiets => !their_pieces,
     };
+    let ep_bb = match board.en_passant_square() {
+        Some(sq) => Bitboard::from_square(sq),
+        None => Bitboard::default(),
+    };
     let pawn_filter = match move_filter {
         MoveFilter::All => Bitboard::FULL,
-        MoveFilter::Captures => their_pieces,
-        MoveFilter::Tacticals => their_pieces | Rank::promotion_rank(us).to_bitboard(),
-        MoveFilter::Quiets => !their_pieces,
+        MoveFilter::Captures => their_pieces | ep_bb,
+        MoveFilter::Tacticals => their_pieces | Rank::promotion_rank(us).to_bitboard() | ep_bb,
+        MoveFilter::Quiets => !(their_pieces | ep_bb),
     };
 
     let king_sq_idx = board.king_square(us);

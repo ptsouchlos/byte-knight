@@ -72,6 +72,7 @@ pub(crate) fn enumerate_moves(
             let flags: &[MoveFlag] = match move_filter {
                 MoveFilter::Tacticals => &[MoveFlag::PromotionQueen],
                 MoveFilter::Quiets => &[
+                    MoveFlag::PromotionQueen,
                     MoveFlag::PromotionRook,
                     MoveFlag::PromotionBishop,
                     MoveFlag::PromotionKnight,
