@@ -532,7 +532,7 @@ mod tests {
         bitboard::Bitboard,
         board::Board,
         definitions::Squares,
-        move_generation::{self, legal::MoveFilter},
+        move_generation::{self, move_filter::MoveFilter},
         move_list::MoveList,
         pieces::Piece,
         side::Side,

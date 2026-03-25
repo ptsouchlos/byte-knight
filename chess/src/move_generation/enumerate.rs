@@ -8,7 +8,7 @@
 use crate::{
     bitboard::Bitboard,
     board::Board,
-    move_generation::legal::MoveFilter,
+    move_generation::MoveFilter,
     move_list::MoveList,
     moves::{Move, MoveFlag},
     pieces::Piece,

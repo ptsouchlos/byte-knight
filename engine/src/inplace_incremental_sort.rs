@@ -97,12 +97,8 @@ impl Iterator for InplaceIncrementalSort<'_> {
 mod tests {
 
     use chess::{
-        board::Board,
-        move_generation,
-        move_list::MoveList,
-        move_generation::legal::MoveFilter,
-        moves::Move,
-        pieces::Piece,
+        board::Board, move_generation, move_generation::move_filter::MoveFilter,
+        move_list::MoveList, moves::Move, pieces::Piece,
     };
 
     use crate::{inplace_incremental_sort::InplaceIncrementalSort, move_order::MoveOrder};

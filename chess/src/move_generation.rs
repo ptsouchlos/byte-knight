@@ -7,7 +7,7 @@ use crate::{
     attacks,
     bitboard::Bitboard,
     board::Board,
-    move_generation::{self, enumerate::enumerate_moves, legal::MoveFilter},
+    move_generation::{self, enumerate::enumerate_moves, move_filter::MoveFilter},
     move_list::MoveList,
     moves::Move,
     pieces::Piece,
@@ -21,6 +21,7 @@ pub mod castling;
 pub mod enumerate;
 pub mod legal;
 pub mod metadata;
+pub mod move_filter;
 pub mod square_state;
 
 pub(crate) const NORTH: u64 = 8;
@@ -210,7 +211,10 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
         };
 
         // pawn non-capture moves
-        if matches!(move_filter, MoveFilter::All | MoveFilter::Quiets | MoveFilter::Tacticals) {
+        if matches!(
+            move_filter,
+            MoveFilter::All | MoveFilter::Quiets | MoveFilter::Tacticals
+        ) {
             let bb_push = Bitboard::new(1u64 << to_square);
             let bb_single_push = bb_push & empty;
             let can_double_push = match us {
@@ -258,7 +262,10 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
         }
 
         // pawn captures
-        if matches!(move_filter, MoveFilter::All | MoveFilter::Captures | MoveFilter::Tacticals) {
+        if matches!(
+            move_filter,
+            MoveFilter::All | MoveFilter::Captures | MoveFilter::Tacticals
+        ) {
             let bb_capture = attack_bb & their_pieces;
             // En passant
             let bb_en_passant = match board.en_passant_square() {

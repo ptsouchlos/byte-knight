@@ -19,7 +19,7 @@ use arrayvec::ArrayVec;
 use chess::{
     board::Board,
     definitions::MAX_MOVE_LIST_SIZE,
-    move_generation::{self, legal::MoveFilter},
+    move_generation::{self, move_filter::MoveFilter},
     moves::Move,
     pieces::Piece,
 };

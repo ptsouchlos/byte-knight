@@ -663,7 +663,7 @@ mod tests {
     use crate::{
         definitions::{DEFAULT_FEN, Squares},
         file::File,
-        move_generation::{self, legal::MoveFilter},
+        move_generation::{self, move_filter::MoveFilter},
         move_list::MoveList,
         moves::MoveFlag,
         rank::Rank,

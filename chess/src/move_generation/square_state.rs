@@ -27,7 +27,7 @@ pub fn is_attacked(
 #[cfg(test)]
 mod tests {
     use crate::{
-        move_generation::{self, legal::MoveFilter, square_state},
+        move_generation::{self, MoveFilter, square_state},
         move_list::MoveList,
     };
 

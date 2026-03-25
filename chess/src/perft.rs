@@ -5,7 +5,7 @@
 
 use crate::{
     board::Board,
-    move_generation::{self, legal::MoveFilter},
+    move_generation::{self, move_filter::MoveFilter},
     moves::Move,
 };
 use anyhow::{Result, bail};

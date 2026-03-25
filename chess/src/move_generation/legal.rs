@@ -10,6 +10,7 @@ use crate::move_generation::NORTH;
 use crate::move_generation::SOUTH;
 use crate::move_generation::enumerate::enumerate_moves;
 use crate::move_generation::metadata::CheckPinMetadata;
+use crate::move_generation::move_filter::MoveFilter;
 use crate::move_list::MoveList;
 use crate::rays;
 use crate::square;
@@ -352,14 +353,6 @@ fn generate_legal_mobility(
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum MoveFilter {
-    All,
-    Tacticals,
-    Captures,
-    Quiets,
-}
-
 /// Generate legal moves for the current [`Board`] state.
 ///
 /// This is a convenience wrapper that generates tacticals followed by quiets.
@@ -375,7 +368,7 @@ pub enum MoveFilter {
 /// use chess::board::Board;
 /// use chess::move_list::MoveList;
 /// use chess::move_generation;
-/// use chess::move_generation::legal::MoveFilter;
+/// use chess::move_generation::move_filter::MoveFilter;
 ///
 /// let board = Board::default_board();
 /// let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
