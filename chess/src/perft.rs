@@ -5,8 +5,8 @@
 
 use crate::{
     board::Board,
-    move_generation,
-    moves::{Move, MoveType},
+    move_generation::{self, legal::MoveFilter},
+    moves::Move,
 };
 use anyhow::{Result, bail};
 
@@ -33,7 +33,7 @@ pub fn split_perft(
     depth: usize,
     print_moves: bool,
 ) -> Result<Vec<SplitPerftResult>> {
-    let move_list = move_generation::generate_legal_moves(board, crate::moves::MoveType::All);
+    let move_list = move_generation::legal::generate_moves(board, MoveFilter::All);
 
     let mut results = Vec::new();
     for mv in move_list.iter() {
@@ -72,7 +72,7 @@ pub fn split_perft(
 #[cfg_attr(debug_assertions, inline(never))]
 pub fn perft(board: &mut Board, depth: usize, print_moves: bool) -> Result<u64> {
     let mut nodes = 0;
-    let move_list = move_generation::generate_legal_moves(board, MoveType::All);
+    let move_list = move_generation::legal::generate_moves(board, MoveFilter::All);
 
     if print_moves {
         for mv in move_list.iter() {
@@ -715,7 +715,7 @@ mod tests {
         let board =
             Board::from_fen("R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1").unwrap();
 
-        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+        let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
         assert_eq!(move_list.len(), 218);
     }
 

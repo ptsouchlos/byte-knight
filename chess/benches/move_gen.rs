@@ -7,7 +7,7 @@ pub fn move_gen_benchmark(c: &mut Criterion) {
 
     c.bench_function("move-gen", |b| {
         b.iter(|| {
-            let _moves = move_generation::generate_legal_moves(&board, chess::moves::MoveType::All);
+            let _moves = move_generation::legal::generate_all_moves(&board);
         });
     });
 }
