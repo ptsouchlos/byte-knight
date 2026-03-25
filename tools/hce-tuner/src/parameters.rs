@@ -122,6 +122,7 @@ impl Parameters {
         }
 
         // Rook offset bonus
+        // Pick starting positions for respective kings
         let king_sq_white = Squares::E1;
         let king_sq_black = Squares::E8;
         // White
