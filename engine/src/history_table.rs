@@ -67,7 +67,7 @@ impl HistoryTable {
         for (piece_type, piece_name) in PIECE_NAMES.iter().enumerate() {
             writeln!(output, "{piece_name} - {side}")?;
             // print from white's perspective
-            for rank in (0..=NumberOf::RANKS - 1).rev() {
+            for rank in (0..NumberOf::RANKS).rev() {
                 write!(output, "|")?;
                 for file in 0..NumberOf::FILES {
                     let square = file + rank * NumberOf::FILES;
