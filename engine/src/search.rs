@@ -25,6 +25,8 @@ use chess::{
 };
 use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
+mod extensions;
+
 use crate::{
     aspiration_window::AspirationWindow,
     defs::{MAX_DEPTH, MAX_PLY},
@@ -608,8 +610,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         1
                     };
 
-                    // Calculate the reduced depth
-                    let reduced_depth = depth.saturating_sub(reduction);
+                    // Calculate the reduced depth along with any extensions
+                    let reduced_depth = depth.saturating_sub(reduction) + self.extension_value(board);
 
                     // Search with a null window at a reduced depth
                     let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha - 1, -alpha, &mut local_pv);
