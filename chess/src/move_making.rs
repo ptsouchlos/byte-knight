@@ -534,7 +534,6 @@ mod tests {
         definitions::Squares,
         move_generation::{self, legal::MoveFilter},
         move_list::MoveList,
-        moves::MoveType,
         pieces::Piece,
         side::Side,
     };
@@ -585,7 +584,7 @@ mod tests {
         let mut move_list = MoveList::new();
         let mut board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
         let initial_mv = *move_list
             .iter()
@@ -618,7 +617,7 @@ mod tests {
         let mut move_list = MoveList::new();
         let mut board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
         let initial_mv = *move_list
             .iter()
@@ -635,7 +634,7 @@ mod tests {
 
         // generate moves again
         move_list.clear();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
         let mut node_count = 0;
         for mv in move_list.iter() {
             println!("trying move {}", mv.to_long_algebraic());
@@ -673,7 +672,7 @@ mod tests {
         );
 
         move_list.clear();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
         node_count = 0;
 
         for mv in move_list.iter() {
@@ -697,7 +696,7 @@ mod tests {
                 Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
                     .unwrap();
 
-            move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+            move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
             let first_mv = move_list
                 .iter()

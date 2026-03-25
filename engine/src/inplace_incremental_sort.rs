@@ -100,7 +100,8 @@ mod tests {
         board::Board,
         move_generation,
         move_list::MoveList,
-        moves::{Move, MoveType},
+        move_generation::legal::MoveFilter,
+        moves::Move,
         pieces::Piece,
     };
 
@@ -112,7 +113,7 @@ mod tests {
         let board = Board::default_board();
 
         // generate moves for starting position (20)
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
         let mut order = vec![
             MoveOrder::Quiet(14),

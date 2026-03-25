@@ -3,14 +3,14 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use chess::{board::Board, move_generation, move_list::MoveList, moves::MoveType};
+use chess::{board::Board, move_generation, move_generation::legal::MoveFilter, move_list::MoveList};
 
 #[test]
 fn make_promotion_move() {
     let mut board =
         Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
     let mut move_list = MoveList::new();
-    move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+    move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
     let promotion_move = move_list.iter().find(|m| m.is_promotion()).unwrap();
     board.make_move(promotion_move).unwrap();
     println!("{}", board.to_fen());
