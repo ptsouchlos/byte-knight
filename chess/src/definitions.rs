@@ -48,6 +48,13 @@ impl NumberOf {
     pub const CASTLING_OPTIONS: usize = 16;
     // Passed pawns cannot be on ranks 1 or 8
     pub const PASSED_PAWN_RANKS: usize = 6;
+    pub const KNIGHT_MOVES: usize = 8;
+    pub const BISHOP_MOVES: usize = 13;
+    pub const ROOK_MOVES: usize = 14;
+    pub const QUEEN_MOVES: usize = 27;
+    pub const PAWN_SHIELD_RANKS: usize = 4;
+    pub const PAWN_STORM_RANKS: usize = 4;
+    pub const KING_FLANK_FILES: usize = 3;
 }
 
 pub const EMPTY: u64 = 0;

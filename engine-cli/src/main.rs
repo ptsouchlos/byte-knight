@@ -7,11 +7,9 @@ mod bench;
 mod perft;
 
 use chess::definitions::DEFAULT_FEN;
-use chess::move_generation::MoveGenerator;
 use clap::{Parser, Subcommand};
 use engine::defs::About;
-use engine::engine::ByteKnight;
-use std::process::exit;
+use engine::uci_handler::UciHandler;
 
 shadow_rs::shadow!(build);
 
@@ -62,15 +60,20 @@ enum Command {
 }
 
 fn run_uci() {
-    let mut engine = ByteKnight::new();
-    let engine_run_result = engine.run();
-    match engine_run_result {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Error running engine: {e}");
-            exit(1);
-        }
-    }
+    // Spawn UCI handler on a thread with 8 MiB stack — the search is deeply recursive
+    // and the default main thread stack size is insufficient on some platforms.
+    let handle = std::thread::Builder::new()
+        .name("bk-main".to_string())
+        .stack_size(8 * 1024 * 1024)
+        .spawn(|| {
+            let mut handler = UciHandler::new();
+            let result = handler.run();
+            if let Err(e) = result {
+                eprintln!("Error running engine: {e}");
+            }
+        })
+        .unwrap();
+    handle.join().unwrap();
 }
 
 fn main() {
@@ -85,14 +88,13 @@ fn main() {
                 fen,
                 epd_file,
             } => {
-                let move_gen = MoveGenerator::new();
                 let board = &mut chess::board::Board::from_fen(&fen).unwrap();
                 if let Some(epd) = epd_file {
-                    perft::process_epd_file(&epd, &move_gen);
+                    perft::process_epd_file(&epd);
                 } else {
                     for i in 1..depth + 1 {
                         let now = std::time::Instant::now();
-                        let nodes = chess::perft::perft(board, &move_gen, i, false).unwrap();
+                        let nodes = chess::perft::perft(board, i, false).unwrap();
                         let elapsed = now.elapsed();
                         let nps = nodes as f64 / elapsed.as_secs_f64();
                         println!(
@@ -111,10 +113,8 @@ fn main() {
                 print_moves,
             } => {
                 println!("running split perft at depth {}", depth);
-                let move_gen = MoveGenerator::new();
                 let board = &mut chess::board::Board::from_fen(&fen).unwrap();
-                let move_results =
-                    chess::perft::split_perft(board, &move_gen, depth, print_moves).unwrap();
+                let move_results = chess::perft::split_perft(board, depth, print_moves).unwrap();
                 for res in &move_results {
                     println!("{}: {}", res.mv.to_long_algebraic(), res.nodes);
                 }

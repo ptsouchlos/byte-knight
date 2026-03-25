@@ -15,7 +15,6 @@ use rayon::prelude::*;
 use chess::{
     board::Board,
     definitions::DEFAULT_FEN,
-    move_generation::MoveGenerator,
     perft::{self},
 };
 use clap::Parser;
@@ -55,8 +54,7 @@ where
 ///
 /// # Arguments
 /// - `path` - The path to the EPD file.
-/// - `move_generation` - The move generator to use for perft calculations.
-pub(crate) fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
+pub(crate) fn process_epd_file(path: &str) {
     let mut all_failures = Vec::new();
     let lines = read_lines(path).unwrap();
     let now = std::time::Instant::now();
@@ -71,7 +69,7 @@ pub(crate) fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
                 let depth = parts[0].replace('D', "").parse::<usize>().unwrap();
                 let expected_nodes = parts[1].parse::<u64>().unwrap();
                 let mut board = Board::from_fen(fen).unwrap();
-                let nodes = perft::perft(&mut board, move_generation, depth, false).unwrap();
+                let nodes = perft::perft(&mut board, depth, false).unwrap();
                 if expected_nodes != nodes {
                     print!("{} ", "[FAIL]".red().bold());
                     println!("{fen:<30}: {depth:2} {expected_nodes:^10} != {nodes:^10}");

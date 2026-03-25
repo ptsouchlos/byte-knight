@@ -3,6 +3,8 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
+use std::io;
+
 use chess::board::Board;
 use engine::{
     log_level::LogNone,
@@ -109,7 +111,9 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     let mut nodes = 0u64;
     let mut tt = Default::default();
     let mut hist = Default::default();
-    let mut search = Search::<LogNone>::new(&config, &mut tt, &mut hist);
+    let mut killers = Default::default();
+    let mut sink = io::sink();
+    let mut search = Search::<LogNone>::new(&config, &mut tt, &mut hist, &mut killers, &mut sink);
 
     let max_fen_width = benchmark_strings.iter().map(|s| s.len()).max().unwrap();
 

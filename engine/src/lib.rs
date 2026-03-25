@@ -6,6 +6,10 @@
 #![deny(clippy::unused_result_ok)]
 #![deny(clippy::panic)]
 #![deny(clippy::expect_used)]
+#![cfg_attr(
+    all(nightly, target_arch = "aarch64"),
+    feature(stdarch_aarch64_prefetch)
+)]
 
 pub mod aspiration_window;
 pub mod defs;
@@ -15,6 +19,7 @@ pub mod hce_values;
 pub mod history_table;
 mod inplace_incremental_sort;
 pub mod input_handler;
+pub mod killers_table;
 mod lmr;
 pub mod log_level;
 mod move_order;
@@ -24,8 +29,9 @@ pub mod phased_score;
 pub(crate) mod principle_variation;
 pub mod score;
 pub mod search;
-pub mod search_thread;
+pub mod structure;
 pub(crate) mod table;
 pub mod traits;
 pub mod ttable;
 pub mod tuneable;
+pub mod uci_handler;

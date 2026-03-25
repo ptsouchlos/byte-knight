@@ -3,6 +3,8 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
+use std::io::{self, Write};
+
 use chess::{
     definitions::NumberOf,
     pieces::{PIECE_NAMES, Piece},
@@ -60,19 +62,25 @@ impl HistoryTable {
         }
     }
 
-    pub(crate) fn print_for_side(&self, side: Side) {
+    #[allow(dead_code)]
+    pub(crate) fn print_for_side(&self, side: Side, output: &mut impl Write) -> io::Result<()> {
         for (piece_type, piece_name) in PIECE_NAMES.iter().enumerate() {
-            println!("{piece_name} - {side}");
+            writeln!(output, "{piece_name} - {side}")?;
             // print from white's perspective
-            for rank in (0..=NumberOf::RANKS - 1).rev() {
-                print!("|");
+            for rank in (0..NumberOf::RANKS).rev() {
+                write!(output, "|")?;
                 for file in 0..NumberOf::FILES {
                     let square = file + rank * NumberOf::FILES;
-                    print!("{:5} ", self.table[side as usize][piece_type][square]);
+                    write!(
+                        output,
+                        "{:5} ",
+                        self.table[side as usize][piece_type][square]
+                    )?;
                 }
-                println!("|");
+                writeln!(output, "|")?;
             }
         }
+        Ok(())
     }
 }
 

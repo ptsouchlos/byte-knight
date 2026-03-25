@@ -14,8 +14,8 @@ clap = { workspace = true, features = ["derive"] }
 rayon = { workspace = true }
 indicatif = { workspace = true, features = ["rayon"] }
 textplots = { workspace = true }
+ctrlc = { workspace = true }
 
 [[bin]]
 name = "hce-tuner"
 path = "src/main.rs"
-test = false

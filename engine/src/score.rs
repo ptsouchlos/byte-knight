@@ -60,6 +60,26 @@ impl Score {
         Score(score)
     }
 
+    /// Returns a new "mate" score (positive).
+    /// This is the largest mate score possible.
+    pub fn new_mate() -> Score {
+        Score::MATE
+    }
+
+    /// Returns a new "mated" score (negative).
+    /// This is the largest mate score possible.
+    pub fn new_mated() -> Score {
+        -Score::MATE
+    }
+
+    pub fn mate_in(ply: ScoreType) -> Score {
+        Score::new_mate() - ply
+    }
+
+    pub fn mated_in(ply: ScoreType) -> Score {
+        Score::new_mated() + ply
+    }
+
     pub fn clamp(&self, min: ScoreType, max: ScoreType) -> Score {
         Score(self.0.clamp(min, max))
     }
@@ -82,6 +102,41 @@ impl Score {
     /// - True if the score indicates that you are being mated, false otherwise.
     pub fn mated(&self) -> bool {
         self.0 <= -Score::MINIMUM_MATE.0 && self.0 > -Score::INF.0
+    }
+
+    /// Add ply bias to the current score if it is a mate score.
+    ///
+    /// # Arguments
+    /// - `ply`: The ply bias to add to the mate score.
+    ///
+    /// # Returns
+    /// A new score with ply bias if it is a mate score.
+    pub fn ply_relative(&self, ply: ScoreType) -> Score {
+        if self.0 >= Score::MINIMUM_MATE.0 {
+            Score::new(self.0 - ply)
+        } else if self.0 <= -Score::MINIMUM_MATE.0 {
+            Score::new(self.0 + ply)
+        } else {
+            *self
+        }
+    }
+
+    /// Remove ply bias from a score if it is a mate score.
+    ///
+    /// # Arguments
+    /// - `ply`: The ply to remove from the mate score.
+    ///
+    /// # Returns
+    /// A new score with the ply bias removed if the current score is a mate score.
+    /// Otherwise, it just returns a clone of the same score.
+    pub fn remove_ply_bias(&self, ply: ScoreType) -> Score {
+        if self.0 >= Score::MINIMUM_MATE.0 {
+            Score::new(self.0 + ply)
+        } else if self.0 <= -Score::MINIMUM_MATE.0 {
+            Score::new(self.0 - ply)
+        } else {
+            *self
+        }
     }
 }
 
@@ -311,5 +366,163 @@ mod tests {
 
         score = Score::MINIMUM_MATE;
         assert!(score.is_mate());
+
+        score = Score::new_mate();
+        assert!(score.is_mate());
+        assert_eq!(score.0, Score::MATE.0);
+
+        score = Score::new_mated();
+        assert!(score.is_mate());
+        assert_eq!(score.0, -Score::MATE.0);
+    }
+
+    #[test]
+    fn ply_bias_non_mate_no_change() {
+        // Non-mate scores should pass through unchanged regardless of ply
+        for cp in [0, 100, -100, 500, -500, 1, -1] {
+            let score = Score::new(cp);
+            assert_eq!(score.ply_relative(0), score);
+            assert_eq!(score.ply_relative(5), score);
+            assert_eq!(score.ply_relative(50), score);
+            assert_eq!(score.remove_ply_bias(0), score);
+            assert_eq!(score.remove_ply_bias(5), score);
+            assert_eq!(score.remove_ply_bias(50), score);
+        }
+    }
+
+    #[test]
+    fn ply_relative_positive_mate() {
+        // Positive mate: ply_relative subtracts ply
+        // MATE - 5 at ply 0 → stays MATE - 5
+        let score = Score::new_mate().ply_relative(5);
+        assert_eq!(score.ply_relative(0), score);
+        // MATE - 2 (stored ply-independent) retrieved at ply 3 → MATE - 5
+        let offset_ply = 2;
+        let lookup_ply = 5;
+        let stored = Score::new_mate() - offset_ply;
+        assert_eq!(
+            stored.ply_relative(lookup_ply - offset_ply),
+            Score::new_mate().ply_relative(lookup_ply)
+        );
+    }
+
+    #[test]
+    fn ply_relative_negative_mate() {
+        // Negative mate (being mated): ply_relative adds ply
+        // -MATE + 2 (stored ply-independent) retrieved at ply 3 → -MATE + 5
+        let stored = Score::new(-Score::MATE.0 + 2);
+        assert_eq!(stored.ply_relative(3), Score::new(-Score::MATE.0 + 5));
+        // At ply 0, no adjustment
+        assert_eq!(stored.ply_relative(0), stored);
+    }
+
+    #[test]
+    fn remove_ply_bias_positive_mate() {
+        // Positive mate: remove_ply_bias adds ply
+        // MATE - 5 at ply 3 → stored as MATE - 5 + 3 = MATE - 2
+        let score = Score::new(Score::MATE.0 - 5);
+        assert_eq!(score.remove_ply_bias(3), Score::new(Score::MATE.0 - 2));
+        // At ply 0, no adjustment
+        assert_eq!(score.remove_ply_bias(0), score);
+    }
+
+    #[test]
+    fn remove_ply_bias_negative_mate() {
+        // Negative mate (being mated): remove_ply_bias subtracts ply
+        // -MATE + 5 at ply 3 → stored as -MATE + 5 - 3 = -MATE + 2
+        let score = Score::new(-Score::MATE.0 + 5);
+        assert_eq!(score.remove_ply_bias(3), Score::new(-Score::MATE.0 + 2));
+        assert_eq!(score.remove_ply_bias(0), score);
+    }
+
+    #[test]
+    fn ply_bias_round_trip_same_ply() {
+        // store then retrieve at the same ply → original score
+        let plies = [0, 1, 5, 10, 50];
+        let scores = [
+            Score::new_mate() - 3,
+            Score::new_mate() - 10,
+            Score::new_mated() + 3,
+            Score::new_mated() + 10,
+            Score::MATE,
+            Score::MINIMUM_MATE,
+            -Score::MINIMUM_MATE,
+        ];
+        for ply in plies {
+            for score in scores {
+                assert_eq!(
+                    score.remove_ply_bias(ply).ply_relative(ply),
+                    score,
+                    "round-trip failed for score {} at ply {ply}",
+                    score.0
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn ply_bias_round_trip_different_ply() {
+        // Store at ply 4, retrieve at ply 10.
+        // Positive mate: MATE - 5 at ply 4. Distance from position = 5 - 4 = 1.
+        // Stored: MATE - 5 + 4 = MATE - 1.
+        // Retrieved at ply 10: MATE - 1 - 10 = MATE - 11.
+        // This means mate at ply 11 from root, which is 1 ply from ply 10. Correct.
+        let score_at_ply4 = Score::new(Score::MATE.0 - 5);
+        let stored = score_at_ply4.remove_ply_bias(4);
+        assert_eq!(stored, Score::new(Score::MATE.0 - 1));
+        let retrieved_at_ply10 = stored.ply_relative(10);
+        assert_eq!(retrieved_at_ply10, Score::new(Score::MATE.0 - 11));
+        // The distance from the position is preserved: (MATE - score) - ply
+        // At ply 4:  (MATE - (MATE-5)) - 4 = 5 - 4 = 1
+        // At ply 10: (MATE - (MATE-11)) - 10 = 11 - 10 = 1
+        assert_eq!(Score::MATE.0 - score_at_ply4.0 - 4, 1);
+        assert_eq!(Score::MATE.0 - retrieved_at_ply10.0 - 10, 1);
+    }
+
+    #[test]
+    fn ply_bias_boundary_minimum_mate() {
+        // MINIMUM_MATE is the lowest score that counts as a mate
+        let score = Score::MINIMUM_MATE;
+        assert!(score.is_mate());
+        // Should be adjusted by ply_relative/remove_ply_bias
+        assert_eq!(score.ply_relative(5), Score::new(Score::MINIMUM_MATE.0 - 5));
+        assert_eq!(
+            score.remove_ply_bias(5),
+            Score::new(Score::MINIMUM_MATE.0 + 5)
+        );
+
+        // One below MINIMUM_MATE is NOT a mate score → no adjustment
+        let below = Score::new(Score::MINIMUM_MATE.0 - 1);
+        assert!(!below.is_mate());
+        assert_eq!(below.ply_relative(5), below);
+        assert_eq!(below.remove_ply_bias(5), below);
+
+        // Negative boundary: -MINIMUM_MATE
+        let neg = -Score::MINIMUM_MATE;
+        assert!(neg.mated());
+        assert_eq!(neg.ply_relative(5), Score::new(-Score::MINIMUM_MATE.0 + 5));
+        assert_eq!(
+            neg.remove_ply_bias(5),
+            Score::new(-Score::MINIMUM_MATE.0 - 5)
+        );
+
+        // One above -MINIMUM_MATE is NOT a mated score → no adjustment
+        let above_neg = Score::new(-Score::MINIMUM_MATE.0 + 1);
+        assert!(!above_neg.mated());
+        assert_eq!(above_neg.ply_relative(5), above_neg);
+        assert_eq!(above_neg.remove_ply_bias(5), above_neg);
+    }
+
+    #[test]
+    fn mate_in_and_mated_in() {
+        assert_eq!(Score::mate_in(0), Score::MATE);
+        assert_eq!(Score::mate_in(5), Score::new(Score::MATE.0 - 5));
+        assert_eq!(Score::mated_in(0), -Score::MATE);
+        assert_eq!(Score::mated_in(5), Score::new(-Score::MATE.0 + 5));
+        // they are negations of each other
+        assert_eq!(-Score::mated_in(5), Score::mate_in(5));
+        // both return mate scores
+        assert!(Score::mate_in(1).is_mate());
+        assert!(Score::mated_in(1).mated());
     }
 }

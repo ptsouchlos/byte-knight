@@ -5,7 +5,13 @@
 
 //! This module provides functionality to retrieve the ray (line of squares) between two squares on a chessboard.
 
-use crate::{attacks, bitboard::Bitboard, definitions::NumberOf};
+use crate::{
+    attacks,
+    bitboard::Bitboard,
+    definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
+    file::File,
+    rank::Rank,
+};
 
 #[allow(long_running_const_eval)]
 static RAYS_BETWEEN: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] = initialize_rays_between();
@@ -56,26 +62,38 @@ pub fn between(from: u8, to: u8) -> Bitboard {
     RAYS_BETWEEN[from as usize][to as usize]
 }
 
+/// Returns a [`Bitboard`] representing the edge squares of the chessboard, excluding the specified file and rank.
+///
+/// # Arguments
+/// - `file`: The file (0-7) to exclude from the edge squares.
+/// - `rank`: The rank (0-7) to exclude from the edge squares.
+///
+/// # Returns
+/// - A [`Bitboard`] representing the edge squares of the chessboard, excluding the specified
+pub fn edges(file: u8, rank: u8) -> Bitboard {
+    let file_bb = FILE_BITBOARDS[file as usize];
+    let rank_bb = RANK_BITBOARDS[rank as usize];
+    (FILE_BITBOARDS[File::A as usize] & !file_bb)
+        | (FILE_BITBOARDS[File::H as usize] & !file_bb)
+        | (RANK_BITBOARDS[Rank::R1 as usize] & !rank_bb)
+        | (RANK_BITBOARDS[Rank::R8 as usize] & !rank_bb)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{move_generation::MoveGenerator, pieces::SQUARE_NAME, square::Square};
+    use crate::pieces::SQUARE_NAME;
 
     #[test]
     fn validate_rays_between() {
-        let move_gen = MoveGenerator::new();
         for from in 0..64_u8 {
             for to in 0..64_u8 {
                 let bb = super::between(from, to);
-                let move_gen_bb = move_gen.ray_between(
-                    Square::from_square_index(from),
-                    Square::from_square_index(to),
-                );
                 println!(
-                    "{} -> {}\n{}\n{}",
-                    SQUARE_NAME[from as usize], SQUARE_NAME[to as usize], bb, move_gen_bb
+                    "{} -> {}\n{}",
+                    SQUARE_NAME[from as usize], SQUARE_NAME[to as usize], bb
                 );
-
-                assert_eq!(bb, move_gen_bb);
+                // Verify symmetry: between(a, b) == between(b, a)
+                assert_eq!(bb, super::between(to, from));
             }
         }
     }

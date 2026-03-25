@@ -11,9 +11,7 @@ use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, MAX_REPETITION_COUNT, SPACE};
 use crate::fen::FenError;
 use crate::file::File;
-use crate::move_generation::MoveGenerator;
 use crate::move_history::BoardHistory;
-use crate::move_list::MoveList;
 use crate::moves::Move;
 use crate::rank::Rank;
 use crate::square::Square;
@@ -27,7 +25,8 @@ use super::{bitboard::Bitboard, pieces::Piece};
 /// Represents a chessboard position.
 #[derive(Debug)]
 pub struct Board {
-    piece_bitboards: [[Bitboard; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+    bitboards: [Bitboard; NumberOf::PIECE_TYPES + NumberOf::SIDES],
+    pieces: [Option<Piece>; NumberOf::SQUARES],
     pub(crate) history: BoardHistory,
     state: BoardState,
     zobrist_values: ZobristRandomValues,
@@ -36,7 +35,8 @@ pub struct Board {
 impl Clone for Board {
     fn clone(&self) -> Self {
         Self {
-            piece_bitboards: self.piece_bitboards,
+            bitboards: self.bitboards,
+            pieces: self.pieces,
             history: self.history.clone(),
             state: self.state,
             zobrist_values: self.zobrist_values.clone(),
@@ -99,7 +99,8 @@ impl Board {
     /// Create a new board in the default, *uninitialized*, state.
     fn new() -> Self {
         Board {
-            piece_bitboards: [[Bitboard::default(); NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+            bitboards: [Bitboard::default(); NumberOf::PIECE_TYPES + NumberOf::SIDES],
+            pieces: [None; NumberOf::SQUARES],
             history: BoardHistory::new(),
             state: BoardState::new(),
             zobrist_values: ZobristRandomValues::new(),
@@ -120,14 +121,25 @@ impl Board {
         let mut zobrist_hash = ZobristHash::default();
 
         // XOR the zobrist values for each piece on the board
-        for side in 0..NumberOf::SIDES {
-            for piece in 0..NumberOf::PIECE_TYPES {
-                let mut bitboard = self.piece_bitboards[side][piece];
 
-                while bitboard != 0 {
-                    let square = bitboard_helpers::next_bit(&mut bitboard);
-                    zobrist_hash ^= self.zobrist_values.get_piece_value(piece, side, square);
-                }
+        for piece in 0..NumberOf::PIECE_TYPES {
+            let bitboard = self.bitboards[piece];
+            let white_bb = self.pieces(Side::White);
+            let black_bb = self.pieces(Side::Black);
+
+            let white_pieces = bitboard & white_bb;
+            let black_pieces = bitboard & black_bb;
+
+            for sq in white_pieces.iter() {
+                zobrist_hash ^=
+                    self.zobrist_values
+                        .get_piece_value(piece, Side::White as usize, sq as usize);
+            }
+
+            for sq in black_pieces.iter() {
+                zobrist_hash ^=
+                    self.zobrist_values
+                        .get_piece_value(piece, Side::Black as usize, sq as usize);
             }
         }
 
@@ -150,44 +162,45 @@ impl Board {
     }
 
     /// Initialize bitboards for a given side
-    fn initialize_piece_bbs(&mut self, side: Side) {
+    fn initialize_piece_bbs(&mut self) {
         // Set up the board with the starting position
-        match side {
-            Side::White => self.initialize_white_bbs(),
-            Side::Black => self.initialize_black_bbs(),
+        let layout: &[(Piece, u64, u64)] = &[
+            (Piece::Pawn, 0xFF00, 0xFF000000000000),
+            (Piece::Knight, 0x42, 0x4200000000000000),
+            (Piece::Bishop, 0x24, 0x2400000000000000),
+            (Piece::Rook, 0x81, 0x8100000000000000),
+            (Piece::Queen, 0x8, 0x800000000000000),
+            (Piece::King, 0x10, 0x1000000000000000),
+        ];
+
+        for &(piece, white_bits, black_bits) in layout {
+            for sq in Bitboard::new(white_bits).iter() {
+                self.set_piece_square(piece, Side::White, sq);
+            }
+            for sq in Bitboard::new(black_bits).iter() {
+                self.set_piece_square(piece, Side::Black, sq);
+            }
         }
     }
 
-    /// Initialize bitboard for all white pieces
-    fn initialize_white_bbs(&mut self) {
-        let index = Side::White as usize;
-        // Set up the board with the starting position
-        self.piece_bitboards[index][Piece::Pawn as usize] = Bitboard::new(0xFF00);
-        self.piece_bitboards[index][Piece::Knight as usize] = Bitboard::new(0x42);
-        self.piece_bitboards[index][Piece::Bishop as usize] = Bitboard::new(0x24);
-        self.piece_bitboards[index][Piece::Rook as usize] = Bitboard::new(0x81);
-        self.piece_bitboards[index][Piece::Queen as usize] = Bitboard::new(0x8);
-        self.piece_bitboards[index][Piece::King as usize] = Bitboard::new(0x10);
+    pub(crate) fn set_piece_square(&mut self, piece: Piece, side: Side, square: u8) {
+        let piece_bb = &mut self.bitboards[piece as usize];
+        piece_bb.set_square(square);
+
+        let side_bb = &mut self.bitboards[NumberOf::PIECE_TYPES + side as usize];
+        side_bb.set_square(square);
+
+        self.pieces[square as usize] = Some(piece);
     }
 
-    /// Initialize bitboard for all black pieces
-    fn initialize_black_bbs(&mut self) {
-        let index = Side::Black as usize;
-        // Set up the board with the starting position
-        self.piece_bitboards[index][Piece::Pawn as usize] = Bitboard::new(0xFF000000000000);
-        self.piece_bitboards[index][Piece::Knight as usize] = Bitboard::new(0x4200000000000000);
-        self.piece_bitboards[index][Piece::Bishop as usize] = Bitboard::new(0x2400000000000000);
-        self.piece_bitboards[index][Piece::Rook as usize] = Bitboard::new(0x8100000000000000);
-        self.piece_bitboards[index][Piece::Queen as usize] = Bitboard::new(0x800000000000000);
-        self.piece_bitboards[index][Piece::King as usize] = Bitboard::new(0x1000000000000000);
-    }
+    pub(crate) fn remove_piece_from_square(&mut self, piece: Piece, side: Side, square: u8) {
+        let piece_bb = &mut self.bitboards[piece as usize];
+        piece_bb.clear_square(square);
 
-    pub(crate) fn mut_piece_bitboard(&mut self, piece: Piece, side: Side) -> &mut Bitboard {
-        &mut self.piece_bitboards[side as usize][piece as usize]
-    }
+        let side_bb = &mut self.bitboards[NumberOf::PIECE_TYPES + side as usize];
+        side_bb.clear_square(square);
 
-    pub(crate) fn set_piece_square(&mut self, piece: usize, side: usize, square: u8) {
-        self.piece_bitboards[side][piece].set_square(square);
+        self.pieces[square as usize] = None;
     }
 
     /// Sets the side to move and updates the zobrist hash.
@@ -258,10 +271,7 @@ impl Board {
     pub fn default_board() -> Board {
         let mut board = Board::new();
         // Set up the board with the starting position
-        // White pieces
-        board.initialize_piece_bbs(Side::White);
-        // Black pieces
-        board.initialize_piece_bbs(Side::Black);
+        board.initialize_piece_bbs();
         board.set_en_passant_square(None);
         board.set_half_move_clock(0);
         board.set_full_move_number(1);
@@ -332,22 +342,12 @@ impl Board {
     /// Returns the all pieces of this [`Board`].
     /// This is also known as the occupancy bitboard.
     pub fn all_pieces(&self) -> Bitboard {
-        let mut all_pieces = Bitboard::default();
-        for piece_type in 0..NumberOf::PIECE_TYPES {
-            for side in 0..NumberOf::SIDES {
-                all_pieces |= self.piece_bitboards[side][piece_type];
-            }
-        }
-        all_pieces
+        self.white_pieces() | self.black_pieces()
     }
 
     /// Returns all the pieces of a given side in a single [`Bitboard`].
     pub fn pieces(&self, side: Side) -> Bitboard {
-        let mut pieces = Bitboard::default();
-        for piece_type in 0..NumberOf::PIECE_TYPES {
-            pieces |= self.piece_bitboards[side as usize][piece_type];
-        }
-        pieces
+        self.bitboards[NumberOf::PIECE_TYPES + side as usize]
     }
 
     /// Returns the white pieces of this [`Board`] in a single [`Bitboard`].
@@ -361,17 +361,13 @@ impl Board {
     }
 
     /// Returns the bitboard for a specific piece and side.
-    pub fn piece_bitboard(&self, piece: Piece, side: Side) -> &Bitboard {
-        &self.piece_bitboards[side as usize][piece as usize]
+    pub fn piece_bitboard(&self, piece: Piece, side: Side) -> Bitboard {
+        self.piece_kind_bitboard(piece) & self.pieces(side)
     }
 
     /// Returns a combined [`Bitboard`] of all pieces of a given type for both sides.
     pub fn piece_kind_bitboard(&self, piece: Piece) -> Bitboard {
-        let mut piece_bb = Bitboard::default();
-        for side in 0..NumberOf::SIDES {
-            piece_bb |= self.piece_bitboards[side][piece as usize];
-        }
-        piece_bb
+        self.bitboards[piece as usize]
     }
 
     /// Returns the current square of the king for a given side.
@@ -390,17 +386,17 @@ impl Board {
     ///
     /// - Optional tuple of the piece and the side that the piece belongs to. (Piece, Side)
     pub fn piece_on_square(&self, square: u8) -> Option<(Piece, Side)> {
-        for piece in 0..NumberOf::PIECE_TYPES {
-            for side in 0..NumberOf::SIDES {
-                if self.piece_bitboards[side][piece].is_square_occupied(square) {
-                    return Some((
-                        Piece::try_from(piece as u8).unwrap(),
-                        Side::try_from(side as u8).unwrap(),
-                    ));
-                }
-            }
-        }
-        None
+        let piece = self.pieces[square as usize];
+        piece?;
+
+        let bb = Bitboard::from_square(square);
+        let side = if !(bb & self.pieces(Side::White)).is_empty() {
+            Side::White
+        } else {
+            Side::Black
+        };
+
+        Some((piece.unwrap(), side))
     }
 
     /// Returns the side to move of this [`Board`].
@@ -474,66 +470,6 @@ impl Board {
         }
     }
 
-    /// Check if the side to move is in check.
-    ///
-    /// # Arguments
-    ///
-    /// - `move_gen` - The move generator to use for generating moves.
-    ///
-    /// # Returns
-    ///
-    /// - `true` if the side to move is in check, otherwise `false`.
-    pub fn is_in_check(&self, move_gen: &MoveGenerator) -> bool {
-        // pseudo legal check
-        // check if we are in check
-        // get the kings location and check if that square is attacked by the opponent
-        let mut king_bb = *self.piece_bitboard(Piece::King, self.side_to_move());
-        let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
-        move_gen.is_square_attacked(
-            self,
-            &Square::from_square_index(king_square),
-            self.side_to_move().opposite(),
-        )
-    }
-
-    /// Check if the side to move is in checkmate.
-    pub fn is_checkmate(&self, move_gen: &MoveGenerator) -> bool {
-        // if the side to move is not in check, it's not checkmate
-        if !self.is_in_check(move_gen) {
-            return false;
-        }
-
-        let king_bb = self.piece_bitboard(Piece::King, self.side_to_move());
-        let king_sq = bitboard_helpers::next_bit(&mut king_bb.clone());
-
-        // check mate happens when we're in check and all the legal moves are illegal but we
-        // don't want to try all the moves to check their legality
-        // instead we can get king moves only and then check if the possible squares the king can move to are attacked
-        let mut occupancy = self.all_pieces();
-        let us = self.side_to_move();
-
-        let king_attacks = move_gen.get_piece_attacks(Piece::King, king_sq as u8, us, &occupancy);
-        let our_pieces = self.pieces(self.side_to_move());
-        let mut king_attacks = king_attacks & !our_pieces;
-
-        // modify occupancy to exclude the king square
-        occupancy.clear_square(king_sq as u8);
-
-        // check if the king can move to any of the squares it's attacking
-        while king_attacks > 0 {
-            let square = bitboard_helpers::next_bit(&mut king_attacks);
-            if move_gen.is_square_attacked_with_occupancy(
-                self,
-                &Square::from_square_index(square as u8),
-                self.side_to_move().opposite(),
-                &occupancy,
-            ) {
-                return true;
-            }
-        }
-        false
-    }
-
     /// Get the color of the piece on a given square.
     ///
     /// Returns `Some(Side)` if the square is occupied, otherwise `None`.
@@ -563,23 +499,27 @@ impl Board {
     ///
     /// Returns true if the game is a draw by insufficient material, otherwise false.
     pub fn insufficient_material(&self) -> bool {
-        // if any side has a Queen, Rook or Pawn, there's sufficient material
-        let queen_bbs = *self.piece_bitboard(Piece::Queen, Side::Black)
-            | *self.piece_bitboard(Piece::Queen, Side::White);
-        let rook_bbs = *self.piece_bitboard(Piece::Rook, Side::Black)
-            | *self.piece_bitboard(Piece::Rook, Side::White);
-        let pawn_bbs = *self.piece_bitboard(Piece::Pawn, Side::Black)
-            | *self.piece_bitboard(Piece::Pawn, Side::White);
-
-        if (queen_bbs | rook_bbs | pawn_bbs).number_of_occupied_squares() > 0 {
+        // If any side has a Queen, Rook or Pawn, there's sufficient material
+        let pawns = self.piece_kind_bitboard(Piece::Pawn);
+        let rooks = self.piece_kind_bitboard(Piece::Rook);
+        let queens = self.piece_kind_bitboard(Piece::Queen);
+        if (pawns | rooks | queens).number_of_occupied_squares() > 0 {
             return false;
         }
 
+        let knights = self.piece_kind_bitboard(Piece::Knight);
+        let bishops = self.piece_kind_bitboard(Piece::Bishop);
+
+        let minor_pieces = knights | bishops;
+        if minor_pieces.number_of_occupied_squares() <= 1 {
+            return true;
+        }
+
         // check bishops and knights
-        let white_bishops = self.piece_bitboard(Piece::Bishop, Side::White);
-        let black_bishops = self.piece_bitboard(Piece::Bishop, Side::Black);
-        let white_knights = self.piece_bitboard(Piece::Knight, Side::White);
-        let black_knights = self.piece_bitboard(Piece::Knight, Side::Black);
+        let white_bishops = bishops & self.pieces(Side::White);
+        let black_bishops = bishops & self.pieces(Side::Black);
+        let white_knights = knights & self.pieces(Side::White);
+        let black_knights = knights & self.pieces(Side::Black);
 
         let wb_count = white_bishops.number_of_occupied_squares();
         let bb_count = black_bishops.number_of_occupied_squares();
@@ -597,8 +537,8 @@ impl Board {
             (0, 0, 0, 1) => true,
             (1, 1, 0, 0) => {
                 // bishops on the same color
-                Square::from_bitboard(white_bishops).color()
-                    == Square::from_bitboard(black_bishops).color()
+                Square::from_bitboard(&white_bishops).color()
+                    == Square::from_bitboard(&black_bishops).color()
             }
             _ => false,
         }
@@ -633,27 +573,6 @@ impl Board {
         repetition_count >= 2
     }
 
-    /// Check if a given move is legal. This function does not alter the current board state.
-    /// Instead it makes a copy of the current state and tries to make the move. There is a performance
-    /// penalty for this, so use this function sparingly.
-    pub fn is_legal(&self, mv: &Move, move_gen: &MoveGenerator) -> bool {
-        // check if a move is legal without altering the current board state
-        let mut board_copy = self.clone();
-        board_copy.make_move(mv, move_gen).is_ok()
-    }
-
-    /// Check if a list of moves are legal. This function does not alter the current board state.
-    pub fn are_legal(&self, list: &MoveList, move_gen: &MoveGenerator) -> bool {
-        // check if a list of moves are legal without altering the current board state
-        let mut board_copy = self.clone();
-        for mv in list.iter() {
-            if board_copy.make_move(mv, move_gen).is_err() {
-                return false;
-            }
-        }
-        true
-    }
-
     /// Get the last move made on the board.
     ///
     /// Returns `None` if there are no moves in the history.
@@ -671,13 +590,24 @@ impl Board {
         let mut flipped = Board::new();
 
         // Swap sides and flip each bitboard vertically (swap_bytes mirrors ranks).
-        for piece in 0..NumberOf::PIECE_TYPES {
-            let white = self.piece_bitboards[Side::White as usize][piece].as_number();
-            let black = self.piece_bitboards[Side::Black as usize][piece].as_number();
-            flipped.piece_bitboards[Side::White as usize][piece] =
-                Bitboard::new(black.swap_bytes());
-            flipped.piece_bitboards[Side::Black as usize][piece] =
-                Bitboard::new(white.swap_bytes());
+        for piece in Piece::iter() {
+            let white_flipped = Bitboard::new(
+                self.piece_bitboard(piece, Side::White)
+                    .as_number()
+                    .swap_bytes(),
+            );
+            let black_flipped = Bitboard::new(
+                self.piece_bitboard(piece, Side::Black)
+                    .as_number()
+                    .swap_bytes(),
+            );
+
+            for sq in black_flipped.iter() {
+                flipped.set_piece_square(piece, Side::White, sq);
+            }
+            for sq in white_flipped.iter() {
+                flipped.set_piece_square(piece, Side::Black, sq);
+            }
         }
 
         flipped.state.side_to_move = self.state.side_to_move.opposite();
@@ -706,6 +636,26 @@ impl Board {
         flipped.state.zobrist_hash = flipped.initialize_zobrist_hash();
         flipped
     }
+
+    /// Helper to get the captured piece for a given move.
+    /// Use this instead of checking piece_on_square for the move's destination square,
+    /// as this will correctly handle en passant captures and castling moves.
+    ///
+    /// # Arguments
+    /// - `mv` - The move for which to get the captured piece.
+    ///
+    /// # Returns
+    /// - `Some(Piece)` if the move is a capture, otherwise `None`.
+    #[inline]
+    pub fn captured(&self, mv: &Move) -> Option<Piece> {
+        if mv.is_castle() {
+            return None;
+        }
+        if mv.is_en_passant_capture() {
+            return Some(Piece::Pawn);
+        }
+        self.piece_on_square(mv.to()).map(|(piece, _side)| piece)
+    }
 }
 
 #[cfg(test)]
@@ -713,9 +663,9 @@ mod tests {
     use crate::{
         definitions::{DEFAULT_FEN, Squares},
         file::File,
-        move_generation::MoveGenerator,
+        move_generation,
         move_list::MoveList,
-        moves::{MoveDescriptor, MoveType},
+        moves::{MoveFlag, MoveType},
         rank::Rank,
         side::Side,
         square,
@@ -732,41 +682,12 @@ mod tests {
         let wq_square_1 = Square::from_square_index(Squares::B6);
         let wq_square_2 = Square::from_square_index(Squares::C5);
 
-        let white_queen_move = Move::new(
-            &wq_square_1,
-            &wq_square_2,
-            MoveDescriptor::None,
-            Piece::Queen,
-            None,
-            None,
-        );
+        let white_queen_move = Move::new(wq_square_1, wq_square_2, MoveFlag::Standard);
+        let while_queen_reverse_move = Move::new(wq_square_2, wq_square_1, MoveFlag::Standard);
 
-        let while_queen_reverse_move = Move::new(
-            &wq_square_2,
-            &wq_square_1,
-            MoveDescriptor::None,
-            Piece::Queen,
-            None,
-            None,
-        );
+        let black_king_move = Move::new(bk_square_1, bk_square_2, MoveFlag::Standard);
 
-        let black_king_move = Move::new(
-            &bk_square_1,
-            &bk_square_2,
-            MoveDescriptor::None,
-            Piece::King,
-            None,
-            None,
-        );
-
-        let black_king_reverse_move = Move::new(
-            &bk_square_2,
-            &bk_square_1,
-            MoveDescriptor::None,
-            Piece::King,
-            None,
-            None,
-        );
+        let black_king_reverse_move = Move::new(bk_square_2, bk_square_1, MoveFlag::Standard);
 
         for _i in 0..2 {
             assert!(board.make_move_unchecked(&white_queen_move).is_ok());
@@ -780,21 +701,20 @@ mod tests {
 
     #[test]
     fn checkmate() {
-        let move_gen = MoveGenerator::new();
         {
             let board =
                 Board::from_fen("r1b1k1nr/pppp1ppp/2n5/4P3/8/2Q2N2/P1P1PPPP/RNq1KB1R w KQkq - 1 9")
                     .unwrap();
 
-            assert!(board.is_in_check(&move_gen));
-            assert!(board.is_checkmate(&move_gen));
+            assert!(move_generation::is_in_check(&board));
+            assert!(move_generation::is_checkmate(&board));
         }
         {
             let board =
                 Board::from_fen("r1b3nr/5ppp/3pk2R/8/2Q5/4R1PB/2PPPP1P/RNB1K1NR b KQ - 0 1")
                     .unwrap();
-            assert!(board.is_in_check(&move_gen));
-            assert!(board.is_checkmate(&move_gen));
+            assert!(move_generation::is_in_check(&board));
+            assert!(move_generation::is_checkmate(&board));
         }
     }
 
@@ -808,15 +728,14 @@ mod tests {
     #[test]
     fn make_and_unmake_move_changes_hash() {
         static FEN: &str = "6nr/pp3p1p/k1p5/8/1QN5/2P1P3/4KPqP/8 b - - 5 26";
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         let mut board = Board::from_fen(FEN).unwrap();
         let hash = board.zobrist_hash();
 
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         for mv in move_list.iter() {
-            let mv_ok = board.make_move(mv, &move_gen);
+            let mv_ok = board.make_move(mv);
             if mv_ok.is_ok() {
                 // legal move, check that the new hash is different
                 let move_hash = board.zobrist_hash();
@@ -915,12 +834,11 @@ mod tests {
     #[test]
     fn get_last_move() {
         let mut board = Board::default_board();
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         let first_move = move_list.iter().next().unwrap();
-        let mv_ok = board.make_move(first_move, &move_gen);
+        let mv_ok = board.make_move(first_move);
         assert!(mv_ok.is_ok());
 
         let last_move = board.last_move().unwrap();
@@ -949,7 +867,7 @@ mod tests {
         let black_pawns_bb = board.piece_bitboard(Piece::Pawn, Side::Black);
         let white_pawns_bb = board.piece_bitboard(Piece::Pawn, Side::White);
 
-        assert_eq!(piece_kind_bb, *black_pawns_bb | *white_pawns_bb);
+        assert_eq!(piece_kind_bb, black_pawns_bb | white_pawns_bb);
         assert_eq!(piece_kind_bb.number_of_occupied_squares(), 16);
     }
 

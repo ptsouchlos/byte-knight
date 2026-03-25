@@ -5,7 +5,7 @@
 
 use std::time::Instant;
 
-use chess::{board::Board, move_generation::MoveGenerator, perft::perft};
+use chess::{board::Board, perft::perft};
 use clap::Parser;
 use colored::*;
 
@@ -27,8 +27,6 @@ fn main() {
     let mut total_nodes_tested = 0;
 
     let now = Instant::now();
-    let move_gen = MoveGenerator::new();
-
     for (i, entry) in contents.lines().enumerate() {
         let mut parts = entry.split(';');
 
@@ -48,7 +46,7 @@ fn main() {
             let mut board = Board::from_fen(fen).unwrap();
 
             let start = Instant::now();
-            let nodes = perft(&mut board, &move_gen, depth, false).unwrap();
+            let nodes = perft(&mut board, depth, false).unwrap();
             let elapsed = start.elapsed();
             total_nodes_tested += nodes;
 

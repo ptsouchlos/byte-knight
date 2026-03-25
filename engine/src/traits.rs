@@ -19,7 +19,24 @@ pub trait EvalValues {
     fn passed_pawn_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn doubled_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn isolated_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;
-    fn bishop_pair_bonus_value(&self) -> Self::ReturnScore;
-    fn king_safety_value(&self, piece: Piece) -> Self::ReturnScore;
-    fn threat_value(&self, piece: Piece, attacked_piece: Piece) -> Self::ReturnScore;
+    fn mobility_value(&self, piece: Piece, count: usize, side: Side) -> Self::ReturnScore;
+    // The following terms usually don't need a [`Side`] input, but this is necessary for the [`TracingValues`].
+    fn bishop_pair_bonus_value(&self, side: Side) -> Self::ReturnScore;
+    fn king_safety_value(&self, piece: Piece, side: Side) -> Self::ReturnScore;
+    fn threat_value(&self, piece: Piece, attacked_piece: Piece, side: Side) -> Self::ReturnScore;
+    fn tempo_bonus(&self, side: Side) -> Self::ReturnScore;
+    fn open_file_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
+    fn semi_open_file_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
+    fn pawn_shield_value(
+        &self,
+        file_index: usize,
+        rank_index: usize,
+        side: Side,
+    ) -> Self::ReturnScore;
+    fn pawn_storm_value(
+        &self,
+        file_index: usize,
+        rank_index: usize,
+        side: Side,
+    ) -> Self::ReturnScore;
 }

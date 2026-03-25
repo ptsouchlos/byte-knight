@@ -27,3 +27,5 @@ pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 6;
 
 // How much to extend search when in check
 pub(crate) const CHECK_EXTENSION_DEPTH: ScoreType = 1;
+pub(crate) const RAZORING_SCALING: ScoreType = 400;
+pub(crate) const RAZORING_OFFSET: ScoreType = 500;

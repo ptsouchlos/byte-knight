@@ -7,10 +7,11 @@ use std::cmp::Ordering;
 
 use anyhow::{Ok, Result};
 use arrayvec::ArrayVec;
-use chess::{definitions::MAX_MOVE_LIST_SIZE, moves::Move, pieces::Piece, side::Side};
+use chess::{board::Board, definitions::MAX_MOVE_LIST_SIZE, moves::Move, pieces::Piece};
 
 use crate::{
-    evaluation::Evaluation, hce_values::ByteKnightValues, history_table, score::LargeScoreType,
+    evaluation::Evaluation, hce_values::ByteKnightValues, history_table, killers_table,
+    score::LargeScoreType,
 };
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Default)]
@@ -18,6 +19,7 @@ pub enum MoveOrder {
     #[default]
     TtMove,
     Capture(Piece, Piece),
+    Killer(LargeScoreType),
     Quiet(LargeScoreType),
 }
 
@@ -49,6 +51,13 @@ impl Ord for MoveOrder {
             (MoveOrder::Capture(_, _), _) => Ordering::Less,
             (_, MoveOrder::Capture(_, _)) => Ordering::Greater,
 
+            // Killers are ordered before quiets but after captures
+            (MoveOrder::Killer(left_score), MoveOrder::Killer(right_score)) => {
+                right_score.cmp(left_score)
+            }
+            (MoveOrder::Killer(_), _) => Ordering::Less,
+            (_, MoveOrder::Killer(_)) => Ordering::Greater,
+
             // quiet moves come last, according to their score
             (MoveOrder::Quiet(left_score), MoveOrder::Quiet(right_score)) => {
                 right_score.cmp(left_score)
@@ -61,36 +70,63 @@ impl MoveOrder {
     /// Classify moves for move ordering  purposes.
     #[allow(clippy::expect_used)]
     pub fn classify(
-        stm: Side,
+        ply: u8,
+        board: &Board,
         mv: &Move,
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
+        killers_table: &killers_table::KillerMovesTable,
     ) -> Self {
         if tt_move.is_some_and(|tt| *mv == tt) {
             return Self::TtMove;
         }
 
-        if mv.is_capture() {
-            let victim = mv.captured_piece().expect("Capture move without victim");
-            let attacker = mv.piece();
-            return Self::Capture(victim, attacker);
+        let stm = board.side_to_move();
+        let piece = board
+            .piece_on_square(mv.from())
+            .map(|(pc, _)| pc)
+            .expect("From piece must exist.");
+        let maybe_capture_piece = board.captured(mv);
+        let is_capture = maybe_capture_piece.is_some();
+
+        if is_capture {
+            // We can unwrap here because we know it's a capture move, so there must be a captured piece.
+            let victim = maybe_capture_piece.unwrap();
+            return Self::Capture(victim, piece);
         }
 
-        let score = history_table.get(stm, mv.piece(), mv.to());
+        let score = history_table.get(stm, piece, mv.to());
+        if killers_table
+            .get(ply)
+            .iter()
+            .any(|entry| entry.is_some_and(|k| k.matches(*mv, piece)))
+        {
+            return Self::Killer(score);
+        }
+
         Self::Quiet(score)
     }
 
     pub fn classify_all(
-        stm: Side,
+        ply: u8,
+        board: &Board,
         moves: &[Move],
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
+        killers_table: &killers_table::KillerMovesTable,
         move_order: &mut ArrayVec<MoveOrder, MAX_MOVE_LIST_SIZE>,
     ) -> Result<()> {
         move_order.clear();
 
         for mv in moves.iter() {
-            move_order.try_push(Self::classify(stm, mv, tt_move, history_table))?;
+            move_order.try_push(Self::classify(
+                ply,
+                board,
+                mv,
+                tt_move,
+                history_table,
+                killers_table,
+            ))?;
         }
 
         Ok(())
@@ -99,57 +135,94 @@ impl MoveOrder {
 
 #[cfg(test)]
 mod tests {
-    use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
+    use chess::{
+        board::Board,
+        move_generation,
+        moves::{Move, MoveType},
+        pieces::Piece,
+    };
     use itertools::Itertools;
 
     use crate::{
         move_order::MoveOrder,
         score::Score,
-        ttable::{EntryFlag, TranspositionTable, TranspositionTableEntry},
+        ttable::{EntryFlag, TranspositionTable},
     };
+
+    #[allow(clippy::expect_used)]
+    fn piece_for_move(board: &Board, mv: &Move) -> Piece {
+        board
+            .piece_on_square(mv.from())
+            .map(|(pc, _)| pc)
+            .expect("From piece must exist.")
+    }
 
     #[test]
     fn verify_move_ordering() {
         let mut tt = TranspositionTable::from_capacity(10);
         let mut history_table = crate::history_table::HistoryTable::new();
+        let mut killers_table = crate::killers_table::KillerMovesTable::new();
 
-        let move_gen = MoveGenerator::new();
-        let mut move_list = MoveList::new();
         let board =
             Board::from_fen("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB1R w KQkq - 0 1").unwrap();
-        move_gen.generate_legal_moves(&board, &mut move_list);
+        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
 
         assert!(move_list.len() >= 6);
         let depth = 3i32;
+        let ply = 3u8;
+
         let first_mv = move_list.at(4).unwrap();
-        tt.store_entry(TranspositionTableEntry::new(
+        tt.store_entry(
             board.zobrist_hash(),
             depth as u8,
             Score::new(1234),
             EntryFlag::Exact,
             *first_mv,
-        ));
+        );
 
         let second_mv = move_list.at(2).unwrap();
+        let second_piece = piece_for_move(&board, second_mv);
         history_table.update(
             board.side_to_move(),
-            second_mv.piece(),
+            second_piece,
             second_mv.to(),
             300 * depth - 250,
         );
+
+        // This will be our "killer" move
+        let third_mv = move_list.at(3).unwrap();
+        let third_piece = piece_for_move(&board, third_mv);
+        // We need a entry in the history table first
+        history_table.update(
+            board.side_to_move(),
+            third_piece,
+            third_mv.to(),
+            300 * depth - 250,
+        );
+        killers_table.update(ply, *third_mv, third_piece);
+
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = tt_entry.board_move;
         // sort the moves
         let moves = move_list
             .iter()
             .sorted_by_key(|mv| {
-                MoveOrder::classify(board.side_to_move(), mv, &Some(tt_move), &history_table)
+                MoveOrder::classify(
+                    ply,
+                    &board,
+                    mv,
+                    &Some(tt_move),
+                    &history_table,
+                    &killers_table,
+                )
             })
             .collect::<Vec<&Move>>();
 
         assert!(moves.len() >= 6);
         assert_eq!(moves[0], &tt_move);
         // check the order of the moves
+        assert_eq!(moves[1], third_mv);
+        assert_eq!(moves[2], second_mv);
     }
 
     // TODO(PT): Re-enable benchmark when bench is stablized (if ever)

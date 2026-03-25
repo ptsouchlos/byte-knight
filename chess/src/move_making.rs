@@ -5,9 +5,10 @@
 
 use crate::{
     board::Board,
+    board_state::MovePieceInfo,
     definitions::{CastlingAvailability, Squares},
-    move_generation::MoveGenerator,
-    moves::{self, Move},
+    move_generation,
+    moves::{self, Move, MoveFlag},
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
@@ -53,9 +54,6 @@ impl Board {
         let (piece, side) = self
             .piece_on_square(from.to_square_index())
             .ok_or_else(|| anyhow::anyhow!("No piece on square"))?;
-        let captured_piece = self
-            .piece_on_square(to.to_square_index())
-            .map(|(piece, _)| piece);
 
         // now just figure out the move descriptor
         // need to check if the move is a castle, en passant, promotion or a pawn two up move
@@ -77,24 +75,24 @@ impl Board {
         if states.iter().filter(|&&x| x).count() > 1 {
             bail!("Invalid move, only 1 move state can be true");
         }
+
         let move_desc = if is_double_push {
-            moves::MoveDescriptor::PawnTwoUp
+            MoveFlag::DoublePush
         } else if is_castle {
-            moves::MoveDescriptor::Castle
+            if to.file > from.file {
+                moves::MoveFlag::CastleK
+            } else {
+                moves::MoveFlag::CastleQ
+            }
         } else if is_en_passant {
-            moves::MoveDescriptor::EnPassantCapture
+            moves::MoveFlag::EnPassant
+        } else if let Some(promotion_piece) = promotion_piece {
+            MoveFlag::from_promotion_piece(promotion_piece)
         } else {
-            moves::MoveDescriptor::None
+            moves::MoveFlag::Standard
         };
 
-        let mv = Move::new(
-            &from,
-            &to,
-            move_desc,
-            piece,
-            captured_piece,
-            promotion_piece,
-        );
+        let mv = Move::new(from, to, move_desc);
         self.make_move_unchecked(&mv)
     }
 
@@ -102,35 +100,28 @@ impl Board {
     fn check_move_preconditions(&mut self, mv: &Move) -> Result<()> {
         let from = mv.from();
         let to: u8 = mv.to();
-        let piece = mv.piece();
+        let (piece, piece_side) = self.piece_on_square(from).ok_or_else(|| {
+            anyhow::anyhow!(
+                "No piece on square {} to move from",
+                SQUARE_NAME[from as usize]
+            )
+        })?;
 
         let us = self.side_to_move();
         let them = us.opposite();
 
-        let piece_and_side = self.piece_on_square(from);
-        if piece_and_side.is_none() {
-            bail!(format!(
-                "No piece on square {} to move from",
-                SQUARE_NAME[from as usize]
-            ));
-        }
-
-        let (piece_on_square, side) = piece_and_side.unwrap();
-        if piece_on_square != piece || side != us {
+        if piece_side != us {
             bail!("Invalid piece on square");
         }
 
-        // we don't handle en passant captures here
-        if mv.captured_piece().is_some() && !mv.is_en_passant_capture() {
-            let captured_piece = mv.captured_piece().unwrap();
-            let piece_and_side = self.piece_on_square(to);
-            if piece_and_side.is_none() {
-                bail!("No piece on square for move {}", mv.to_long_algebraic());
-            }
+        let maybe_captured_piece = self.piece_on_square(to);
 
-            let (piece_on_square, side) = piece_and_side.unwrap();
+        // we don't handle en passant captures here
+        if !mv.is_en_passant_capture()
+            && let Some((captured_piece, cap_side)) = maybe_captured_piece
+        {
             // check that the capture piece matches and is not our own
-            if piece_on_square != captured_piece || side != them {
+            if cap_side != them {
                 bail!("Invalid captured piece on square");
             }
 
@@ -139,26 +130,7 @@ impl Board {
             }
         }
 
-        let move_desc = mv.move_descriptor();
-        match move_desc {
-            moves::MoveDescriptor::EnPassantCapture => {
-                if piece != Piece::Pawn {
-                    bail!("Invalid en passant, not a pawn");
-                }
-            }
-            moves::MoveDescriptor::Castle => {
-                if !self.can_castle_kingside(us) && !self.can_castle_queenside(us) {
-                    bail!("Tried to castle without castling rights");
-                }
-            }
-            moves::MoveDescriptor::PawnTwoUp => {
-                if piece != Piece::Pawn {
-                    bail!("Invalid double pawn push, not a pawn");
-                }
-            }
-            // We don't handle None, quiet moves are ok
-            _ => {}
-        }
+        mv.flag().validate(piece)?;
 
         Ok(())
     }
@@ -167,18 +139,26 @@ impl Board {
     /// This should be used with legal move generation.
     #[allow(clippy::panic)]
     pub fn make_move_unchecked(&mut self, mv: &Move) -> Result<()> {
-        // validate pre-conditions first before even bothering to go further
+        // Validate pre-conditions first before even bothering to go further
         self.check_move_preconditions(mv)?;
-
-        let mut current_state = *self.board_state();
-        current_state.next_move = *mv;
-        // update history before modifying the current state
-        self.history.push(current_state);
 
         let from = mv.from();
         let to: u8 = mv.to();
-        let piece = mv.piece();
-        let captured_piece = mv.captured_piece();
+        let (piece, _) = self.piece_on_square(from).ok_or_else(|| {
+            anyhow::anyhow!(
+                "No piece on square {} to move from",
+                SQUARE_NAME[from as usize]
+            )
+        })?;
+
+        let captured = self.captured(mv);
+
+        let mut current_state = *self.board_state();
+        current_state.next_move = *mv;
+        // Store move info that'll we'll need for undoing
+        current_state.next_move_info = MovePieceInfo::new_with_piece(piece, captured);
+        // update history before modifying the current state
+        self.history.push(current_state);
 
         let us = self.side_to_move();
         let them = us.opposite();
@@ -187,7 +167,7 @@ impl Board {
 
         // en passant capture is handled separately
         if !mv.is_en_passant_capture()
-            && let Some(cap) = captured_piece
+            && let Some(cap) = captured
         {
             // remove the captured piece from the board
             self.remove_piece(them, cap, to, update_zobrist_hash);
@@ -268,7 +248,7 @@ impl Board {
             }
             // just move the piece
             self.move_piece(us, piece, from, to, update_zobrist_hash);
-            if captured_piece.is_none() {
+            if captured.is_none() {
                 self.set_half_move_clock(self.half_move_clock() + 1);
             }
         }
@@ -337,7 +317,7 @@ impl Board {
     /// and then undo the move if it is illegal.
     #[cfg_attr(not(debug_assertions), inline(always))]
     #[cfg_attr(debug_assertions, inline(never))]
-    pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
+    pub fn make_move(&mut self, mv: &Move) -> Result<()> {
         let us = self.side_to_move();
         let them = us.opposite();
         self.make_move_unchecked(mv)?;
@@ -345,8 +325,11 @@ impl Board {
         // check if the move is legal
         // if it is not, we need to undo the move
         let king_square = self.king_square(us);
-        let is_king_in_check =
-            move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
+        let is_king_in_check = move_generation::square_state::is_square_attacked(
+            self,
+            Square::from_square_index(king_square),
+            them,
+        );
 
         if is_king_in_check {
             self.unmake_move()?;
@@ -384,16 +367,22 @@ impl Board {
         // this is move that we're unmaking
         let chess_move = state.next_move;
 
-        // handle null moves
         if chess_move.is_null_move() {
-            //nothing else to undo...
+            // Unmaking a null move so we just need to switch the side back and restore the en passant square if needed. There are no pieces to move or capture to restore.
+            // Note that we don't need to update the zobrist hash here as it is restored from the game state.
+            if let Some(sq) = state.en_passant_square {
+                self.set_en_passant_square(Some(sq));
+            }
+
             return Ok(());
         }
 
         let from = chess_move.from();
         let to = chess_move.to();
-        let piece = chess_move.piece();
-        let captured_piece = chess_move.captured_piece();
+
+        let move_info = state.next_move_info;
+        let piece = move_info.piece();
+        let captured_piece = move_info.captured_piece();
         let promoted_piece = chess_move.promotion_piece();
         if let Some(promoted_piece) = promoted_piece {
             // remove the promoted piece
@@ -471,8 +460,7 @@ impl Board {
     /// * `square` - The square to add the piece to.
     /// * `update_zobrist_hash` - Whether to update the zobrist hash for the addition of the piece.
     fn add_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
-        let bb = self.mut_piece_bitboard(piece, side);
-        bb.set_square(square);
+        self.set_piece_square(piece, side, square);
         if update_zobrist_hash {
             self.update_zobrist_hash_for_piece(square, piece, side)
         }
@@ -487,15 +475,8 @@ impl Board {
     /// * `square` - The square to remove the piece from.
     /// * `update_zobrist_hash` - Whether to update the zobrist hash for the removal of the piece.
     fn remove_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
-        let bb = self.mut_piece_bitboard(piece, side);
-        if !bb.is_square_occupied(square) {
-            println!(
-                "square {} not occupied by {}\n{}",
-                SQUARE_NAME[square as usize], piece, bb
-            )
-        }
-        debug_assert!(bb.is_square_occupied(square));
-        bb.clear_square(square);
+        debug_assert!(self.piece_on_square(square).is_some());
+        self.remove_piece_from_square(piece, side, square);
         if update_zobrist_hash {
             self.update_zobrist_hash_for_piece(square, piece, side)
         }
@@ -548,16 +529,14 @@ fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use crate::{
-        bitboard::Bitboard, board::Board, definitions::Squares, move_generation::MoveGenerator,
+        bitboard::Bitboard, board::Board, definitions::Squares, move_generation,
         move_list::MoveList, moves::MoveType, pieces::Piece, side::Side,
     };
 
     #[test]
     fn test_making_en_passant_move() {
         let mut board = Board::from_fen("8/2k5/8/2Pp3r/K7/8/8/8 w - d6 0 1").unwrap();
-        let move_gen = MoveGenerator::new();
-        let mut move_list = MoveList::new();
-        move_gen.generate_legal_moves(&board, &mut move_list);
+        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
 
         let en_passant_move = move_list
             .iter()
@@ -567,7 +546,7 @@ mod tests {
         println!("Making en passant move: {en_passant_move}");
         assert!(board.piece_on_square(Squares::C5).is_some());
         assert!(board.check_move_preconditions(en_passant_move).is_ok());
-        let move_result = board.make_move(en_passant_move, &move_gen);
+        let move_result = board.make_move(en_passant_move);
         assert!(move_result.is_ok());
     }
 
@@ -597,25 +576,24 @@ mod tests {
 
     #[test]
     fn properly_undo_piece_promotion() {
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         let mut board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         let initial_mv = *move_list
             .iter()
             .find(|mv| mv.to_long_algebraic() == "d7c8q")
             .unwrap();
 
-        let mut queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
+        let mut queen_bb = board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 1);
         assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
 
-        let mv_ok = board.make_move(&initial_mv, &move_gen);
+        let mv_ok = board.make_move(&initial_mv);
         assert!(mv_ok.is_ok());
 
-        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
+        queen_bb = board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 2);
         let mut compare_bb = Bitboard::from_square(Squares::D1);
         compare_bb.set_square(Squares::C8);
@@ -624,18 +602,17 @@ mod tests {
         let undo_result = board.unmake_move();
         assert!(undo_result.is_ok());
 
-        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
+        queen_bb = board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 1);
         assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
     }
 
     #[test]
     fn make_move_updates_piece_boards() {
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         let mut board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
         let initial_mv = *move_list
             .iter()
@@ -647,16 +624,16 @@ mod tests {
             .find(|mv| mv.to_long_algebraic() == "d7c8r")
             .unwrap();
 
-        let mut mv_ok = board.make_move(&initial_mv, &move_gen);
+        let mut mv_ok = board.make_move(&initial_mv);
         assert!(mv_ok.is_ok());
 
         // generate moves again
         move_list.clear();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
         let mut node_count = 0;
         for mv in move_list.iter() {
             println!("trying move {}", mv.to_long_algebraic());
-            mv_ok = board.make_move(mv, &move_gen);
+            mv_ok = board.make_move(mv);
             if mv_ok.is_ok() {
                 node_count += 1;
                 let undo_result = board.unmake_move();
@@ -681,7 +658,7 @@ mod tests {
             board.piece_bitboard(Piece::Queen, Side::White)
         );
 
-        mv_ok = board.make_move(&next_move, &move_gen);
+        mv_ok = board.make_move(&next_move);
         assert!(mv_ok.is_ok());
 
         println!(
@@ -690,11 +667,11 @@ mod tests {
         );
 
         move_list.clear();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
         node_count = 0;
 
         for mv in move_list.iter() {
-            mv_ok = board.make_move(mv, &move_gen);
+            mv_ok = board.make_move(mv);
             if mv_ok.is_ok() {
                 println!("{} 1", mv.to_long_algebraic());
                 node_count += 1;
@@ -708,14 +685,13 @@ mod tests {
 
     #[test]
     fn make_move_and_undo_move() {
-        let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
         {
             let mut board =
                 Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
                     .unwrap();
 
-            move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+            move_generation::generate_moves(&board, &mut move_list, MoveType::All);
 
             let first_mv = move_list
                 .iter()
@@ -727,7 +703,7 @@ mod tests {
                 .unwrap();
 
             println!("{}\n{}", board.to_fen(), board.board_state());
-            let mut mv_ok = board.make_move(first_mv, &move_gen);
+            let mut mv_ok = board.make_move(first_mv);
             assert!(mv_ok.is_ok());
             println!("{}\n{}", board.to_fen(), board.board_state());
             // undo the move
@@ -736,7 +712,7 @@ mod tests {
             println!("{}\n{}", board.to_fen(), board.board_state());
 
             // make the second move
-            mv_ok = board.make_move(second_mv, &move_gen);
+            mv_ok = board.make_move(second_mv);
             assert!(mv_ok.is_ok());
             // undo the move
             undo_ok = board.unmake_move();
@@ -746,16 +722,15 @@ mod tests {
         {
             // start with default board
             let mut board = Board::default_board();
-
-            move_gen.generate_legal_moves(&board, &mut move_list);
-            // only move pawns and do 2 up move
+            let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+            // only move pawns and do 2 up movelet mut move_list = MoveList::new();
             let first_mv = move_list
                 .iter()
                 .find(|mv| mv.to_long_algebraic() == "e2e4")
                 .unwrap();
 
             // make the move
-            let mv_ok = board.make_move(first_mv, &move_gen);
+            let mv_ok = board.make_move(first_mv);
             assert!(mv_ok.is_ok());
             // check the en passant square
             assert_eq!(board.en_passant_square(), Some(Squares::E3));

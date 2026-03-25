@@ -159,7 +159,7 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
                 };
 
                 let square = to_square(file as u8, rank);
-                board.set_piece_square(piece as usize, side as usize, square);
+                board.set_piece_square(piece, side, square);
 
                 file += 1;
             }

@@ -30,6 +30,7 @@ build config="debug":
 test config="debug":
     echo "Running tests..."
     cargo test --workspace --all-targets {{ if config == "release" { "--release" } else { "" } }} -- --include-ignored
+    cargo test --workspace --doc
 
 export LLVM_PROFILE_FILE := "./target/coverage/byte_knight-%p-%m.profraw"
 
@@ -92,9 +93,15 @@ perft-epd: (build-target-release "byte-knight")
 [doc('Run perft benchmark over the EPD test suite')]
 [group('chess')]
 [group('performance')]
-perft-bench: (build-target-release "perft-bench")
+perft-bench file='data/standard.epd': (build-target-release "perft-bench")
     echo "Running perft benchmark..."
-    target/release/perft-bench -e data/standard.epd
+    target/release/perft-bench -e {{ file }}
+
+[doc('Run criterion benchmarks')]
+[group('chess')]
+[group('performance')]
+bench:
+    cargo bench -p chess
 
 [doc('Generate magic numbers use for magic bitboards')]
 [group('chess')]
@@ -131,3 +138,8 @@ format:
 hce-tune book epochs: (build-target-release "hce-tuner")
     echo "Running HCE tuner..."
     ./target/release/hce-tuner tune -i {{ book }} -e {{ epochs }} -p engine-values
+
+[doc('Benchmark the HCE tuner epoch performance')]
+[group('performance')]
+hce-bench: (build-target-release "hce-tuner")
+    ./target/release/hce-tuner bench
