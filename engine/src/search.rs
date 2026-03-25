@@ -19,8 +19,8 @@ use arrayvec::ArrayVec;
 use chess::{
     board::Board,
     definitions::MAX_MOVE_LIST_SIZE,
-    move_generation,
-    moves::{Move, MoveType},
+    move_generation::{self, legal::MoveFilter},
+    moves::Move,
     pieces::Piece,
 };
 use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
@@ -221,7 +221,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             self.send_message(format!("searching {}", self.parameters));
         }
 
-        let ml = move_generation::generate_legal_moves(board, MoveType::All);
+        let ml = move_generation::legal::generate_moves(board, MoveFilter::All);
         let mut result = match ml.len() {
             0 => {
                 // Draw or something else?
@@ -334,7 +334,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // initialize the best result
         let mut best_result = SearchResult::default();
 
-        let move_list = move_generation::generate_legal_moves(board, MoveType::All);
+        let move_list = move_generation::legal::generate_moves(board, MoveFilter::All);
         if !move_list.is_empty() {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
@@ -514,8 +514,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // get all legal moves
         let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        let mut move_list =
-            move_generation::generate_legal_moves(board, chess::moves::MoveType::All);
+        let mut move_list = move_generation::legal::generate_moves(board, MoveFilter::All);
 
         // do we have moves?
         if move_list.is_empty() {
@@ -857,11 +856,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         // When in check we must consider all moves; otherwise captures only.
         let move_filter = if in_check {
-            MoveType::All
+            MoveFilter::All
         } else {
-            MoveType::Capture
+            MoveFilter::Captures
         };
-        let mut move_list = move_generation::generate_legal_moves(board, move_filter);
+        let mut move_list = move_generation::legal::generate_moves(board, move_filter);
 
         let mut local_pv = PrincipleVariation::new();
         // clear the current PV because this is a new position

@@ -135,12 +135,7 @@ impl MoveOrder {
 
 #[cfg(test)]
 mod tests {
-    use chess::{
-        board::Board,
-        move_generation,
-        moves::{Move, MoveType},
-        pieces::Piece,
-    };
+    use chess::{board::Board, move_generation, moves::Move, pieces::Piece};
     use itertools::Itertools;
 
     use crate::{
@@ -165,7 +160,7 @@ mod tests {
 
         let board =
             Board::from_fen("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB1R w KQkq - 0 1").unwrap();
-        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+        let move_list = move_generation::legal::generate_all_moves(&board);
 
         assert!(move_list.len() >= 6);
         let depth = 3i32;
