@@ -649,8 +649,7 @@ mod tests {
     fn capture_promotions_are_correct() {
         // White pawn on d7, black rook on c8, d8 empty
         // push-promo: d7-d8 (4 types), capture-promo: d7xc8 (4 types)
-        let board =
-            Board::from_fen("2r5/3P4/8/8/8/8/6k1/4K3 w - - 0 1").unwrap();
+        let board = Board::from_fen("2r5/3P4/8/8/8/8/6k1/4K3 w - - 0 1").unwrap();
 
         let all = generate_moves(&board, MoveFilter::All);
         let captures = generate_moves(&board, MoveFilter::Captures);
@@ -665,7 +664,11 @@ mod tests {
         };
         assert_eq!(push_promos(&all), 4, "All should have 4 push-promos");
         assert_eq!(push_promos(&quiets), 4, "Quiets should have 4 push-promos");
-        assert_eq!(push_promos(&captures), 0, "Captures should have 0 push-promos");
+        assert_eq!(
+            push_promos(&captures),
+            0,
+            "Captures should have 0 push-promos"
+        );
 
         // capture-promo to c8: 4 promo types in All, 4 in Captures, 0 in Quiets
         let cap_promos = |list: &MoveList| {
@@ -674,15 +677,22 @@ mod tests {
                 .count()
         };
         assert_eq!(cap_promos(&all), 4, "All should have 4 capture-promos");
-        assert_eq!(cap_promos(&captures), 4, "Captures should have 4 capture-promos");
-        assert_eq!(cap_promos(&quiets), 0, "Quiets should have 0 capture-promos");
+        assert_eq!(
+            cap_promos(&captures),
+            4,
+            "Captures should have 4 capture-promos"
+        );
+        assert_eq!(
+            cap_promos(&quiets),
+            0,
+            "Quiets should have 0 capture-promos"
+        );
 
         // Tacticals: only queen promos (1 push-promo + 1 capture-promo)
         let tacticals_queen_promos = tacticals
             .iter()
             .filter(|mv| {
-                mv.is_promotion()
-                    && mv.promotion_piece().is_some_and(|pc| pc == Piece::Queen)
+                mv.is_promotion() && mv.promotion_piece().is_some_and(|pc| pc == Piece::Queen)
             })
             .count();
         assert_eq!(
@@ -696,8 +706,7 @@ mod tests {
     #[test]
     fn tacticals_in_check_position() {
         // White king in check from black rook, must evade
-        let board =
-            Board::from_fen("4k3/8/8/8/8/8/4r3/4K3 w - - 0 1").unwrap();
+        let board = Board::from_fen("4k3/8/8/8/8/8/4r3/4K3 w - - 0 1").unwrap();
 
         let tacticals = generate_moves(&board, MoveFilter::Tacticals);
         let all = generate_moves(&board, MoveFilter::All);
@@ -717,10 +726,7 @@ mod tests {
     #[test]
     fn tacticals_in_double_check() {
         // Double check: bishop on b5 and rook on e1 both attack black king on e8
-        let board = Board::from_fen(
-            "4k3/8/8/1B6/8/8/8/4R1K1 b - - 0 1",
-        )
-        .unwrap();
+        let board = Board::from_fen("4k3/8/8/1B6/8/8/8/4R1K1 b - - 0 1").unwrap();
 
         let all = generate_moves(&board, MoveFilter::All);
         let tacticals = generate_moves(&board, MoveFilter::Tacticals);
@@ -728,7 +734,11 @@ mod tests {
         // In double check, only king moves are legal
         for mv in all.iter() {
             let (piece, _) = board.piece_on_square(mv.from()).unwrap();
-            assert_eq!(piece, Piece::King, "Only king moves should be legal in double check");
+            assert_eq!(
+                piece,
+                Piece::King,
+                "Only king moves should be legal in double check"
+            );
         }
 
         validate_tacticals_for_board(&board);
