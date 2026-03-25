@@ -210,6 +210,21 @@ impl<Values: EvalValues> Evaluation<Values> {
         }
         score
     }
+
+    fn evaluate_rook_rank(&self, board: &Board, side: Side) -> PhasedScore
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let mut score = PhasedScore::default();
+
+        let our_rooks = board.piece_bitboard(Piece::Rook, side);
+        let their_king_sq = board.king_square(side.opposite());
+        for rook_sq in our_rooks.iter() {
+            score += self.values().rook_rank_bonus(rook_sq, their_king_sq, side);
+        }
+
+        score
+    }
 }
 
 impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<Values> {
@@ -343,6 +358,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             eg[side as usize] += shield_storm.eg() as i32;
         }
 
+        // Rook open/semi open file bonus
         let our_rook_bonus = self.evaluate_rook_files(board, side_to_move);
         let their_rook_bonus = self.evaluate_rook_files(board, side_to_move.opposite());
 
@@ -351,6 +367,16 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         mg[opp_idx] += their_rook_bonus.mg() as i32;
         eg[opp_idx] += their_rook_bonus.eg() as i32;
+
+        // Rook rank bonus
+        let our_rook_rank_bonus = self.evaluate_rook_rank(board, side_to_move);
+        let their_rook_rank_bonus = self.evaluate_rook_rank(board, side_to_move.opposite());
+
+        mg[stm_idx] += our_rook_rank_bonus.mg() as i32;
+        eg[stm_idx] += our_rook_rank_bonus.eg() as i32;
+
+        mg[opp_idx] += their_rook_rank_bonus.mg() as i32;
+        eg[opp_idx] += their_rook_rank_bonus.eg() as i32;
 
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
