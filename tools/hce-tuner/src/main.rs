@@ -281,6 +281,22 @@ fn print_params(params: &Parameters) {
         println!("],")
     }
     println!("];");
+
+    println!();
+    println!("// Bonus for Rook on 7th Rank. Bonus scaled based on Rook's File. Separate");
+    println!("// bonus if enemy king is in Rank 8. Flipped for black");
+    println!("pub const ROOK_RANK_BONUS: [[PhasedScore; NumberOf::FILES]; 2] = [");
+
+    for is_king_ahead in [false, true] {
+        println!("  [");
+        for file in 0..NumberOf::FILES {
+            let idx = Offsets::offset_for_rook_rank(file, is_king_ahead);
+            let val = params.as_slice()[idx];
+            println!("    {val:?}");
+        }
+        println!("  ],")
+    }
+    println!("];");
 }
 
 fn plot_k(tuner: &Tuner) {

@@ -3,7 +3,7 @@
 
 use std::cell::{Cell, RefCell};
 
-use chess::{pieces::Piece, side::Side};
+use chess::{pieces::Piece, rank::Rank, side::Side, square};
 use engine::{
     hce_values::{GAME_PHASE_INC, GAME_PHASE_MAX},
     phased_score::PhasedScore,
@@ -137,6 +137,35 @@ impl EvalValues for TracingValues {
         side: Side,
     ) -> Self::ReturnScore {
         let idx = Offsets::offset_for_pawn_storm(file_index, rank_index);
+        self.record(side, idx);
+        PhasedScore::default()
+    }
+    fn rook_rank_bonus(
+        &self,
+        rook_square: u8,
+        enemy_king_square: u8,
+        side: Side,
+    ) -> Self::ReturnScore {
+        let (rook_rank, rook_file) = square::from_square(rook_square);
+        let bonus_rank = match side {
+            Side::White => Rank::R7,
+            Side::Black => Rank::R2,
+        };
+
+        // Don't record if not valid
+        if rook_rank != bonus_rank.as_number() {
+            return PhasedScore::default();
+        }
+
+        let king_rank = Rank::of(enemy_king_square);
+        let king_rank_num = king_rank.as_number();
+
+        let is_king_ahead = match side {
+            Side::White => king_rank_num > rook_rank,
+            Side::Black => king_rank_num < rook_rank,
+        };
+
+        let idx = Offsets::offset_for_rook_rank(rook_file as usize, is_king_ahead);
         self.record(side, idx);
         PhasedScore::default()
     }
