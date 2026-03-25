@@ -549,6 +549,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_move = tt_move;
         let mut moves_seen = 0;
 
+        let is_in_check = move_generation::is_in_check(board);
+        let is_root = Node::ROOT;
+        let is_pv = Node::PV;
+
         // Loop through all moves
         #[allow(clippy::explicit_counter_loop)]
         for (loop_counter, mv) in move_iter.into_iter().enumerate() {
@@ -561,9 +565,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             };
 
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
-            let is_in_check = move_generation::is_in_check(board);
-            let is_root = Node::ROOT;
-            let is_pv = Node::PV;
             let is_quiet = board.captured(&mv).is_none() && !mv.is_promotion();
             let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
 
@@ -592,10 +593,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // Don't bother searching drawn positions
             if !board.is_draw() {
+                let new_depth = depth - 1 + self.extension_value(is_in_check);
                 score =
                 // Principal Variation Search (PVS)
                 if moves_seen == 0 {
-                    -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
+                    -self.negamax::<Node::Next>(board, new_depth, ply + 1, -beta, -alpha, &mut local_pv)
                 } else {
                     let is_killer = self.killers_table.get(ply as u8).iter().any(|entry|entry.is_some_and(|k|k.matches(mv, piece)));
                     // No LMR reduction for killer moves
@@ -611,14 +613,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     };
 
                     // Calculate the reduced depth along with any extensions
-                    let reduced_depth = depth.saturating_sub(reduction) + self.extension_value(board);
+                    let reduced_depth = new_depth.saturating_sub(reduction);
 
                     // Search with a null window at a reduced depth
                     let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha - 1, -alpha, &mut local_pv);
 
                     // If the reduced depth failed, verify again at full depth with null window to avoid a more expensive full re-search
                     temp_score = if temp_score > alpha && reduction > 1 {
-                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha - 1, -alpha, &mut local_pv)
+                        -self.negamax::<NonPvNode>(board, new_depth, ply + 1, -alpha - 1, -alpha, &mut local_pv)
                     }
                     else {
                         temp_score
@@ -626,7 +628,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                     // If it fails again, we now know we need to do a full re-search
                     if temp_score > alpha && temp_score < beta {
-                        -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
+                        -self.negamax::<PvNode>(board, new_depth, ply + 1, -beta, -alpha, &mut local_pv)
                     }
                     else {
                         temp_score
