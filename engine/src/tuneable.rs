@@ -80,8 +80,7 @@ macro_rules! tunable_params {
 #[rustfmt::skip]
 tunable_params!(
     lmp_max_depth                = 6, 6, 10, 1,               false;
-    lmp_base                     = 2, 1, 5, 1,                false;
-    lmp_scale                    = 11, 10, 100, 20,           true;
+    lmp_base                     = 6, 1, 10, 1,               false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;

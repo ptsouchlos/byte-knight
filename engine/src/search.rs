@@ -580,7 +580,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 && !is_pv
                 && !is_in_check
                 && !is_mated
-                && depth <= lmp_max_depth() as ScoreType
+                && is_quiet
+                && depth <= lmp_max_depth() as i16
                 && moves_seen > params::late_move_threshold(depth as i32)
             {
                 break;
