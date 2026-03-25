@@ -460,8 +460,7 @@ impl Board {
     /// * `square` - The square to add the piece to.
     /// * `update_zobrist_hash` - Whether to update the zobrist hash for the addition of the piece.
     fn add_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
-        let bb = self.mut_piece_bitboard(piece, side);
-        bb.set_square(square);
+        self.set_piece_square(piece, side, square);
         if update_zobrist_hash {
             self.update_zobrist_hash_for_piece(square, piece, side)
         }
@@ -476,15 +475,8 @@ impl Board {
     /// * `square` - The square to remove the piece from.
     /// * `update_zobrist_hash` - Whether to update the zobrist hash for the removal of the piece.
     fn remove_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
-        let bb = self.mut_piece_bitboard(piece, side);
-        if !bb.is_square_occupied(square) {
-            println!(
-                "square {} not occupied by {}\n{}",
-                SQUARE_NAME[square as usize], piece, bb
-            )
-        }
-        debug_assert!(bb.is_square_occupied(square));
-        bb.clear_square(square);
+        debug_assert!(self.piece_on_square(square).is_some());
+        self.remove_piece_from_square(piece, side, square);
         if update_zobrist_hash {
             self.update_zobrist_hash_for_piece(square, piece, side)
         }
@@ -594,14 +586,14 @@ mod tests {
             .find(|mv| mv.to_long_algebraic() == "d7c8q")
             .unwrap();
 
-        let mut queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
+        let mut queen_bb = board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 1);
         assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
 
         let mv_ok = board.make_move(&initial_mv);
         assert!(mv_ok.is_ok());
 
-        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
+        queen_bb = board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 2);
         let mut compare_bb = Bitboard::from_square(Squares::D1);
         compare_bb.set_square(Squares::C8);
@@ -610,7 +602,7 @@ mod tests {
         let undo_result = board.unmake_move();
         assert!(undo_result.is_ok());
 
-        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
+        queen_bb = board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 1);
         assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
     }

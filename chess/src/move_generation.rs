@@ -133,7 +133,7 @@ pub(crate) fn calculate_checkers(board: &Board, occupancy: Bitboard) -> Bitboard
     let us = board.side_to_move();
     let king_bb = board.piece_bitboard(Piece::King, us);
     let king_square = board.king_square(us);
-    let kingless_occupancy = occupancy & !(*king_bb);
+    let kingless_occupancy = occupancy & !(king_bb);
 
     attacks::all_attackers_of(king_square, board, us.opposite(), kingless_occupancy)
 }
@@ -182,7 +182,7 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_t
     let occupancy = board.all_pieces();
     let empty = !occupancy;
 
-    let piece_bb = *board.piece_bitboard(piece, us);
+    let piece_bb = board.piece_bitboard(piece, us);
     for from_sq in piece_bb.iter() {
         let attack_bb = attacks::for_piece_on_square(piece, from_sq, occupancy, us);
 

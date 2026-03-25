@@ -63,19 +63,19 @@ pub fn compute(board: &Board) -> CheckPinMetadata {
     let king_sq = board.king_square(us);
 
     let mut pinned = Bitboard::default();
-    let mut capture_mask = enemy_or_empty & !(*board.piece_bitboard(Piece::King, them));
+    let mut capture_mask = enemy_or_empty & !(board.piece_bitboard(Piece::King, them));
     let mut orthogonal_pin_rays = Bitboard::default();
     let mut diagonal_pin_rays = Bitboard::default();
 
     // Super-piece method: project attacks from king square with opposite side semantics
-    let mut checkers = *board.piece_bitboard(Piece::Knight, them) & attacks::knight(king_sq)
-        | *board.piece_bitboard(Piece::Pawn, them) & attacks::pawn(king_sq, us);
+    let mut checkers = board.piece_bitboard(Piece::Knight, them) & attacks::knight(king_sq)
+        | board.piece_bitboard(Piece::Pawn, them) & attacks::pawn(king_sq, us);
 
     let enemy_sliding_attacks = attacks::rook(king_sq, Bitboard::default())
-        & (*board.piece_bitboard(Piece::Rook, them) | *board.piece_bitboard(Piece::Queen, them))
+        & (board.piece_bitboard(Piece::Rook, them) | board.piece_bitboard(Piece::Queen, them))
         | attacks::bishop(king_sq, Bitboard::default())
-            & (*board.piece_bitboard(Piece::Bishop, them)
-                | *board.piece_bitboard(Piece::Queen, them));
+            & (board.piece_bitboard(Piece::Bishop, them)
+                | board.piece_bitboard(Piece::Queen, them));
 
     for next_attacker_sq in enemy_sliding_attacks.iter() {
         let attacker_bb = Bitboard::from_square(next_attacker_sq);
@@ -113,7 +113,7 @@ pub fn compute(board: &Board) -> CheckPinMetadata {
     if checkers_count >= 1 {
         let is_single_check = checkers_count == 1;
 
-        capture_mask = checkers & !(*board.piece_bitboard(Piece::King, them));
+        capture_mask = checkers & !(board.piece_bitboard(Piece::King, them));
 
         if is_single_check {
             let mut checkers_clone = checkers;
