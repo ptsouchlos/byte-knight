@@ -567,10 +567,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // Move-loop pruning techniques
 
+            // ---------------------------------------------------------------------------------
             // LMP - Late Move Pruning
             // We assume our move ordering is just too good, so if we're under a certain depth
             // and have made more than a certain number of moves, we can assume that later moves
             // won't be as good, so we prune them.
+            // ---------------------------------------------------------------------------------
             if !is_root && !is_pv && !is_in_check && !best_score.mated() {
                 let min_lmp_moves =
                     LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
