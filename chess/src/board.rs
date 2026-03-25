@@ -25,7 +25,8 @@ use super::{bitboard::Bitboard, pieces::Piece};
 /// Represents a chessboard position.
 #[derive(Debug)]
 pub struct Board {
-    piece_bitboards: [[Bitboard; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+    bitboards: [Bitboard; NumberOf::PIECE_TYPES + NumberOf::SIDES],
+    pieces: [Option<Piece>; NumberOf::SQUARES],
     pub(crate) history: BoardHistory,
     state: BoardState,
     zobrist_values: ZobristRandomValues,
@@ -34,7 +35,8 @@ pub struct Board {
 impl Clone for Board {
     fn clone(&self) -> Self {
         Self {
-            piece_bitboards: self.piece_bitboards,
+            bitboards: self.bitboards,
+            pieces: self.pieces,
             history: self.history.clone(),
             state: self.state,
             zobrist_values: self.zobrist_values.clone(),
@@ -97,7 +99,8 @@ impl Board {
     /// Create a new board in the default, *uninitialized*, state.
     fn new() -> Self {
         Board {
-            piece_bitboards: [[Bitboard::default(); NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+            bitboards: [Bitboard::default(); NumberOf::PIECE_TYPES + NumberOf::SIDES],
+            pieces: [None; NumberOf::SQUARES],
             history: BoardHistory::new(),
             state: BoardState::new(),
             zobrist_values: ZobristRandomValues::new(),
@@ -118,15 +121,25 @@ impl Board {
         let mut zobrist_hash = ZobristHash::default();
 
         // XOR the zobrist values for each piece on the board
-        for side in 0..NumberOf::SIDES {
-            for piece in 0..NumberOf::PIECE_TYPES {
-                let bitboard = self.piece_bitboards[side][piece];
 
-                for sq in bitboard.iter() {
-                    zobrist_hash ^= self
-                        .zobrist_values
-                        .get_piece_value(piece, side, sq as usize);
-                }
+        for piece in 0..NumberOf::PIECE_TYPES {
+            let bitboard = self.bitboards[piece];
+            let white_bb = self.pieces(Side::White);
+            let black_bb = self.pieces(Side::Black);
+
+            let white_pieces = bitboard & white_bb;
+            let black_pieces = bitboard & black_bb;
+
+            for sq in white_pieces.iter() {
+                zobrist_hash ^=
+                    self.zobrist_values
+                        .get_piece_value(piece, Side::White as usize, sq as usize);
+            }
+
+            for sq in black_pieces.iter() {
+                zobrist_hash ^=
+                    self.zobrist_values
+                        .get_piece_value(piece, Side::Black as usize, sq as usize);
             }
         }
 
@@ -149,44 +162,45 @@ impl Board {
     }
 
     /// Initialize bitboards for a given side
-    fn initialize_piece_bbs(&mut self, side: Side) {
+    fn initialize_piece_bbs(&mut self) {
         // Set up the board with the starting position
-        match side {
-            Side::White => self.initialize_white_bbs(),
-            Side::Black => self.initialize_black_bbs(),
+        let layout: &[(Piece, u64, u64)] = &[
+            (Piece::Pawn, 0xFF00, 0xFF000000000000),
+            (Piece::Knight, 0x42, 0x4200000000000000),
+            (Piece::Bishop, 0x24, 0x2400000000000000),
+            (Piece::Rook, 0x81, 0x8100000000000000),
+            (Piece::Queen, 0x8, 0x800000000000000),
+            (Piece::King, 0x10, 0x1000000000000000),
+        ];
+
+        for &(piece, white_bits, black_bits) in layout {
+            for sq in Bitboard::new(white_bits).iter() {
+                self.set_piece_square(piece, Side::White, sq);
+            }
+            for sq in Bitboard::new(black_bits).iter() {
+                self.set_piece_square(piece, Side::Black, sq);
+            }
         }
     }
 
-    /// Initialize bitboard for all white pieces
-    fn initialize_white_bbs(&mut self) {
-        let index = Side::White as usize;
-        // Set up the board with the starting position
-        self.piece_bitboards[index][Piece::Pawn as usize] = Bitboard::new(0xFF00);
-        self.piece_bitboards[index][Piece::Knight as usize] = Bitboard::new(0x42);
-        self.piece_bitboards[index][Piece::Bishop as usize] = Bitboard::new(0x24);
-        self.piece_bitboards[index][Piece::Rook as usize] = Bitboard::new(0x81);
-        self.piece_bitboards[index][Piece::Queen as usize] = Bitboard::new(0x8);
-        self.piece_bitboards[index][Piece::King as usize] = Bitboard::new(0x10);
+    pub(crate) fn set_piece_square(&mut self, piece: Piece, side: Side, square: u8) {
+        let piece_bb = &mut self.bitboards[piece as usize];
+        piece_bb.set_square(square);
+
+        let side_bb = &mut self.bitboards[NumberOf::PIECE_TYPES + side as usize];
+        side_bb.set_square(square);
+
+        self.pieces[square as usize] = Some(piece);
     }
 
-    /// Initialize bitboard for all black pieces
-    fn initialize_black_bbs(&mut self) {
-        let index = Side::Black as usize;
-        // Set up the board with the starting position
-        self.piece_bitboards[index][Piece::Pawn as usize] = Bitboard::new(0xFF000000000000);
-        self.piece_bitboards[index][Piece::Knight as usize] = Bitboard::new(0x4200000000000000);
-        self.piece_bitboards[index][Piece::Bishop as usize] = Bitboard::new(0x2400000000000000);
-        self.piece_bitboards[index][Piece::Rook as usize] = Bitboard::new(0x8100000000000000);
-        self.piece_bitboards[index][Piece::Queen as usize] = Bitboard::new(0x800000000000000);
-        self.piece_bitboards[index][Piece::King as usize] = Bitboard::new(0x1000000000000000);
-    }
+    pub(crate) fn remove_piece_from_square(&mut self, piece: Piece, side: Side, square: u8) {
+        let piece_bb = &mut self.bitboards[piece as usize];
+        piece_bb.clear_square(square);
 
-    pub(crate) fn mut_piece_bitboard(&mut self, piece: Piece, side: Side) -> &mut Bitboard {
-        &mut self.piece_bitboards[side as usize][piece as usize]
-    }
+        let side_bb = &mut self.bitboards[NumberOf::PIECE_TYPES + side as usize];
+        side_bb.clear_square(square);
 
-    pub(crate) fn set_piece_square(&mut self, piece: usize, side: usize, square: u8) {
-        self.piece_bitboards[side][piece].set_square(square);
+        self.pieces[square as usize] = None;
     }
 
     /// Sets the side to move and updates the zobrist hash.
@@ -257,10 +271,7 @@ impl Board {
     pub fn default_board() -> Board {
         let mut board = Board::new();
         // Set up the board with the starting position
-        // White pieces
-        board.initialize_piece_bbs(Side::White);
-        // Black pieces
-        board.initialize_piece_bbs(Side::Black);
+        board.initialize_piece_bbs();
         board.set_en_passant_square(None);
         board.set_half_move_clock(0);
         board.set_full_move_number(1);
@@ -331,22 +342,12 @@ impl Board {
     /// Returns the all pieces of this [`Board`].
     /// This is also known as the occupancy bitboard.
     pub fn all_pieces(&self) -> Bitboard {
-        let mut all_pieces = Bitboard::default();
-        for piece_type in 0..NumberOf::PIECE_TYPES {
-            for side in 0..NumberOf::SIDES {
-                all_pieces |= self.piece_bitboards[side][piece_type];
-            }
-        }
-        all_pieces
+        self.white_pieces() | self.black_pieces()
     }
 
     /// Returns all the pieces of a given side in a single [`Bitboard`].
     pub fn pieces(&self, side: Side) -> Bitboard {
-        let mut pieces = Bitboard::default();
-        for piece_type in 0..NumberOf::PIECE_TYPES {
-            pieces |= self.piece_bitboards[side as usize][piece_type];
-        }
-        pieces
+        self.bitboards[NumberOf::PIECE_TYPES + side as usize]
     }
 
     /// Returns the white pieces of this [`Board`] in a single [`Bitboard`].
@@ -360,17 +361,13 @@ impl Board {
     }
 
     /// Returns the bitboard for a specific piece and side.
-    pub fn piece_bitboard(&self, piece: Piece, side: Side) -> &Bitboard {
-        &self.piece_bitboards[side as usize][piece as usize]
+    pub fn piece_bitboard(&self, piece: Piece, side: Side) -> Bitboard {
+        self.piece_kind_bitboard(piece) & self.pieces(side)
     }
 
     /// Returns a combined [`Bitboard`] of all pieces of a given type for both sides.
     pub fn piece_kind_bitboard(&self, piece: Piece) -> Bitboard {
-        let mut piece_bb = Bitboard::default();
-        for side in 0..NumberOf::SIDES {
-            piece_bb |= self.piece_bitboards[side][piece as usize];
-        }
-        piece_bb
+        self.bitboards[piece as usize]
     }
 
     /// Returns the current square of the king for a given side.
@@ -389,17 +386,17 @@ impl Board {
     ///
     /// - Optional tuple of the piece and the side that the piece belongs to. (Piece, Side)
     pub fn piece_on_square(&self, square: u8) -> Option<(Piece, Side)> {
-        for piece in 0..NumberOf::PIECE_TYPES {
-            for side in 0..NumberOf::SIDES {
-                if self.piece_bitboards[side][piece].is_square_occupied(square) {
-                    return Some((
-                        Piece::try_from(piece as u8).unwrap(),
-                        Side::try_from(side as u8).unwrap(),
-                    ));
-                }
-            }
-        }
-        None
+        let piece = self.pieces[square as usize];
+        piece?;
+
+        let bb = Bitboard::from_square(square);
+        let side = if !(bb & self.pieces(Side::White)).is_empty() {
+            Side::White
+        } else {
+            Side::Black
+        };
+
+        Some((piece.unwrap(), side))
     }
 
     /// Returns the side to move of this [`Board`].
@@ -593,13 +590,24 @@ impl Board {
         let mut flipped = Board::new();
 
         // Swap sides and flip each bitboard vertically (swap_bytes mirrors ranks).
-        for piece in 0..NumberOf::PIECE_TYPES {
-            let white = self.piece_bitboards[Side::White as usize][piece].as_number();
-            let black = self.piece_bitboards[Side::Black as usize][piece].as_number();
-            flipped.piece_bitboards[Side::White as usize][piece] =
-                Bitboard::new(black.swap_bytes());
-            flipped.piece_bitboards[Side::Black as usize][piece] =
-                Bitboard::new(white.swap_bytes());
+        for piece in Piece::iter() {
+            let white_flipped = Bitboard::new(
+                self.piece_bitboard(piece, Side::White)
+                    .as_number()
+                    .swap_bytes(),
+            );
+            let black_flipped = Bitboard::new(
+                self.piece_bitboard(piece, Side::Black)
+                    .as_number()
+                    .swap_bytes(),
+            );
+
+            for sq in black_flipped.iter() {
+                flipped.set_piece_square(piece, Side::White, sq);
+            }
+            for sq in white_flipped.iter() {
+                flipped.set_piece_square(piece, Side::Black, sq);
+            }
         }
 
         flipped.state.side_to_move = self.state.side_to_move.opposite();
@@ -859,7 +867,7 @@ mod tests {
         let black_pawns_bb = board.piece_bitboard(Piece::Pawn, Side::Black);
         let white_pawns_bb = board.piece_bitboard(Piece::Pawn, Side::White);
 
-        assert_eq!(piece_kind_bb, *black_pawns_bb | *white_pawns_bb);
+        assert_eq!(piece_kind_bb, black_pawns_bb | white_pawns_bb);
         assert_eq!(piece_kind_bb.number_of_occupied_squares(), 16);
     }
 

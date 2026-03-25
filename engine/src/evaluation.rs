@@ -82,7 +82,7 @@ impl<Values: EvalValues> Evaluation<Values> {
 
         let pawn_attacks = attacks::for_piece(Piece::Pawn, board, occ, us);
         for piece_attacked in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
-            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+            let piece_bb = board.piece_bitboard(piece_attacked, them);
             let count = (pawn_attacks & piece_bb).number_of_occupied_squares();
             for _ in 0..count {
                 score += self.values().threat_value(Piece::Pawn, piece_attacked, us);
@@ -91,7 +91,7 @@ impl<Values: EvalValues> Evaluation<Values> {
 
         let knight_attacks = attacks::for_piece(Piece::Knight, board, occ, us);
         for piece_attacked in [Piece::Bishop, Piece::Rook, Piece::Queen] {
-            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+            let piece_bb = board.piece_bitboard(piece_attacked, them);
             let count = (knight_attacks & piece_bb).number_of_occupied_squares();
             for _ in 0..count {
                 score += self
@@ -102,7 +102,7 @@ impl<Values: EvalValues> Evaluation<Values> {
 
         let bishop_attacks = attacks::for_piece(Piece::Bishop, board, occ, us);
         for piece_attacked in [Piece::Knight, Piece::Rook, Piece::Queen] {
-            let piece_bb = *board.piece_bitboard(piece_attacked, them);
+            let piece_bb = board.piece_bitboard(piece_attacked, them);
             let count = (bishop_attacks & piece_bb).number_of_occupied_squares();
             for _ in 0..count {
                 score += self
@@ -189,8 +189,8 @@ impl<Values: EvalValues> Evaluation<Values> {
     {
         let mut score = PhasedScore::default();
 
-        let our_pawns = *board.piece_bitboard(Piece::Pawn, side);
-        let their_pawns = *board.piece_bitboard(Piece::Pawn, side.opposite());
+        let our_pawns = board.piece_bitboard(Piece::Pawn, side);
+        let their_pawns = board.piece_bitboard(Piece::Pawn, side.opposite());
 
         let our_rooks = board.piece_bitboard(Piece::Rook, side);
         for rook_sq in our_rooks.iter() {
@@ -294,7 +294,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             // Loop through enemy pieces (except king) and check overlap with king ring
             for piece in Piece::iter().filter(|&p| p != Piece::King) {
                 // Get opponent piece bb
-                let piece_bb = *board.piece_bitboard(piece, them);
+                let piece_bb = board.piece_bitboard(piece, them);
 
                 // Loop through each sq in the piece bb and see if that piece is attacking the king ring
                 for sq in piece_bb.iter() {

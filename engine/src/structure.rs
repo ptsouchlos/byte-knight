@@ -10,8 +10,8 @@ use chess::{bitboard::Bitboard, bitboard_helpers, board::Board, pieces::Piece, s
 /// (pawn shield (friendly), pawn storm (enemy)) pair of [`Bitboard`]s.
 pub(crate) fn king_pawn_shield_and_storm(board: &Board, side: Side) -> (Bitboard, Bitboard) {
     let king_sq = board.king_square(side);
-    let our_pawns = *board.piece_bitboard(Piece::Pawn, side);
-    let their_pawns = *board.piece_bitboard(Piece::Pawn, side.opposite());
+    let our_pawns = board.piece_bitboard(Piece::Pawn, side);
+    let their_pawns = board.piece_bitboard(Piece::Pawn, side.opposite());
 
     let king_sq_bb = Bitboard::from_square(king_sq);
     let king_sq_adjacent_bb =

@@ -526,12 +526,12 @@ pub fn all_attackers_of(
     let queen_attacks = attacks::for_piece_on_square(Piece::Queen, sq, occupancy, not_attacking);
     let pawn_attacks = attacks::pawn(sq, not_attacking);
 
-    let king = *board.piece_bitboard(Piece::King, attacking_side);
-    let bishops = *board.piece_bitboard(Piece::Bishop, attacking_side);
-    let rooks = *board.piece_bitboard(Piece::Rook, attacking_side);
-    let knights = *board.piece_bitboard(Piece::Knight, attacking_side);
-    let queen = *board.piece_bitboard(Piece::Queen, attacking_side);
-    let pawns = *board.piece_bitboard(Piece::Pawn, attacking_side);
+    let king = board.piece_bitboard(Piece::King, attacking_side);
+    let bishops = board.piece_bitboard(Piece::Bishop, attacking_side);
+    let rooks = board.piece_bitboard(Piece::Rook, attacking_side);
+    let knights = board.piece_bitboard(Piece::Knight, attacking_side);
+    let queen = board.piece_bitboard(Piece::Queen, attacking_side);
+    let pawns = board.piece_bitboard(Piece::Pawn, attacking_side);
 
     (king & king_attacks)
         | (knights & knight_attacks)

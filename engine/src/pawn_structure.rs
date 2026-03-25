@@ -53,8 +53,8 @@ impl PawnEvaluator {
 
     pub fn detect_pawn_structure(&self, board: &Board) -> PawnStructure {
         // Get pawn structure from the board
-        let white_pawns = *board.piece_bitboard(Piece::Pawn, Side::White);
-        let black_pawns = *board.piece_bitboard(Piece::Pawn, Side::Black);
+        let white_pawns = board.piece_bitboard(Piece::Pawn, Side::White);
+        let black_pawns = board.piece_bitboard(Piece::Pawn, Side::Black);
 
         // Create masks for the passed pawns mask. We start with the pawns themselves and make a copy.
         let mut white_passed_pawns_mask = white_pawns;

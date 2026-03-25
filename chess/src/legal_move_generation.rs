@@ -276,7 +276,7 @@ pub(crate) fn generate_king_legal_mobility(
 
     let king_moves_bb = attacks::king(square.to_square_index());
 
-    let attacked_squares_occupancy = occupancy & !*king_bb;
+    let attacked_squares_occupancy = occupancy & !king_bb;
     let attacked_squares =
         move_generation::get_attacked_squares(board, them, attacked_squares_occupancy);
     let king_pushes = king_moves_bb & !attacked_squares & !our_pieces & !their_pieces;
@@ -290,7 +290,7 @@ pub(crate) fn generate_king_legal_mobility(
 
     let k_att = king_attacks;
     for capture_sq in k_att.iter() {
-        let modified_occupancy = occupancy & !Bitboard::from_square(capture_sq) & !*king_bb;
+        let modified_occupancy = occupancy & !Bitboard::from_square(capture_sq) & !king_bb;
         let is_invalid_capture =
             !attacks::all_attackers_of(capture_sq, board, them, modified_occupancy).is_empty();
         if is_invalid_capture {
