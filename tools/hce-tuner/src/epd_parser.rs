@@ -321,4 +321,37 @@ mod tests {
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }
+
+    #[test]
+    fn custom_filtered_epd_data() {
+        let lines = [
+            "r3rbk1/p1pbqpp1/2p4p/3pP3/1P1B1P2/3B4/P1P3PP/1R1Q1R1K b - b3 c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
+            "r3rbk1/2pbqpp1/2p4p/p2pP3/1P1B1P2/3B4/P1P3PP/1R1Q1R1K w - a6 c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
+            "r3rbk1/2pbqpp1/2p4p/p2pP3/1P1B1P2/P2B4/2P3PP/1R1Q1R1K b - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
+            "r3rbk1/2pbqpp1/2p4p/3pP3/1p1B1P2/P2B4/2P3PP/1R1Q1R1K w - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
+            "r3rbk1/2pbqpp1/2p4p/3pP3/1P1B1P2/3B4/2P3PP/1R1Q1R1K b - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
+            "1r2rbk1/2pbqpp1/2p4p/3pP3/1P1B1P2/3B4/2P3PP/1R1Q1R1K w - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
+            "1r2rbk1/2pbqpp1/2p4p/3pP3/1P1B1P2/2PB4/6PP/1R1Q1R1K b - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
+            "1r2rbk1/2pbqp2/2p3pp/3pP3/1P1B1P2/2PB4/6PP/1R1Q1R1K w - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
+        ];
+
+        let eval = ByteKnightEvaluation::default();
+        let params = Parameters::create_from_engine_values();
+
+        let parsed_results = test_epd_lines(&lines);
+        for (pos, board, result) in parsed_results {
+            assert_eq!(result, 0.0);
+            assert_eq!(pos.game_result, result);
+            let expected_value = eval.eval(&board);
+            // tuning position evaluation is always from white's perspective
+            let val = match board.side_to_move() {
+                Side::White => pos.evaluate(&params),
+                Side::Black => -pos.evaluate(&params),
+            };
+
+            println!("pos: {}\n{}", board.to_fen(), board);
+            println!("{expected_value} // {val}");
+            assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
+        }
+    }
 }
