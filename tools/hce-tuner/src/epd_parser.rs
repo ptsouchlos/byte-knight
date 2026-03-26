@@ -6,7 +6,7 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use chess::{board::Board, side::Side};
 use engine::{evaluation::Evaluation, traits::Eval};
 
@@ -22,6 +22,8 @@ pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
         let pos = parse_epd_line(line.as_str());
         if let Ok(pos) = pos {
             positions.push(pos);
+        } else {
+            println!("Error processing {line}, {}", pos.err().unwrap());
         }
     }
     positions
@@ -29,18 +31,32 @@ pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
 
 pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     // find the split point between the FEN and the result
+    if line.is_empty() {
+        bail!("Empty line")
+    }
+
+    let mut replace_pattern = String::default();
     let split_point = if let Some(idx) = line.rfind("ce") {
+        replace_pattern = "ce".to_string();
         idx
-    } else if let Some(idx) = line.rfind("c9") {
+    } else if let Some(idx) = (1..10).find_map(|num| line.rfind(format!("c{}", num).as_str())) {
+        replace_pattern = line.get(idx..idx + 2).unwrap().to_owned();
         idx
     } else {
         line.rfind(' ').unwrap()
     };
 
-    let fen = &line[..split_point].trim();
+    let fen_split_point = if let Some(idx) = line.rfind("ce") {
+        idx
+    } else if let Some(idx) = (0..10).find_map(|num| line.find(format!("c{}", num).as_str())) {
+        idx
+    } else {
+        split_point
+    };
+
+    let fen = &line[..fen_split_point].trim();
     let result = &line[split_point..]
-        .replace("ce", "")
-        .replace("c9", "")
+        .replace(replace_pattern.as_str(), "")
         .trim()
         .to_string();
 
@@ -54,29 +70,31 @@ pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
 }
 
 pub(crate) fn parse_epd_line(line: &str) -> Result<TuningPosition> {
-    let (board, game_result) = process_epd_line(line)?;
+    if let Ok((board, game_result)) = process_epd_line(line) {
+        let tracing = TracingValues::new();
+        let eval = Evaluation::new(tracing);
+        let _ = eval.eval(&board);
+        let (white_indexes, black_indexes, scaled_phase) = eval.into_values().into_trace();
 
-    let tracing = TracingValues::new();
-    let eval = Evaluation::new(tracing);
-    let _ = eval.eval(&board);
-    let (white_indexes, black_indexes, scaled_phase) = eval.into_values().into_trace();
+        let is_white_relative = matches!(game_result, 0.0 | 0.5 | 1.0);
+        let result = if is_white_relative {
+            game_result
+        } else {
+            match board.side_to_move() {
+                Side::White => game_result,
+                Side::Black => 1.0 - game_result,
+            }
+        };
 
-    let is_white_relative = matches!(game_result, 0.0 | 0.5 | 1.0);
-    let result = if is_white_relative {
-        game_result
-    } else {
-        match board.side_to_move() {
-            Side::White => game_result,
-            Side::Black => 1.0 - game_result,
-        }
-    };
+        return Ok(TuningPosition::new(
+            white_indexes,
+            black_indexes,
+            scaled_phase,
+            result,
+        ));
+    }
 
-    Ok(TuningPosition::new(
-        white_indexes,
-        black_indexes,
-        scaled_phase,
-        result,
-    ))
+    bail!("Could not process {line}")
 }
 
 /// Parse the game result from part of the EPD line.
