@@ -42,12 +42,14 @@ use crate::{
     traits::Eval,
     ttable,
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, LMR_MIN_DEPTH,
-        LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET,
-        RAZORING_SCALING, RFP_MARGIN,
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
+        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
+        lmp_max_depth,
     },
 };
 use ttable::TranspositionTable;
+
+mod params;
 
 /// Result for a search.
 #[derive(Clone, Debug)]
@@ -558,6 +560,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             };
 
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
+            let is_mated = best_score.mated();
             let is_in_check = move_generation::is_in_check(board);
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
@@ -566,16 +569,21 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // Move-loop pruning techniques
 
+            // ---------------------------------------------------------------------------------
             // LMP - Late Move Pruning
             // We assume our move ordering is just too good, so if we're under a certain depth
             // and have made more than a certain number of moves, we can assume that later moves
             // won't be as good, so we prune them.
-            if !is_root && !is_pv && !is_in_check && !best_score.mated() {
-                let min_lmp_moves =
-                    LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
-                if loop_counter >= min_lmp_moves {
-                    break;
-                }
+            // ---------------------------------------------------------------------------------
+            if !is_root
+                && !is_pv
+                && !is_in_check
+                && !is_mated
+                && is_quiet
+                && depth <= lmp_max_depth() as i16
+                && moves_seen > params::late_move_threshold(depth as i32)
+            {
+                break;
             }
 
             // local PV is for each node below this one is different when we call negamax recursively
@@ -596,7 +604,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 } else {
                     let is_killer = self.killers_table.get(ply as u8).iter().any(|entry|entry.is_some_and(|k|k.matches(mv, piece)));
                     // No LMR reduction for killer moves
-                    let reduction = if is_quiet && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
+                    let reduction = if is_quiet && depth >= LMR_MIN_DEPTH && moves_seen as usize >= LMR_MIN_MOVES_SEEN {
                         if is_killer {
                             // Reduce less if the move is a killer
                             (lmr_reduction-1).max(1)
