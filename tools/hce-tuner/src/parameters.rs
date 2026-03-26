@@ -4,9 +4,8 @@
 use std::ops::{Add, AddAssign, Index, IndexMut};
 
 use chess::{
-    definitions::{NumberOf, Squares},
+    definitions::NumberOf,
     pieces::{ALL_PIECES, Piece},
-    rank::Rank,
     side::Side,
     square,
 };
@@ -121,31 +120,9 @@ impl Parameters {
             }
         }
 
-        // Rook offset bonus
-        // Pick starting positions for respective kings
-        let king_sq_white = Squares::E1;
-        let king_sq_black = Squares::E8;
-        // White
-        for sq in Rank::R7.to_bitboard().iter() {
-            let (rook_file, _rook_rank) = square::from_square(sq);
-            params[Offsets::offset_for_rook_rank(rook_file as usize, true)] = values
-                .rook_rank_bonus(sq, king_sq_black, Side::White)
-                .into();
-            params[Offsets::offset_for_rook_rank(rook_file as usize, false)] = values
-                .rook_rank_bonus(sq, king_sq_white, Side::White)
-                .into();
-        }
-
-        // Black
-        for sq in Rank::R2.to_bitboard().iter() {
-            let (rook_file, _rook_rank) = square::from_square(sq);
-            params[Offsets::offset_for_rook_rank(rook_file as usize, true)] = values
-                .rook_rank_bonus(sq, king_sq_white, Side::Black)
-                .into();
-            params[Offsets::offset_for_rook_rank(rook_file as usize, false)] = values
-                .rook_rank_bonus(sq, king_sq_black, Side::Black)
-                .into();
-        }
+        // Rook on 7th rank bonus
+        params[Offsets::offset_for_rook_on_7th()] =
+            values.rook_on_7th_bonus(Side::White).into();
 
         params
     }

@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn offsets() {
-        assert_eq!(PARAMETER_COUNT, 553);
+        assert_eq!(PARAMETER_COUNT, 538);
     }
 
     #[test]

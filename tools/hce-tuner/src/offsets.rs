@@ -38,7 +38,7 @@ impl Offsets {
         ROOK_SEMI_OPEN_FILE_BONUS: NumberOf::FILES,
         PAWN_SHIELD: NumberOf::KING_FLANK_FILES * NumberOf::PAWN_SHIELD_RANKS,
         PAWN_STORM:  NumberOf::KING_FLANK_FILES * NumberOf::PAWN_STORM_RANKS,
-        ROOK_RANK: NumberOf::FILES * 2
+        ROOK_ON_7TH: 1
     );
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
@@ -138,8 +138,8 @@ impl Offsets {
         Self::PAWN_STORM + file_index * NumberOf::PAWN_STORM_RANKS + rank_index
     }
 
-    pub(crate) fn offset_for_rook_rank(file_index: usize, is_king_ahead: bool) -> usize {
-        Self::ROOK_RANK + is_king_ahead as usize * NumberOf::FILES + file_index
+    pub(crate) fn offset_for_rook_on_7th() -> usize {
+        Self::ROOK_ON_7TH
     }
 }
 
