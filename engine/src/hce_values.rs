@@ -6,7 +6,6 @@
 use chess::{
     definitions::NumberOf,
     pieces::Piece,
-    rank::Rank,
     side::Side,
     square::{self},
 };
@@ -280,30 +279,8 @@ pub const PAWN_STORM: [[PhasedScore; NumberOf::PAWN_STORM_RANKS]; NumberOf::KING
     [S(-49, 231), S(-54, 85), S(-22, 22), S(-3, 3)],
 ];
 
-// Bonus for Rook on 7th Rank. Bonus scaled based on Rook's File. Separate
-// bonus if enemy king is in Rank 8. Flipped for black
-pub const ROOK_RANK_BONUS: [[PhasedScore; NumberOf::FILES]; 2] = [
-    [
-        S(9, -19),
-        S(20, -21),
-        S(19, -23),
-        S(20, -17),
-        S(25, -23),
-        S(13, -24),
-        S(16, -19),
-        S(-17, -9),
-    ],
-    [
-        S(-5, 16),
-        S(-17, 18),
-        S(-13, 19),
-        S(-24, 18),
-        S(-19, 16),
-        S(-14, 15),
-        S(-2, 28),
-        S(-4, 38),
-    ],
-];
+// Bonus for Rook on 7th Rank (relative to side). Flipped for black.
+pub const ROOK_ON_7TH_BONUS: PhasedScore = S(10, 0);
 
 const RANK_1: u8 = 1;
 
@@ -392,30 +369,8 @@ impl EvalValues for ByteKnightValues {
         PAWN_STORM[file_index][rank_index]
     }
 
-    fn rook_rank_bonus(
-        &self,
-        rook_square: u8,
-        enemy_king_square: u8,
-        side: Side,
-    ) -> Self::ReturnScore {
-        let (rook_file, rook_rank) = square::from_square(rook_square);
-        let bonus_rank = match side {
-            Side::White => Rank::R7,
-            Side::Black => Rank::R2,
-        };
-        if rook_rank != bonus_rank.as_number() {
-            return Default::default();
-        }
-
-        let king_rank = Rank::of(enemy_king_square);
-        let king_rank_num = king_rank.as_number();
-
-        let is_king_ahead = match side {
-            Side::White => king_rank_num > rook_rank,
-            Side::Black => king_rank_num < rook_rank,
-        };
-
-        ROOK_RANK_BONUS[is_king_ahead as usize][rook_file as usize]
+    fn rook_on_7th_bonus(&self, _side: Side) -> Self::ReturnScore {
+        ROOK_ON_7TH_BONUS
     }
 }
 

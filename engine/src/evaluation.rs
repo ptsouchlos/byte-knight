@@ -218,9 +218,13 @@ impl<Values: EvalValues> Evaluation<Values> {
         let mut score = PhasedScore::default();
 
         let our_rooks = board.piece_bitboard(Piece::Rook, side);
-        let their_king_sq = board.king_square(side.opposite());
-        for rook_sq in our_rooks.iter() {
-            score += self.values().rook_rank_bonus(rook_sq, their_king_sq, side);
+        let seventh_rank = match side {
+            Side::White => Rank::R7,
+            Side::Black => Rank::R2,
+        };
+        let rooks_on_7th = (our_rooks & seventh_rank.to_bitboard()).number_of_occupied_squares();
+        for _ in 0..rooks_on_7th {
+            score += self.values().rook_on_7th_bonus(side);
         }
 
         score

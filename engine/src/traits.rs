@@ -39,10 +39,5 @@ pub trait EvalValues {
         rank_index: usize,
         side: Side,
     ) -> Self::ReturnScore;
-    fn rook_rank_bonus(
-        &self,
-        rook_square: u8,
-        enemy_king_square: u8,
-        side: Side,
-    ) -> Self::ReturnScore;
+    fn rook_on_7th_bonus(&self, side: Side) -> Self::ReturnScore;
 }
