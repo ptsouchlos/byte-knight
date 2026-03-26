@@ -8,6 +8,7 @@
 use crate::{
     bitboard::Bitboard,
     board::Board,
+    move_generation::MoveFilter,
     move_list::MoveList,
     moves::{Move, MoveFlag},
     pieces::Piece,
@@ -22,6 +23,7 @@ use crate::{
 /// - `from`: The from square the moves originate from.
 /// - `piece`: The `piece` that is moving.
 /// - `board`: The current [`Board`].
+/// - `move_filter`: The current move filter. Used to handling pawn promotion enumeration.
 /// - `move_list`: The [`MoveList`] to push enumerated moves into.
 /// - `promotion_filter`: Controls which promotion types are generated.
 #[allow(clippy::panic)]
@@ -30,6 +32,7 @@ pub(crate) fn enumerate_moves(
     from: Square,
     piece: Piece,
     board: &Board,
+    move_filter: MoveFilter,
     move_list: &mut MoveList,
 ) {
     // Stop if the bitboard is empty.
@@ -66,12 +69,24 @@ pub(crate) fn enumerate_moves(
 
         let to_square = square::to_square_object(file, rank);
         if is_promotion {
-            let flags: &[MoveFlag] = &[
-                MoveFlag::PromotionQueen,
-                MoveFlag::PromotionRook,
-                MoveFlag::PromotionBishop,
-                MoveFlag::PromotionKnight,
-            ];
+            let flags: &[MoveFlag] = match move_filter {
+                MoveFilter::Tacticals => &[MoveFlag::PromotionQueen],
+                MoveFilter::Quiets => &[
+                    MoveFlag::PromotionQueen,
+                    MoveFlag::PromotionRook,
+                    MoveFlag::PromotionBishop,
+                    MoveFlag::PromotionKnight,
+                ],
+                // For all and capture we consider all promo types.
+                // For captures, the bitboard given to this function will be filtered already
+                //  for captures only so we can be sure that any promos we can make are also captures.
+                MoveFilter::All | MoveFilter::Captures => &[
+                    MoveFlag::PromotionQueen,
+                    MoveFlag::PromotionRook,
+                    MoveFlag::PromotionBishop,
+                    MoveFlag::PromotionKnight,
+                ],
+            };
             for flg in flags {
                 let mv = Move::new(from, to_square, *flg);
                 move_list.push(mv);

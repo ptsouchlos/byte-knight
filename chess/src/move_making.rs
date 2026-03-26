@@ -529,14 +529,19 @@ fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use crate::{
-        bitboard::Bitboard, board::Board, definitions::Squares, move_generation,
-        move_list::MoveList, moves::MoveType, pieces::Piece, side::Side,
+        bitboard::Bitboard,
+        board::Board,
+        definitions::Squares,
+        move_generation::{self, move_filter::MoveFilter},
+        move_list::MoveList,
+        pieces::Piece,
+        side::Side,
     };
 
     #[test]
     fn test_making_en_passant_move() {
         let mut board = Board::from_fen("8/2k5/8/2Pp3r/K7/8/8/8 w - d6 0 1").unwrap();
-        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+        let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
 
         let en_passant_move = move_list
             .iter()
@@ -579,7 +584,7 @@ mod tests {
         let mut move_list = MoveList::new();
         let mut board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
         let initial_mv = *move_list
             .iter()
@@ -612,7 +617,7 @@ mod tests {
         let mut move_list = MoveList::new();
         let mut board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
         let initial_mv = *move_list
             .iter()
@@ -629,7 +634,7 @@ mod tests {
 
         // generate moves again
         move_list.clear();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
         let mut node_count = 0;
         for mv in move_list.iter() {
             println!("trying move {}", mv.to_long_algebraic());
@@ -667,7 +672,7 @@ mod tests {
         );
 
         move_list.clear();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
         node_count = 0;
 
         for mv in move_list.iter() {
@@ -691,7 +696,7 @@ mod tests {
                 Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
                     .unwrap();
 
-            move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+            move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
             let first_mv = move_list
                 .iter()
@@ -722,7 +727,7 @@ mod tests {
         {
             // start with default board
             let mut board = Board::default_board();
-            let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+            let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
             // only move pawns and do 2 up movelet mut move_list = MoveList::new();
             let first_mv = move_list
                 .iter()

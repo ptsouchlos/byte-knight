@@ -74,7 +74,7 @@ impl Default for KillerMovesTable {
 mod tests {
     use super::KillerMovesTable;
     use crate::defs::{MAX_DEPTH, MAX_KILLERS_PER_PLY};
-    use chess::{board::Board, move_generation, moves::MoveType, pieces::Piece};
+    use chess::{board::Board, move_generation, pieces::Piece};
 
     #[allow(clippy::expect_used)]
     fn piece_for_move(board: &Board, mv: &chess::moves::Move) -> Piece {
@@ -99,7 +99,7 @@ mod tests {
         let mut kt = KillerMovesTable::new();
         let board = Board::default_board();
 
-        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+        let move_list = move_generation::legal::generate_all_moves(&board);
 
         let mv_a = *move_list.at(0).unwrap();
         let mv_b = *move_list.at(1).unwrap();
@@ -118,7 +118,7 @@ mod tests {
     fn killer_update_rotates_slots() {
         let mut kt = KillerMovesTable::new();
         let board = Board::default_board();
-        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+        let move_list = move_generation::legal::generate_all_moves(&board);
 
         let mv_a = *move_list.at(0).unwrap();
         let mv_b = *move_list.at(1).unwrap();

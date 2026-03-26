@@ -7,9 +7,9 @@ use crate::{
     attacks,
     bitboard::Bitboard,
     board::Board,
-    move_generation::{self, enumerate::enumerate_moves},
+    move_generation::{self, enumerate::enumerate_moves, move_filter::MoveFilter},
     move_list::MoveList,
-    moves::{Move, MoveType},
+    moves::Move,
     pieces::Piece,
     rank::Rank,
     rays,
@@ -19,7 +19,9 @@ use crate::{
 
 pub mod castling;
 pub mod enumerate;
+pub mod legal;
 pub mod metadata;
+pub mod move_filter;
 pub mod square_state;
 
 pub(crate) const NORTH: u64 = 8;
@@ -108,14 +110,14 @@ pub(crate) fn get_attacked_squares(board: &Board, side: Side, occupancy: Bitboar
 
 /// Generates pseudo-legal moves for the current board state.
 /// This function does not check for legality of the moves.
-pub fn generate_moves(board: &Board, move_list: &mut MoveList, move_type: MoveType) {
+pub fn generate_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilter) {
     for piece in Piece::iter().filter(|p| *p != Piece::Pawn) {
-        get_piece_moves(piece, board, move_list, &move_type);
+        get_piece_moves(piece, board, move_list, move_filter);
     }
 
-    get_pawn_moves(board, move_list, &move_type);
+    get_pawn_moves(board, move_list, move_filter);
 
-    if move_type == MoveType::All || move_type == MoveType::Quiet {
+    if matches!(move_filter, MoveFilter::All | MoveFilter::Quiets) {
         get_castling_moves(board, move_list);
     }
 }
@@ -139,23 +141,6 @@ pub(crate) fn calculate_checkers(board: &Board, occupancy: Bitboard) -> Bitboard
 }
 
 fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
-    /*
-     * For castling, the king and rook must not have moved.
-     * The squares between the king and rook must be empty.
-     * The squares the king moves through must not be under attack (including start and end).
-     * The king must not be in check.
-     * The king must not move through check.
-     * The king must not end up in check.
-     *
-     * FIDE Laws of Chess:
-     * 3.8.2.1 The right to castle has been lost:
-     *     3.8.2.1.1 if the king has already moved, or
-     *     3.8.2.1.2 with a rook that has already moved.
-     *
-     * 3.8.2.2 Castling is prevented temporarily:
-     *     3.8.2.2.1 if the square on which the king stands, or the square which it must cross, or the square which it is to occupy, is attacked by one or more of the opponent's pieces, or
-     *     3.8.2.2.2 if there is any piece between the king and the rook with which castling is to be effected.
-     */
     let occupancy = board.all_pieces();
     let checkers = calculate_checkers(board, occupancy);
     let legal_castling_mobility = move_generation::castling::legal_mobility(board, checkers);
@@ -165,11 +150,12 @@ fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
         king_sq,
         Piece::King,
         board,
+        MoveFilter::All,
         move_list,
     );
 }
 
-fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
+fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_filter: MoveFilter) {
     debug_assert!(
         piece != Piece::Pawn,
         "Pawn move enumeration is handle separately."
@@ -186,10 +172,10 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_t
     for from_sq in piece_bb.iter() {
         let attack_bb = attacks::for_piece_on_square(piece, from_sq, occupancy, us);
 
-        let bb_moves = match move_type {
-            MoveType::Capture => attack_bb & their_pieces,
-            MoveType::Quiet => attack_bb & empty,
-            MoveType::All => attack_bb & !our_pieces,
+        let bb_moves = match move_filter {
+            MoveFilter::Captures | MoveFilter::Tacticals => attack_bb & their_pieces,
+            MoveFilter::Quiets => attack_bb & empty,
+            MoveFilter::All => attack_bb & !our_pieces,
         };
 
         enumerate::enumerate_moves(
@@ -197,6 +183,7 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_t
             Square::from_square_index(from_sq),
             piece,
             board,
+            move_filter,
             move_list,
         );
     }
@@ -204,7 +191,7 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_t
 
 #[cfg_attr(not(debug_assertions), inline(always))]
 #[cfg_attr(debug_assertions, inline(never))]
-fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
+fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilter) {
     let us = board.side_to_move();
     let them = us.opposite();
     let their_pieces = board.pieces(them);
@@ -224,7 +211,10 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType)
         };
 
         // pawn non-capture moves
-        if *move_type == MoveType::All || *move_type == MoveType::Quiet {
+        if matches!(
+            move_filter,
+            MoveFilter::All | MoveFilter::Quiets | MoveFilter::Tacticals
+        ) {
             let bb_push = Bitboard::new(1u64 << to_square);
             let bb_single_push = bb_push & empty;
             let can_double_push = match us {
@@ -260,11 +250,22 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType)
             } else {
                 Bitboard::default()
             };
-            bb_moves |= bb_single_push | bb_double_push;
+
+            // For Tacticals, only include pushes that land on the promotion rank
+            let promo_rank_bb = Rank::promotion_rank(us).to_bitboard();
+            let pushes = bb_single_push | bb_double_push;
+            let filtered_pushes = match move_filter {
+                MoveFilter::Tacticals => pushes & promo_rank_bb,
+                _ => pushes,
+            };
+            bb_moves |= filtered_pushes;
         }
 
         // pawn captures
-        if move_type == &MoveType::All || move_type == &MoveType::Capture {
+        if matches!(
+            move_filter,
+            MoveFilter::All | MoveFilter::Captures | MoveFilter::Tacticals
+        ) {
             let bb_capture = attack_bb & their_pieces;
             // En passant
             let bb_en_passant = match board.en_passant_square() {
@@ -291,6 +292,7 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_type: &MoveType)
             Square::from_square_index(from_square),
             Piece::Pawn,
             board,
+            move_filter,
             move_list,
         );
     }
@@ -313,7 +315,7 @@ pub fn is_checkmate(board: &Board) -> bool {
         return false;
     }
 
-    let move_list = generate_legal_moves(board, MoveType::All);
+    let move_list = legal::generate_moves(board, MoveFilter::All);
     move_list.is_empty()
 }
 
@@ -334,9 +336,6 @@ pub fn are_legal(board: &Board, list: &MoveList) -> bool {
     }
     true
 }
-
-/// Re-export from legal_move_generation for convenience.
-pub use crate::legal_move_generation::generate_legal_moves;
 
 #[cfg(test)]
 mod tests {
@@ -694,7 +693,7 @@ mod tests {
     fn check_basic_move_gen() {
         let board = Board::default_board();
         let mut move_list = MoveList::new();
-        generate_moves(&board, &mut move_list, MoveType::All);
+        generate_moves(&board, &mut move_list, MoveFilter::All);
 
         for mv in move_list.iter() {
             println!("{mv}");
@@ -706,7 +705,7 @@ mod tests {
         assert_eq!(move_list.len(), 20);
 
         move_list.clear();
-        let move_list = move_generation::generate_legal_moves(&board, MoveType::All);
+        let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
 
         for mv in move_list.iter() {
             println!("{mv}");
@@ -721,7 +720,7 @@ mod tests {
 
         assert_eq!(board.side_to_move(), Side::Black);
         let mut move_list = MoveList::new();
-        generate_moves(&board, &mut move_list, MoveType::All);
+        generate_moves(&board, &mut move_list, MoveFilter::All);
         let en_passant_move = move_list.iter().find(|mv| mv.is_en_passant_capture());
         assert!(en_passant_move.is_some());
         assert!(move_list.len() >= 8);

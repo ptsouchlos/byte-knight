@@ -108,13 +108,6 @@ impl MoveFlag {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum MoveType {
-    Quiet,
-    Capture,
-    All,
-}
-
 // Bit masks for move information
 const MOVE_INFO_TO_MASK: u16 = 0b111111;
 const MOVE_INFO_FROM_MASK: u16 = 0b111111000000;

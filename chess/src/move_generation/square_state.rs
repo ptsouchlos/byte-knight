@@ -27,9 +27,8 @@ pub fn is_attacked(
 #[cfg(test)]
 mod tests {
     use crate::{
-        move_generation::{self, square_state},
+        move_generation::{self, MoveFilter, square_state},
         move_list::MoveList,
-        moves::MoveType,
     };
 
     use super::*;
@@ -47,7 +46,7 @@ mod tests {
         }
 
         let mut move_list = MoveList::new();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
         let side_to_move = board.side_to_move();
         for mv in move_list.iter().filter(|mv| !mv.is_pawn_two_up()) {
             let to = mv.to();
@@ -71,7 +70,7 @@ mod tests {
             let mut board =
                 Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
                     .unwrap();
-            move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+            move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
             let mv = move_list
                 .iter()
                 .find(|mv| mv.to_long_algebraic() == "b1c3")

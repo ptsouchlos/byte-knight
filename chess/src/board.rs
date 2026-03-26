@@ -663,9 +663,9 @@ mod tests {
     use crate::{
         definitions::{DEFAULT_FEN, Squares},
         file::File,
-        move_generation,
+        move_generation::{self, move_filter::MoveFilter},
         move_list::MoveList,
-        moves::{MoveFlag, MoveType},
+        moves::MoveFlag,
         rank::Rank,
         side::Side,
         square,
@@ -732,7 +732,7 @@ mod tests {
         let mut board = Board::from_fen(FEN).unwrap();
         let hash = board.zobrist_hash();
 
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
         for mv in move_list.iter() {
             let mv_ok = board.make_move(mv);
@@ -835,7 +835,7 @@ mod tests {
     fn get_last_move() {
         let mut board = Board::default_board();
         let mut move_list = MoveList::new();
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
         let first_move = move_list.iter().next().unwrap();
         let mv_ok = board.make_move(first_move);

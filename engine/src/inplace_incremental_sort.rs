@@ -97,11 +97,8 @@ impl Iterator for InplaceIncrementalSort<'_> {
 mod tests {
 
     use chess::{
-        board::Board,
-        move_generation,
-        move_list::MoveList,
-        moves::{Move, MoveType},
-        pieces::Piece,
+        board::Board, move_generation, move_generation::move_filter::MoveFilter,
+        move_list::MoveList, moves::Move, pieces::Piece,
     };
 
     use crate::{inplace_incremental_sort::InplaceIncrementalSort, move_order::MoveOrder};
@@ -112,7 +109,7 @@ mod tests {
         let board = Board::default_board();
 
         // generate moves for starting position (20)
-        move_generation::generate_moves(&board, &mut move_list, MoveType::All);
+        move_generation::generate_moves(&board, &mut move_list, MoveFilter::All);
 
         let mut order = vec![
             MoveOrder::Quiet(14),
