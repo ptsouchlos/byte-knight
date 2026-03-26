@@ -121,8 +121,7 @@ impl Parameters {
         }
 
         // Rook on 7th rank bonus
-        params[Offsets::offset_for_rook_on_7th()] =
-            values.rook_on_7th_bonus(Side::White).into();
+        params[Offsets::offset_for_rook_on_7th()] = values.rook_on_7th_bonus(Side::White).into();
 
         params
     }
