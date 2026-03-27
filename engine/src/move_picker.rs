@@ -12,7 +12,7 @@ use chess::{
         move_filter::MoveFilter,
     },
     move_list::MoveList,
-    moves::{Move, MoveFlag},
+    moves::Move,
     pieces::Piece,
 };
 
@@ -227,13 +227,6 @@ impl MovePicker {
                     .as_ref()
                     .expect("metadata must be set after GenerateTacticals");
                 self.moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
-                for mv in self.moves.iter() {
-                    // Filter out queen push-promotions: they were already generated
-                    // in the Tacticals stage and must not be duplicated here.
-                    if mv.flag() == MoveFlag::PromotionQueen && board.captured(mv).is_none() {
-                        continue;
-                    }
-                }
                 self.stage = Stage::ScoreQuiets;
             }
         }
