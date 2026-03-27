@@ -15,7 +15,6 @@ use std::{
 };
 
 use anyhow::{Result, bail};
-use arrayvec::ArrayVec;
 use chess::{
     board::Board,
     definitions::MAX_MOVE_LIST_SIZE,
@@ -30,11 +29,10 @@ use crate::{
     defs::{MAX_DEPTH, MAX_PLY},
     evaluation::ByteKnightEvaluation,
     history_table::{self, HistoryTable},
-    inplace_incremental_sort::InplaceIncrementalSort,
     killers_table::KillerMovesTable,
     lmr,
     log_level::LogLevel,
-    move_order::MoveOrder,
+    move_picker,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
@@ -514,12 +512,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return score;
         }
 
-        // get all legal moves
-        let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        let mut move_list = move_generation::legal::generate_moves(board, MoveFilter::All);
+        // Build move picker (generates all legal moves and partitions them).
+        let mut picker =
+            move_picker::MovePicker::new(board, tt_move, self.killers_table, ply as u8);
 
-        // do we have moves?
-        if move_list.is_empty() {
+        // Do we have moves?
+        if picker.is_empty() {
             return if move_generation::is_in_check(board) {
                 -Score::MATE + ply
             } else {
@@ -527,30 +525,15 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             };
         }
 
-        let classify_res = MoveOrder::classify_all(
-            ply as u8,
-            board,
-            move_list.as_slice(),
-            &tt_move,
-            self.history_table,
-            self.killers_table,
-            &mut order_list,
-        );
-
-        // TODO(PT): Should we log a message to the CLI or a log?
-        assert!(classify_res.is_ok());
-
-        // sort moves by MVV/LVA
-        let move_iter = InplaceIncrementalSort::new(move_list.as_mut_slice(), &mut order_list);
-
         // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move = tt_move;
         let mut moves_seen = 0;
 
-        // Loop through all moves
-        #[allow(clippy::explicit_counter_loop)]
-        for (loop_counter, mv) in move_iter.into_iter().enumerate() {
+        // Loop through all moves in best-first order.
+        while let Some(mv) = picker.next(board, self.history_table) {
+            let loop_counter = picker.moves_yielded() - 1;
+
             // Calculate the LMR reduction and depth which will be used later in FP
             let lmr_table_value = self.lmr_table.at(depth as usize, loop_counter);
             let base_reduction = if let Some(table_val) = lmr_table_value {
@@ -671,18 +654,16 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         );
 
                         // Apply a penalty to all quiets searched so far.
-                        for mv in move_list
-                            .iter()
-                            .take(loop_counter)
-                            .filter(|mv| board.captured(mv).is_none() && !mv.is_promotion())
-                        {
-                            // The board is already in the parent state (we already unmade the move)
-                            // so it's save to look up the piece on the board using mv.from().
-                            let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
+                        // The board is already in the parent state (we already unmade the move)
+                        // so it's safe to look up the piece on the board using mv.from().
+                        for &(prev_mv, prev_piece) in picker.searched_quiets() {
+                            if prev_mv == mv {
+                                continue;
+                            }
                             self.history_table.update(
                                 board.side_to_move(),
-                                piece,
-                                mv.to(),
+                                prev_piece,
+                                prev_mv.to(),
                                 -bonus as LargeScoreType,
                             );
                         }
@@ -861,28 +842,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             alpha
         };
 
-        let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        // When in check we must consider all moves; otherwise captures only.
-        let move_filter = if in_check {
-            MoveFilter::All
-        } else {
-            MoveFilter::Captures
-        };
-        let mut move_list = move_generation::legal::generate_moves(board, move_filter);
-
-        let mut local_pv = PrincipleVariation::new();
-        // clear the current PV because this is a new position
-        pv.clear();
-
-        if move_list.is_empty() {
-            // In check with no legal moves: checkmate
-            if in_check {
-                return Score::new_mated() + ply;
-            }
-            // Quiet position with no captures: stand pat
-            return standing_eval;
-        }
-
         // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
         // Check if we have a transposition table entry and if we can return early
         let tt_move = match self.transposition_table.probe::<Node>(
@@ -903,29 +862,28 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             ttable::ProbeResult::Empty => None,
         };
 
-        // sort moves by MVV/LVA
-        let classify_res = MoveOrder::classify_all(
-            ply as u8,
-            board,
-            move_list.as_slice(),
-            &tt_move,
-            self.history_table,
-            self.killers_table,
-            &mut move_order_list,
-        );
+        // When in check we must consider all moves; otherwise tacticals only.
+        let mut picker = move_picker::MovePicker::new_qsearch(board, tt_move, in_check);
 
-        // TODO(PT): Should we log a message to the CLI or a log?
-        assert!(classify_res.is_ok());
+        let mut local_pv = PrincipleVariation::new();
+        // clear the current PV because this is a new position
+        pv.clear();
 
-        let moves_slice = move_list.as_mut_slice();
-        let move_iter = InplaceIncrementalSort::new(moves_slice, &mut move_order_list);
+        if picker.is_empty() {
+            // In check with no legal moves: checkmate
+            if in_check {
+                return Score::new_mated() + ply;
+            }
+            // Quiet position with no tacticals: stand pat
+            return standing_eval;
+        }
 
         // When in check there is no stand-pat floor, so begin from -INF.
         let mut best = if in_check { -Score::INF } else { standing_eval };
         let mut best_move = tt_move;
         let original_alpha = alpha_use;
 
-        for mv in move_iter.into_iter() {
+        while let Some(mv) = picker.next(board, self.history_table) {
             // local PV is for each node below this one is different when we call negamax recursively
             // so we have to clear it
             local_pv.clear();

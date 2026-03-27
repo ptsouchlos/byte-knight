@@ -23,6 +23,7 @@ pub mod killers_table;
 mod lmr;
 pub mod log_level;
 mod move_order;
+mod move_picker;
 pub(crate) mod node_types;
 pub mod pawn_structure;
 pub mod phased_score;
