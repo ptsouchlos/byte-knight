@@ -446,7 +446,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     /// This is the core of the search algorithm. It recursively searches the game tree to find the best move.
     fn negamax<Node>(
         &mut self,
-        board: &Board,
+        board: &mut Board,
         mut depth: ScoreType,
         ply: ScoreType,
         mut alpha: Score,
@@ -534,7 +534,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
             let is_mated = best_score.mated();
-            let is_in_check = move_generation::is_in_check(board);
+            let is_in_check = picker.in_check();
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
             let is_quiet = board.captured(&mv).is_none() && !mv.is_promotion();
@@ -563,19 +563,17 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // so we have to clear it
             local_pv.clear();
 
-            let mut local_board = board.clone();
             // make the move
-            local_board.make_move_unchecked(&mv).unwrap();
-            self.transposition_table
-                .prefetch(local_board.zobrist_hash());
+            board.make_move_unchecked(&mv).unwrap();
+            self.transposition_table.prefetch(board.zobrist_hash());
             let mut score = Score::DRAW;
 
             // Don't bother searching drawn positions
-            if !local_board.is_draw() {
+            if !board.is_draw() {
                 score =
                 // Principal Variation Search (PVS)
                 if moves_seen == 0 {
-                    -self.negamax::<Node::Next>(&local_board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
+                    -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
                 } else {
                     let is_killer = self.killers_table.get(ply as u8).iter().any(|entry|entry.is_some_and(|k|k.matches(mv, piece)));
                     // No LMR reduction for killer moves
@@ -594,11 +592,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     let reduced_depth = depth.saturating_sub(reduction);
 
                     // Search with a null window at a reduced depth
-                    let mut temp_score = -self.negamax::<NonPvNode>(&local_board, reduced_depth, ply + 1, -alpha - 1, -alpha, &mut local_pv);
+                    let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha - 1, -alpha, &mut local_pv);
 
                     // If the reduced depth failed, verify again at full depth with null window to avoid a more expensive full re-search
                     temp_score = if temp_score > alpha && reduction > 1 {
-                        -self.negamax::<NonPvNode>(&local_board, depth - 1, ply + 1, -alpha - 1, -alpha, &mut local_pv)
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha - 1, -alpha, &mut local_pv)
                     }
                     else {
                         temp_score
@@ -606,7 +604,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                     // If it fails again, we now know we need to do a full re-search
                     if temp_score > alpha && temp_score < beta {
-                        -self.negamax::<PvNode>(&local_board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
+                        -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
                     }
                     else {
                         temp_score
@@ -614,6 +612,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 };
             }
 
+            // undo the move
+            board.unmake_move().unwrap();
             moves_seen += 1;
 
             // check the results
@@ -729,10 +729,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // If we can't beat alpha with the qsearch score, then we fail-low.
         let razoring_margin = RAZORING_OFFSET + RAZORING_SCALING * depth;
         if static_eval + razoring_margin < alpha {
-            let brd_cpy = board.clone();
+            let mut brd_cpy = board.clone();
             let mut razor_pv = PrincipleVariation::new();
             let score =
-                self.quiescence::<NonPvNode>(&brd_cpy, ply, alpha, alpha + 1, &mut razor_pv);
+                self.quiescence::<NonPvNode>(&mut brd_cpy, ply, alpha, alpha + 1, &mut razor_pv);
             if score < alpha && !score.is_mate() {
                 return Some(score);
             }
@@ -775,7 +775,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             self.transposition_table.prefetch(null_board.zobrist_hash());
             let mut nmp_pv = PrincipleVariation::new();
             let null_score = -self.negamax::<NonPvNode>(
-                &null_board,
+                &mut null_board,
                 null_move_depth,
                 ply + 1,
                 -beta,
@@ -806,7 +806,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     ///
     fn quiescence<Node: NodeType>(
         &mut self,
-        board: &Board,
+        board: &mut Board,
         ply: ScoreType,
         alpha: Score,
         beta: Score,
@@ -877,17 +877,15 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // local PV is for each node below this one is different when we call negamax recursively
             // so we have to clear it
             local_pv.clear();
-            let mut local_board = board.clone();
 
-            local_board.make_move_unchecked(&mv).unwrap();
-            self.transposition_table
-                .prefetch(local_board.zobrist_hash());
+            board.make_move_unchecked(&mv).unwrap();
+            self.transposition_table.prefetch(board.zobrist_hash());
 
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
                 let eval = -self.quiescence::<Node>(
-                    &local_board,
+                    board,
                     ply + 1,
                     -beta,
                     -alpha_use,
@@ -896,6 +894,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 self.nodes += 1;
                 eval
             };
+
+            board.unmake_move().unwrap();
 
             if score > best {
                 best = score;
