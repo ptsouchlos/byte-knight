@@ -381,11 +381,17 @@ pub fn generate_moves_with_metadata(
         Some(sq) => Bitboard::from_square(sq),
         None => Bitboard::default(),
     };
+    // Promotion bb for pawn moves
+    let pawn_promos_bb = !their_pieces & Rank::promotion_rank(us).to_bitboard();
     let pawn_filter = match move_filter {
         MoveFilter::All => Bitboard::FULL,
         MoveFilter::Captures => their_pieces | ep_bb,
-        MoveFilter::Tacticals => their_pieces | Rank::promotion_rank(us).to_bitboard() | ep_bb,
-        MoveFilter::Quiets => !(their_pieces | ep_bb),
+        MoveFilter::Tacticals => {
+            // Include captures, which will include capture promotions, but also include quiet promotions since
+            // Queen promotions are considered tactical.
+            their_pieces | pawn_promos_bb | ep_bb
+        }
+        MoveFilter::Quiets => !(their_pieces | pawn_promos_bb | ep_bb),
     };
 
     let king_sq_idx = board.king_square(us);
@@ -471,7 +477,7 @@ pub fn generate_all_moves(board: &Board) -> MoveList {
 
 #[cfg(test)]
 mod tests {
-    use crate::definitions::Squares;
+    use crate::{definitions::Squares, moves::MoveFlag};
 
     use super::*;
 
@@ -555,13 +561,14 @@ mod tests {
             "r3k2r/p1pp1pb1/bn2Qnp1/2qPN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQkq - 3 2",
             // push-promotion position: white pawn on a7, a8 empty
             "8/P3k3/8/8/8/8/8/4K3 w - - 0 1",
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
         ];
 
         for fen in &positions {
             let board = Board::from_fen(fen).unwrap();
 
             let all_moves = generate_moves(&board, MoveFilter::All);
-            let captures = generate_moves(&board, MoveFilter::Captures);
+            let captures = generate_moves(&board, MoveFilter::Tacticals);
             let quiets = generate_moves(&board, MoveFilter::Quiets);
 
             let staged_moves = captures
@@ -595,7 +602,10 @@ mod tests {
             assert!(
                 board.captured(mv).is_some()
                     || (mv.is_promotion()
-                        && mv.promotion_piece().is_some_and(|pc| pc == Piece::Queen)),
+                        && mv.promotion_piece().is_some_and(|pc| matches!(
+                            pc,
+                            Piece::Queen | Piece::Rook | Piece::Bishop | Piece::Knight
+                        ))),
                 "Tactical move {} is neither a capture nor a queen promotion",
                 mv.to_long_algebraic()
             );
@@ -662,7 +672,7 @@ mod tests {
         // White pawn on d7, black rook on c8, d8 empty
         // push-promo: d7-d8 (4 types), capture-promo: d7xc8 (4 types)
         let board = Board::from_fen("2r5/3P4/8/8/8/8/6k1/4K3 w - - 0 1").unwrap();
-
+        println!("{}\n{}", board.to_fen(), board);
         let all = generate_moves(&board, MoveFilter::All);
         let captures = generate_moves(&board, MoveFilter::Captures);
         let quiets = generate_moves(&board, MoveFilter::Quiets);
@@ -675,7 +685,11 @@ mod tests {
                 .count()
         };
         assert_eq!(push_promos(&all), 4, "All should have 4 push-promos");
-        assert_eq!(push_promos(&quiets), 4, "Quiets should have 4 push-promos");
+        assert_eq!(
+            push_promos(&tacticals),
+            4,
+            "Tacticals should have 4 push-promos"
+        );
         assert_eq!(
             push_promos(&captures),
             0,
@@ -758,6 +772,20 @@ mod tests {
         for mv in tacticals.iter() {
             let (piece, _) = board.piece_on_square(mv.from()).unwrap();
             assert_eq!(piece, Piece::King);
+        }
+    }
+
+    #[test]
+    fn no_quiets_with_tactical_movegen() {
+        let fen = "3r4/8/3p4/3QP3/8/8/8/4K1k1 w - - 0 1";
+        let board = Board::from_fen(fen).unwrap();
+        println!("{}", board);
+        let moves = move_generation::legal::generate_moves(&board, MoveFilter::Tacticals);
+        for mv in moves.iter() {
+            let is_capture = board.captured(mv).is_some();
+            let is_queen_promo = mv.flag() == MoveFlag::PromotionQueen;
+            assert!(is_capture || is_queen_promo);
+            println!("{}", mv.to_long_algebraic());
         }
     }
 }
