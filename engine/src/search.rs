@@ -513,8 +513,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         // Build move picker. Move generation is lazy (deferred to stage machine).
-        let mut picker =
-            move_picker::MovePicker::new(tt_move, self.killers_table, ply as u8);
+        let mut picker = move_picker::MovePicker::new(tt_move, self.killers_table, ply as u8);
 
         // Really "bad" initial score
         let mut best_score = -Score::INF;
