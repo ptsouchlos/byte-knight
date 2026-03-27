@@ -6,17 +6,9 @@
 use crate::{board_state::BoardState, definitions::MAX_MOVES};
 
 /// A struct that holds the history of the board states
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct BoardHistory {
     board_states: Vec<BoardState>,
-}
-
-impl Clone for BoardHistory {
-    fn clone(&self) -> Self {
-        Self {
-            board_states: self.board_states.clone(),
-        }
-    }
 }
 
 impl BoardHistory {

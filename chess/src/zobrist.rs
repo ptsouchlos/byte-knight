@@ -10,23 +10,12 @@ use crate::definitions::NumberOf;
 /// A Zobrist hash value.
 pub type ZobristHash = u64;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct ZobristRandomValues {
     pub piece_values: [[[u64; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
     pub castling_values: [u64; NumberOf::CASTLING_OPTIONS],
     pub en_passant_values: [u64; NumberOf::SQUARES + 1],
     pub side_values: [u64; NumberOf::SIDES],
-}
-
-impl Clone for ZobristRandomValues {
-    fn clone(&self) -> Self {
-        Self {
-            piece_values: self.piece_values,
-            castling_values: self.castling_values,
-            en_passant_values: self.en_passant_values,
-            side_values: self.side_values,
-        }
-    }
 }
 
 const RANDOM_SEED: [u8; 32] = [115; 32];
