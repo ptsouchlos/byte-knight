@@ -149,7 +149,7 @@ impl MovePicker {
     }
 
     /// Returns the next best move in staged order, or `None` when exhausted.
-    #[allow(clippy::expect_used)]
+    #[allow(clippy::expect_used, clippy::panic)]
     pub(crate) fn next(&mut self, board: &Board, history_table: &HistoryTable) -> Option<Move> {
         if self.stage == Stage::TtMove {
             self.stage = Stage::GenerateTacticals;
@@ -268,7 +268,13 @@ impl MovePicker {
                 let piece = board
                     .piece_on_square(mv.from())
                     .map(|(pc, _)| pc)
-                    .expect("Move from-square must have a piece");
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Move from-square must have a piece: {} {}",
+                            board.to_fen(),
+                            mv.to_long_algebraic()
+                        )
+                    });
                 // Only track truly quiet moves (not underpromotions) for history penalty.
                 if !mv.is_promotion() {
                     let _ = self.searched_quiets.try_push((mv, piece));
