@@ -317,7 +317,9 @@ impl MovePicker {
                 self.tactical_end -= 1;
                 // Swap it out of the quiet range (which now begins at tactical_end).
                 let last_quiet = self.quiet_end - 1;
-                self.moves.as_mut_slice().swap(self.tactical_end, last_quiet);
+                self.moves
+                    .as_mut_slice()
+                    .swap(self.tactical_end, last_quiet);
                 self.quiet_end -= 1;
                 return true;
             }
@@ -471,8 +473,14 @@ mod tests {
             let piece_a = piece_for_move(&board, &a);
             let victim_b = board.captured(&b).unwrap();
             let piece_b = piece_for_move(&board, &b);
-            let score_a = crate::evaluation::Evaluation::<crate::hce_values::ByteKnightValues>::mvv_lva(victim_a, piece_a);
-            let score_b = crate::evaluation::Evaluation::<crate::hce_values::ByteKnightValues>::mvv_lva(victim_b, piece_b);
+            let score_a =
+                crate::evaluation::Evaluation::<crate::hce_values::ByteKnightValues>::mvv_lva(
+                    victim_a, piece_a,
+                );
+            let score_b =
+                crate::evaluation::Evaluation::<crate::hce_values::ByteKnightValues>::mvv_lva(
+                    victim_b, piece_b,
+                );
             assert!(
                 score_a >= score_b,
                 "Captures not in MVV-LVA order: {:?} ({score_a}) before {:?} ({score_b})",
@@ -516,7 +524,12 @@ mod tests {
         // Give a high history score to the move at index 3
         let favored_mv = *all_moves.at(3).unwrap();
         let favored_piece = piece_for_move(&board, &favored_mv);
-        history.update(board.side_to_move(), favored_piece, favored_mv.to(), Score::MAX_HISTORY);
+        history.update(
+            board.side_to_move(),
+            favored_piece,
+            favored_mv.to(),
+            Score::MAX_HISTORY,
+        );
 
         let mut picker = MovePicker::new(&board, None, &killers, 0);
         let moves = collect_all(&mut picker, &board, &history);
@@ -583,7 +596,10 @@ mod tests {
         // Starting position has no captures — qsearch picker should be empty.
         let board = Board::from_fen(STARTING_FEN).unwrap();
         let picker = MovePicker::new_qsearch(&board, None, false);
-        assert!(picker.is_empty(), "QSearch picker must be empty with no captures");
+        assert!(
+            picker.is_empty(),
+            "QSearch picker must be empty with no captures"
+        );
     }
 
     #[test]
