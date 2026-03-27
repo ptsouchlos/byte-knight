@@ -353,28 +353,21 @@ fn generate_legal_mobility(
     }
 }
 
-/// Generate legal moves for the current [`Board`] state.
+/// Generate legal moves for the current [`Board`] state using pre-computed metadata.
 ///
-/// This is a convenience wrapper that generates tacticals followed by quiets.
+/// This is the core implementation. It accepts pre-computed [`CheckPinMetadata`] to
+/// avoid recomputing it when generating tacticals and quiets in separate stages.
 ///
 /// # Arguments
 ///
 /// - `board` - The current board state
-/// - `move_list` - The list of moves to append to
-///
-/// # Examples
-///
-/// ```
-/// use chess::board::Board;
-/// use chess::move_list::MoveList;
-/// use chess::move_generation;
-/// use chess::move_generation::move_filter::MoveFilter;
-///
-/// let board = Board::default_board();
-/// let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
-/// assert_eq!(20, move_list.len())
-/// ```
-pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
+/// - `move_filter` - Which moves to generate
+/// - `meta` - Pre-computed check/pin metadata for this position
+pub fn generate_moves_with_metadata(
+    board: &Board,
+    move_filter: MoveFilter,
+    meta: &CheckPinMetadata,
+) -> MoveList {
     let us = board.side_to_move();
     let them = us.opposite();
     let our_pieces = board.pieces(us);
@@ -400,7 +393,6 @@ pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
     let king_bb = Bitboard::from_square(king_sq_idx);
 
     let mut move_list = MoveList::new();
-    let meta = move_generation::metadata::compute(board);
 
     // King moves first
     let king_moves = generate_king_legal_mobility(
@@ -438,12 +430,39 @@ pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
             Piece::Pawn => pawn_filter,
             _ => filter,
         };
-        let moves = generate_legal_mobility(piece, from_sq, board, &meta) & use_filter;
+        let moves = generate_legal_mobility(piece, from_sq, board, meta) & use_filter;
 
         enumerate_moves(&moves, from_sq, piece, board, move_filter, &mut move_list);
     }
 
     move_list
+}
+
+/// Generate legal moves for the current [`Board`] state.
+///
+/// This is a convenience wrapper that computes check/pin metadata and delegates
+/// to [`generate_moves_with_metadata`].
+///
+/// # Arguments
+///
+/// - `board` - The current board state
+/// - `move_filter` - Which moves to generate
+///
+/// # Examples
+///
+/// ```
+/// use chess::board::Board;
+/// use chess::move_list::MoveList;
+/// use chess::move_generation;
+/// use chess::move_generation::move_filter::MoveFilter;
+///
+/// let board = Board::default_board();
+/// let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
+/// assert_eq!(20, move_list.len())
+/// ```
+pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
+    let meta = move_generation::metadata::compute(board);
+    generate_moves_with_metadata(board, move_filter, &meta)
 }
 
 pub fn generate_all_moves(board: &Board) -> MoveList {

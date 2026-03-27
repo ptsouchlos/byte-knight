@@ -512,18 +512,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return score;
         }
 
-        // Build move picker (generates all legal moves and partitions them).
+        // Build move picker. Move generation is lazy (deferred to stage machine).
         let mut picker =
-            move_picker::MovePicker::new(board, tt_move, self.killers_table, ply as u8);
-
-        // Do we have moves?
-        if picker.is_empty() {
-            return if move_generation::is_in_check(board) {
-                -Score::MATE + ply
-            } else {
-                Score::DRAW
-            };
-        }
+            move_picker::MovePicker::new(tt_move, self.killers_table, ply as u8);
 
         // Really "bad" initial score
         let mut best_score = -Score::INF;
@@ -676,6 +667,15 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if self.should_stop_searching() {
                 break;
             }
+        }
+
+        // No moves were yielded: checkmate or stalemate.
+        if picker.moves_yielded() == 0 {
+            return if picker.in_check() {
+                -Score::MATE + ply
+            } else {
+                Score::DRAW
+            };
         }
 
         if let Some(bm) = best_move {
@@ -863,20 +863,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         };
 
         // When in check we must consider all moves; otherwise tacticals only.
-        let mut picker = move_picker::MovePicker::new_qsearch(board, tt_move, in_check);
+        let mut picker = move_picker::MovePicker::new_qsearch(tt_move, in_check);
 
         let mut local_pv = PrincipleVariation::new();
         // clear the current PV because this is a new position
         pv.clear();
-
-        if picker.is_empty() {
-            // In check with no legal moves: checkmate
-            if in_check {
-                return Score::new_mated() + ply;
-            }
-            // Quiet position with no tacticals: stand pat
-            return standing_eval;
-        }
 
         // When in check there is no stand-pat floor, so begin from -INF.
         let mut best = if in_check { -Score::INF } else { standing_eval };
@@ -922,6 +913,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if self.should_stop_searching() {
                 break;
             }
+        }
+
+        // In check with no legal moves: checkmate.
+        // When not in check, standing_eval already covers the stand-pat case.
+        if picker.moves_yielded() == 0 && in_check {
+            return Score::new_mated() + ply;
         }
 
         if let Some(bm) = best_move {
