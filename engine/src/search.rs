@@ -889,13 +889,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence::<Node>(
-                    board,
-                    ply + 1,
-                    -beta,
-                    -alpha_use,
-                    &mut local_pv,
-                );
+                let eval =
+                    -self.quiescence::<Node>(board, ply + 1, -beta, -alpha_use, &mut local_pv);
                 self.nodes += 1;
                 eval
             };
