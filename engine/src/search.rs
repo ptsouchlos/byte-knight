@@ -460,6 +460,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         self.nodes += 1;
         self.seldepth = self.seldepth.max(ply);
 
+        // Ply guard: prevent unbounded recursion
+        if ply >= MAX_PLY {
+            return self.eval.eval(board);
+        }
+
         if depth <= 0 {
             return self.quiescence::<Node>(board, ply, alpha, beta, pv);
         }
