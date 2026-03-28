@@ -251,11 +251,12 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
                 Bitboard::default()
             };
 
-            // For Tacticals, only include pushes that land on the promotion rank
+            // Tacticals include only promotion-rank pushes; Quiets exclude them.
             let promo_rank_bb = Rank::promotion_rank(us).to_bitboard();
             let pushes = bb_single_push | bb_double_push;
             let filtered_pushes = match move_filter {
                 MoveFilter::Tacticals => pushes & promo_rank_bb,
+                MoveFilter::Quiets => pushes & !promo_rank_bb,
                 _ => pushes,
             };
             bb_moves |= filtered_pushes;
