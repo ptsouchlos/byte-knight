@@ -229,14 +229,15 @@ impl Board {
             // reset half move clock
             self.set_half_move_clock(0);
 
-            // A pawn reaching the promotion rank MUST carry a promotion flag.
-            // Reject the move otherwise — this guards against TT hash collisions
-            // that replay a non-pawn move as a pawn move without the promotion flag.
-            if square::is_square_on_rank(to, Rank::promotion_rank(us) as u8)
-                && !mv.is_promotion()
-            {
+            // A pawn must never end up on rank 1 or rank 8 (0-indexed: 0 or 7)
+            // without a promotion flag. This covers both the pawn's own promotion
+            // rank AND the opponent's back rank (which a TT hash collision could
+            // target by replaying a non-pawn move as a pawn move).
+            let to_rank = to / 8;
+            if (to_rank == 0 || to_rank == 7) && !mv.is_promotion() {
                 bail!(
-                    "Pawn reached promotion rank without promotion flag: {}",
+                    "Pawn moved to impossible rank {}: {}",
+                    to_rank + 1,
                     mv.to_long_algebraic()
                 );
             }
