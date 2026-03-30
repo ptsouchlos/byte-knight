@@ -586,8 +586,10 @@ mod tests {
         definitions::Squares,
         move_generation::{self, move_filter::MoveFilter},
         move_list::MoveList,
+        moves::{Move, MoveFlag},
         pieces::Piece,
         side::Side,
+        square::Square,
     };
 
     #[test]
@@ -832,5 +834,142 @@ mod tests {
             "half-move clock should be 0 after a non-pawn capture, got {}",
             board.half_move_clock()
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // TT hash collision guards: verify make_move_unchecked rejects moves
+    // that could corrupt the board when replayed from a hash collision.
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn reject_pawn_to_own_promotion_rank_without_flag() {
+        // White pawn on a7, push to a8 as Standard (missing promotion flag)
+        let mut board = Board::from_fen("8/P5k1/8/8/8/8/8/4K3 w - - 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::A7),
+            Square::from_square_index(Squares::A8),
+            MoveFlag::Standard,
+        );
+        assert!(board.make_move_unchecked(&mv).is_err());
+    }
+
+    #[test]
+    fn reject_pawn_to_opponent_back_rank() {
+        // White pawn on b2, TT collision moves it to a1 (rank 0)
+        let mut board = Board::from_fen("4k3/8/8/8/8/8/1P6/4K3 w - - 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::B2),
+            Square::from_square_index(Squares::A1),
+            MoveFlag::Standard,
+        );
+        assert!(board.make_move_unchecked(&mv).is_err());
+    }
+
+    #[test]
+    fn reject_black_pawn_to_own_promotion_rank_without_flag() {
+        // Black pawn on h2, push to h1 as Standard (missing promotion flag)
+        let mut board = Board::from_fen("4k3/8/8/8/8/8/7p/4K3 b - - 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::H2),
+            Square::from_square_index(Squares::H1),
+            MoveFlag::Standard,
+        );
+        assert!(board.make_move_unchecked(&mv).is_err());
+    }
+
+    #[test]
+    fn reject_black_pawn_to_opponent_back_rank() {
+        // Black pawn on g7, TT collision moves it to h8 (rank 7)
+        let mut board = Board::from_fen("4k3/6p1/8/8/8/8/8/4K3 b - - 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::G7),
+            Square::from_square_index(Squares::H8),
+            MoveFlag::Standard,
+        );
+        assert!(board.make_move_unchecked(&mv).is_err());
+    }
+
+    #[test]
+    fn reject_castle_with_occupied_intermediate() {
+        // White king on e1, rook on h1, bishop on f1 blocks castling
+        let mut board = Board::from_fen("4k3/8/8/8/8/8/8/4KB1R w K - 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::E1),
+            Square::from_square_index(Squares::G1),
+            MoveFlag::CastleK,
+        );
+        assert!(board.make_move_unchecked(&mv).is_err());
+    }
+
+    #[test]
+    fn reject_castle_without_rook() {
+        // White king on e1, no rook on h1 but has kingside rights
+        let mut board = Board::from_fen("4k3/8/8/8/8/8/8/4K3 w K - 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::E1),
+            Square::from_square_index(Squares::G1),
+            MoveFlag::CastleK,
+        );
+        assert!(board.make_move_unchecked(&mv).is_err());
+    }
+
+    #[test]
+    fn reject_ep_without_matching_square() {
+        // White pawn on e5, no EP square set, but move has EP flag
+        let mut board = Board::from_fen("4k3/8/8/4Pp2/8/8/8/4K3 w - - 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::E5),
+            Square::from_square_index(Squares::F6),
+            MoveFlag::EnPassant,
+        );
+        assert!(board.make_move_unchecked(&mv).is_err());
+    }
+
+    #[test]
+    fn reject_ep_without_target_pawn() {
+        // White pawn on e5, EP square set to f6 but no black pawn on f5
+        let mut board = Board::from_fen("4k3/8/8/4P3/8/8/8/4K3 w - f6 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::E5),
+            Square::from_square_index(Squares::F6),
+            MoveFlag::EnPassant,
+        );
+        assert!(board.make_move_unchecked(&mv).is_err());
+    }
+
+    #[test]
+    fn accept_valid_promotion() {
+        // White pawn on a7, proper queen promotion should succeed
+        let mut board = Board::from_fen("8/P5k1/8/8/8/8/8/4K3 w - - 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::A7),
+            Square::from_square_index(Squares::A8),
+            MoveFlag::PromotionQueen,
+        );
+        assert!(board.make_move_unchecked(&mv).is_ok());
+    }
+
+    #[test]
+    fn accept_valid_castle() {
+        // White king on e1, rook on h1, path clear
+        let mut board = Board::from_fen("4k3/8/8/8/8/8/8/4K2R w K - 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::E1),
+            Square::from_square_index(Squares::G1),
+            MoveFlag::CastleK,
+        );
+        assert!(board.make_move_unchecked(&mv).is_ok());
+    }
+
+    #[test]
+    fn accept_valid_en_passant() {
+        // White pawn on e5, black pawn on f5, EP square f6
+        let mut board = Board::from_fen("4k3/8/8/4Pp2/8/8/8/4K3 w - f6 0 1").unwrap();
+        let mv = Move::new(
+            Square::from_square_index(Squares::E5),
+            Square::from_square_index(Squares::F6),
+            MoveFlag::EnPassant,
+        );
+        assert!(board.make_move_unchecked(&mv).is_ok());
     }
 }
