@@ -1331,4 +1331,176 @@ mod tests {
         let mv = res.best_move.unwrap();
         println!("{}", mv.to_long_algebraic());
     }
+
+    /// Helper: run a search at the given depth and assert it doesn't panic.
+    fn search_position(board: &mut Board, depth: u8) {
+        let config = SearchParameters {
+            max_depth: depth,
+            ..Default::default()
+        };
+        let mut ttable = TranspositionTable::default();
+        let mut history_table = Default::default();
+        let mut killers_table = Default::default();
+        let mut sink = io::sink();
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
+        let res = search.search(board, None);
+        assert!(res.best_move.is_some(), "Search must return a move");
+    }
+
+    /// Regression tests for positions that caused crashes during fastchess play.
+    /// Each position is from a game where the engine disconnected.
+    /// We search the starting FEN of each crash game at high depth to trigger
+    /// the same code paths that caused the crash.
+    #[test]
+    fn repro_crash_positions() {
+        let crash_fens = [
+            // Round 7: shortest crash (4 ply before disconnect)
+            "r2qkb1r/2p2ppp/p1npbn2/1p2p3/4P3/2P2N2/PPBP1PPP/RNBQR1K1 w kq - 2 9",
+            // Round 1: 42 ply crash
+            "r1bq1rk1/ppppn1bp/2n3p1/4p2P/4p3/2NP2P1/PPP1NPB1/R1BQK2R w KQ - 0 9",
+            // Round 60: 24 ply crash
+            "r3k2r/pp1npp1p/1qpp1p1b/5b2/3P4/1NP3P1/PP2PPBP/R2QK1NR w KQkq - 5 9",
+            // Round 93: 46 ply crash
+            "rnbqkb1r/p3nppp/1p2p3/2ppP3/3P1BP1/2PB1N2/PP3P1P/RN1QK2R w KQkq - 2 9",
+        ];
+
+        for fen in &crash_fens {
+            println!("Testing: {fen}");
+            let mut board = Board::from_fen(fen).unwrap();
+            search_position(&mut board, 12);
+        }
+    }
+
+    /// Integration tests: inject invalid TT entries that simulate hash collisions,
+    /// then verify the search completes without crashing.
+    ///
+    /// Each test stores a poisoned move into the TT at the exact index the
+    /// position will probe, forcing the move picker to encounter it as a TT move.
+    mod tt_collision_tests {
+        use std::io;
+
+        use chess::{
+            board::Board,
+            definitions::Squares,
+            moves::{Move, MoveFlag},
+            square::Square,
+        };
+
+        use crate::{
+            log_level::LogDebug,
+            score::Score,
+            search::{Search, SearchParameters},
+            ttable::{EntryFlag, TranspositionTable},
+        };
+
+        /// Inject a poisoned move into the TT and run a search.
+        /// The search must complete without panicking.
+        fn search_with_poisoned_tt(fen: &str, bad_move: Move, depth: u8) {
+            let mut board = Board::from_fen(fen).unwrap();
+            let zobrist = board.zobrist_hash();
+
+            let mut ttable = TranspositionTable::default();
+            // Store the bad move at the position's zobrist hash so the search
+            // will find it on the first TT probe.
+            ttable.store_entry(
+                zobrist,
+                depth + 2, // high depth so the TT entry is trusted
+                Score::new(50),
+                EntryFlag::Exact,
+                bad_move,
+            );
+
+            let config = SearchParameters {
+                max_depth: depth,
+                ..Default::default()
+            };
+            let mut history_table = Default::default();
+            let mut killers_table = Default::default();
+            let mut sink = io::sink();
+            let mut search = Search::<LogDebug>::new(
+                &config,
+                &mut ttable,
+                &mut history_table,
+                &mut killers_table,
+                &mut sink,
+            );
+            let res = search.search(&mut board, None);
+            assert!(res.best_move.is_some(), "Search must return a move");
+        }
+
+        #[test]
+        fn tt_collision_pawn_to_promotion_rank() {
+            // Position with White pawn on a7. Inject a7a8 as Standard (no promo flag).
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::A7),
+                Square::from_square_index(Squares::A8),
+                MoveFlag::Standard,
+            );
+            search_with_poisoned_tt("3qk3/P7/8/8/8/8/8/4K3 w - - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_pawn_to_back_rank() {
+            // Position with White pawn on b2. Inject b2a1 as Standard.
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::B2),
+                Square::from_square_index(Squares::A1),
+                MoveFlag::Standard,
+            );
+            search_with_poisoned_tt("4k3/8/8/8/8/8/1P6/4K3 w - - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_castle_with_occupied_square() {
+            // White can castle kingside but we inject the castle move for a
+            // position where f1 is occupied by a bishop — the move should be
+            // rejected by is_legal.
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::E1),
+                Square::from_square_index(Squares::G1),
+                MoveFlag::CastleK,
+            );
+            search_with_poisoned_tt("4k3/8/8/8/8/8/8/4KB1R w K - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_en_passant_without_target() {
+            // White pawn on e5, no EP square set. Inject EP move e5f6.
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::E5),
+                Square::from_square_index(Squares::F6),
+                MoveFlag::EnPassant,
+            );
+            search_with_poisoned_tt("4k3/8/8/4P3/8/8/8/4K3 w - - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_castle_without_rook() {
+            // King on e1, no rook on h1 but has K rights (bogus FEN).
+            // Inject kingside castle.
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::E1),
+                Square::from_square_index(Squares::G1),
+                MoveFlag::CastleK,
+            );
+            search_with_poisoned_tt("4k3/8/8/8/8/8/4PPPP/4K3 w K - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_black_pawn_to_back_rank() {
+            // Black pawn on g7. Inject g7h8 as Standard (backward to rank 7).
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::G7),
+                Square::from_square_index(Squares::H8),
+                MoveFlag::Standard,
+            );
+            search_with_poisoned_tt("4k3/6p1/8/8/8/8/8/4K3 b - - 0 1", bad_move, 8);
+        }
+    }
 }
