@@ -561,7 +561,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 && depth <= lmp_max_depth() as i16
                 && moves_seen > params::late_move_threshold(depth as i32)
             {
-                break;
+                // Skip quiets
+                picker.skip_quiets = true;
             }
 
             // local PV is for each node below this one is different when we call negamax recursively
