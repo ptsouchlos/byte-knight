@@ -28,6 +28,21 @@ use crate::{
 /// above all history-scored quiets (history is clamped to MAX_HISTORY).
 const KILLER_BONUS: LargeScoreType = Score::MAX_HISTORY + 1;
 
+/// Score tier for queen capture-promotions — above queen push-promos.
+const QUEEN_CAPTURE_PROMO_BONUS: LargeScoreType = 30_000;
+/// Score tier for queen push-promotions — above all regular captures.
+/// Max MVV-LVA (PxQ) is 124, so 20_000 comfortably clears it.
+const QUEEN_PUSH_PROMO_BONUS: LargeScoreType = 20_000;
+
+/// MVV-LVA score for move ordering without the `<< 16` shift used by
+/// `Evaluation::mvv_lva`. Range: 20..=124 for non-king captures.
+fn mvv_lva(victim: Piece, attacker: Piece) -> LargeScoreType {
+    let can_capture = victim != Piece::King;
+    (can_capture as LargeScoreType)
+        * (25 * Evaluation::<ByteKnightValues>::piece_value(victim)
+            - Evaluation::<ByteKnightValues>::piece_value(attacker))
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Stage {
     TtMove,
@@ -175,25 +190,27 @@ impl MovePicker {
             self.moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
             for (i, mv) in self.moves.iter().enumerate() {
                 let maybe_victim = board.captured(mv);
-                let is_capture = maybe_victim.is_some();
-                if is_capture {
+                if let Some(victim) = maybe_victim {
                     let piece = board
                         .piece_on_square(mv.from())
                         .map(|(pc, _)| pc)
                         .expect("Move from-square must have a piece");
 
-                    let victim = maybe_victim.unwrap();
-                    // Give a bonus for queen capture promotion
-                    let base = if mv.is_promote_to_queen() { 100_000 } else { 0 };
-                    self.scores[i] = base + Evaluation::<ByteKnightValues>::mvv_lva(victim, piece);
+                    let base = if mv.is_promote_to_queen() {
+                        QUEEN_CAPTURE_PROMO_BONUS
+                    } else {
+                        0
+                    };
+
+                    self.scores[i] = base + mvv_lva(victim, piece);
                 } else if mv.is_promotion() {
-                    // Score promotions like a pawn capturing the promotion piece
-                    let base = if mv.is_promote_to_queen() { 100_000 } else { 0 };
-                    self.scores[i] = base
-                        + Evaluation::<ByteKnightValues>::mvv_lva(
+                    if mv.is_promote_to_queen() {
+                        self.scores[i] = QUEEN_PUSH_PROMO_BONUS;
+                    } else {
+                        self.scores[i] = Evaluation::<ByteKnightValues>::piece_value(
                             mv.promotion_piece().unwrap(),
-                            Piece::Pawn,
                         );
+                    }
                 }
             }
             self.metadata = Some(meta);
@@ -431,14 +448,8 @@ mod tests {
             let piece_a = piece_for_move(&board, &a);
             let victim_b = board.captured(&b).unwrap();
             let piece_b = piece_for_move(&board, &b);
-            let score_a =
-                crate::evaluation::Evaluation::<crate::hce_values::ByteKnightValues>::mvv_lva(
-                    victim_a, piece_a,
-                );
-            let score_b =
-                crate::evaluation::Evaluation::<crate::hce_values::ByteKnightValues>::mvv_lva(
-                    victim_b, piece_b,
-                );
+            let score_a = super::mvv_lva(victim_a, piece_a);
+            let score_b = super::mvv_lva(victim_b, piece_b);
             assert!(
                 score_a >= score_b,
                 "Captures not in MVV-LVA order: {:?} ({score_a}) before {:?} ({score_b})",
