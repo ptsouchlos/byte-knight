@@ -45,6 +45,7 @@ impl<Values: EvalValues> Evaluation<Values> {
         &mut self.values
     }
 
+    #[allow(dead_code)]
     pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> LargeScoreType {
         let can_capture = captured != Piece::King;
         ((can_capture as LargeScoreType)
