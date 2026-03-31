@@ -181,15 +181,18 @@ impl MovePicker {
                         .piece_on_square(mv.from())
                         .map(|(pc, _)| pc)
                         .expect("Move from-square must have a piece");
-                    // Queen push-promotions have no captured piece; score them as
-                    // if capturing a pawn with a pawn (lowest MVV-LVA), which still
-                    // places them above all quiets.
+
                     let victim = maybe_victim.unwrap();
-                    self.scores[i] = Evaluation::<ByteKnightValues>::mvv_lva(victim, piece);
+                    // Give a bonus for queen capture promotion
+                    let base = if mv.is_promote_to_queen() { 100_000 } else { 0 };
+                    self.scores[i] = base + Evaluation::<ByteKnightValues>::mvv_lva(victim, piece);
                 } else if mv.is_promotion() {
-                    self.scores[i] = 10_000
-                        * Evaluation::<ByteKnightValues>::piece_value(
+                    // Score promotions like a pawn capturing the promotion piece
+                    let base = if mv.is_promote_to_queen() { 100_000 } else { 0 };
+                    self.scores[i] = base
+                        + Evaluation::<ByteKnightValues>::mvv_lva(
                             mv.promotion_piece().unwrap(),
+                            Piece::Pawn,
                         );
                 }
             }
