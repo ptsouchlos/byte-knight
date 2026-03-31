@@ -84,7 +84,7 @@ pub(crate) struct MovePicker {
     /// Used by the caller for history penalty on a beta cutoff.
     searched_quiets: ArrayVec<(Move, Piece), MAX_MOVE_LIST_SIZE>,
     /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to Done.
-    skip_quiets: bool,
+    pub(crate) skip_quiets: bool,
 }
 
 impl MovePicker {
