@@ -44,7 +44,7 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 - [Late Move Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html)
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard/soft limits
-- Move ordering
+- Move ordering via a [move picker](https://www.chessprogramming.org/Move_Generation)
   - [TT Moves](https://www.chessprogramming.org/Transposition_Table#Priority_by_Move_Ordering_Position)
   - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA) with transposition table priority
   - [History heuristic](https://www.chessprogramming.org/History_Heuristic) with history gravity
