@@ -32,11 +32,9 @@ const KILLER_BONUS: LargeScoreType = Score::MAX_HISTORY + 1;
 enum Stage {
     TtMove,
     GenerateTacticals,
-    ScoreTacticals,
-    YieldTacticals,
+    Tacticals,
     GenerateQuiets,
-    ScoreQuiets,
-    YieldQuiets,
+    Quiets,
     Done,
 }
 
@@ -175,11 +173,6 @@ impl MovePicker {
             self.pick_index = 0;
             let meta = move_generation::metadata::compute(board);
             self.moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
-            self.metadata = Some(meta);
-            self.stage = Stage::ScoreTacticals;
-        }
-
-        if self.stage == Stage::ScoreTacticals {
             for (i, mv) in self.moves.iter().enumerate() {
                 let maybe_victim = board.captured(mv);
                 let is_capture = maybe_victim.is_some();
@@ -200,10 +193,11 @@ impl MovePicker {
                         );
                 }
             }
-            self.stage = Stage::YieldTacticals;
+            self.metadata = Some(meta);
+            self.stage = Stage::Tacticals;
         }
 
-        if self.stage == Stage::YieldTacticals {
+        if self.stage == Stage::Tacticals {
             while self.pick_index < self.moves.len() {
                 let mv = self.selection_sort_pick();
                 // Skip the TT move if it was already yielded.
@@ -227,31 +221,29 @@ impl MovePicker {
                     .as_ref()
                     .expect("metadata must be set after GenerateTacticals");
                 self.moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
-                self.stage = Stage::ScoreQuiets;
+
+                let stm = board.side_to_move();
+                for (i, mv) in self.moves.iter().enumerate() {
+                    let piece = board
+                        .piece_on_square(mv.from())
+                        .map(|(pc, _)| pc)
+                        .expect("Move from-square must have a piece");
+                    let is_killer = self
+                        .killers
+                        .iter()
+                        .any(|k| k.is_some_and(|k| k.matches(*mv, piece)));
+                    self.scores[i] = if is_killer {
+                        KILLER_BONUS
+                    } else {
+                        history_table.get(stm, piece, mv.to())
+                    };
+                }
+
+                self.stage = Stage::Quiets;
             }
         }
 
-        if self.stage == Stage::ScoreQuiets {
-            let stm = board.side_to_move();
-            for (i, mv) in self.moves.iter().enumerate() {
-                let piece = board
-                    .piece_on_square(mv.from())
-                    .map(|(pc, _)| pc)
-                    .expect("Move from-square must have a piece");
-                let is_killer = self
-                    .killers
-                    .iter()
-                    .any(|k| k.is_some_and(|k| k.matches(*mv, piece)));
-                self.scores[i] = if is_killer {
-                    KILLER_BONUS
-                } else {
-                    history_table.get(stm, piece, mv.to())
-                };
-            }
-            self.stage = Stage::YieldQuiets;
-        }
-
-        if self.stage == Stage::YieldQuiets {
+        if self.stage == Stage::Quiets {
             while self.pick_index < self.moves.len() {
                 let mv = self.selection_sort_pick();
                 // Skip the TT move if it was already yielded.
