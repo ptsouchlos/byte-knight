@@ -68,25 +68,14 @@ pub(crate) fn enumerate_moves(
         let is_castle = piece == Piece::King && from_file.abs_diff(file) == 2;
 
         let to_square = square::to_square_object(file, rank);
-        if is_promotion {
-            let flags: &[MoveFlag] = match move_filter {
-                MoveFilter::Tacticals => &[MoveFlag::PromotionQueen],
-                MoveFilter::Quiets => &[
-                    MoveFlag::PromotionQueen,
-                    MoveFlag::PromotionRook,
-                    MoveFlag::PromotionBishop,
-                    MoveFlag::PromotionKnight,
-                ],
-                // For all and capture we consider all promo types.
-                // For captures, the bitboard given to this function will be filtered already
-                //  for captures only so we can be sure that any promos we can make are also captures.
-                MoveFilter::All | MoveFilter::Captures => &[
-                    MoveFlag::PromotionQueen,
-                    MoveFlag::PromotionRook,
-                    MoveFlag::PromotionBishop,
-                    MoveFlag::PromotionKnight,
-                ],
-            };
+        // Promotions are not quiet moves
+        if is_promotion && move_filter != MoveFilter::Quiets {
+            let flags: &[MoveFlag] = &[
+                MoveFlag::PromotionQueen,
+                MoveFlag::PromotionRook,
+                MoveFlag::PromotionBishop,
+                MoveFlag::PromotionKnight,
+            ];
             for flg in flags {
                 let mv = Move::new(from, to_square, *flg);
                 move_list.push(mv);

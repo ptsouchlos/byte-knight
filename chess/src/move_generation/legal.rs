@@ -353,28 +353,21 @@ fn generate_legal_mobility(
     }
 }
 
-/// Generate legal moves for the current [`Board`] state.
+/// Generate legal moves for the current [`Board`] state using pre-computed metadata.
 ///
-/// This is a convenience wrapper that generates tacticals followed by quiets.
+/// This is the core implementation. It accepts pre-computed [`CheckPinMetadata`] to
+/// avoid recomputing it when generating tacticals and quiets in separate stages.
 ///
 /// # Arguments
 ///
 /// - `board` - The current board state
-/// - `move_list` - The list of moves to append to
-///
-/// # Examples
-///
-/// ```
-/// use chess::board::Board;
-/// use chess::move_list::MoveList;
-/// use chess::move_generation;
-/// use chess::move_generation::move_filter::MoveFilter;
-///
-/// let board = Board::default_board();
-/// let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
-/// assert_eq!(20, move_list.len())
-/// ```
-pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
+/// - `move_filter` - Which moves to generate
+/// - `meta` - Pre-computed check/pin metadata for this position
+pub fn generate_moves_with_metadata(
+    board: &Board,
+    move_filter: MoveFilter,
+    meta: &CheckPinMetadata,
+) -> MoveList {
     let us = board.side_to_move();
     let them = us.opposite();
     let our_pieces = board.pieces(us);
@@ -388,11 +381,17 @@ pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
         Some(sq) => Bitboard::from_square(sq),
         None => Bitboard::default(),
     };
+    // Promotion bb for pawn moves
+    let pawn_promos_bb = !their_pieces & Rank::promotion_rank(us).to_bitboard();
     let pawn_filter = match move_filter {
         MoveFilter::All => Bitboard::FULL,
         MoveFilter::Captures => their_pieces | ep_bb,
-        MoveFilter::Tacticals => their_pieces | Rank::promotion_rank(us).to_bitboard() | ep_bb,
-        MoveFilter::Quiets => !(their_pieces | ep_bb),
+        MoveFilter::Tacticals => {
+            // Include captures, which will include capture promotions, but also include quiet promotions since
+            // Queen promotions are considered tactical.
+            their_pieces | pawn_promos_bb | ep_bb
+        }
+        MoveFilter::Quiets => !(their_pieces | pawn_promos_bb | ep_bb),
     };
 
     let king_sq_idx = board.king_square(us);
@@ -400,7 +399,6 @@ pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
     let king_bb = Bitboard::from_square(king_sq_idx);
 
     let mut move_list = MoveList::new();
-    let meta = move_generation::metadata::compute(board);
 
     // King moves first
     let king_moves = generate_king_legal_mobility(
@@ -438,12 +436,39 @@ pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
             Piece::Pawn => pawn_filter,
             _ => filter,
         };
-        let moves = generate_legal_mobility(piece, from_sq, board, &meta) & use_filter;
+        let moves = generate_legal_mobility(piece, from_sq, board, meta) & use_filter;
 
         enumerate_moves(&moves, from_sq, piece, board, move_filter, &mut move_list);
     }
 
     move_list
+}
+
+/// Generate legal moves for the current [`Board`] state.
+///
+/// This is a convenience wrapper that computes check/pin metadata and delegates
+/// to [`generate_moves_with_metadata`].
+///
+/// # Arguments
+///
+/// - `board` - The current board state
+/// - `move_filter` - Which moves to generate
+///
+/// # Examples
+///
+/// ```
+/// use chess::board::Board;
+/// use chess::move_list::MoveList;
+/// use chess::move_generation;
+/// use chess::move_generation::move_filter::MoveFilter;
+///
+/// let board = Board::default_board();
+/// let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
+/// assert_eq!(20, move_list.len())
+/// ```
+pub fn generate_moves(board: &Board, move_filter: MoveFilter) -> MoveList {
+    let meta = move_generation::metadata::compute(board);
+    generate_moves_with_metadata(board, move_filter, &meta)
 }
 
 pub fn generate_all_moves(board: &Board) -> MoveList {
@@ -452,7 +477,7 @@ pub fn generate_all_moves(board: &Board) -> MoveList {
 
 #[cfg(test)]
 mod tests {
-    use crate::definitions::Squares;
+    use crate::{definitions::Squares, moves::MoveFlag};
 
     use super::*;
 
@@ -536,13 +561,14 @@ mod tests {
             "r3k2r/p1pp1pb1/bn2Qnp1/2qPN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQkq - 3 2",
             // push-promotion position: white pawn on a7, a8 empty
             "8/P3k3/8/8/8/8/8/4K3 w - - 0 1",
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
         ];
 
         for fen in &positions {
             let board = Board::from_fen(fen).unwrap();
 
             let all_moves = generate_moves(&board, MoveFilter::All);
-            let captures = generate_moves(&board, MoveFilter::Captures);
+            let captures = generate_moves(&board, MoveFilter::Tacticals);
             let quiets = generate_moves(&board, MoveFilter::Quiets);
 
             let staged_moves = captures
@@ -576,7 +602,10 @@ mod tests {
             assert!(
                 board.captured(mv).is_some()
                     || (mv.is_promotion()
-                        && mv.promotion_piece().is_some_and(|pc| pc == Piece::Queen)),
+                        && mv.promotion_piece().is_some_and(|pc| matches!(
+                            pc,
+                            Piece::Queen | Piece::Rook | Piece::Bishop | Piece::Knight
+                        ))),
                 "Tactical move {} is neither a capture nor a queen promotion",
                 mv.to_long_algebraic()
             );
@@ -643,7 +672,7 @@ mod tests {
         // White pawn on d7, black rook on c8, d8 empty
         // push-promo: d7-d8 (4 types), capture-promo: d7xc8 (4 types)
         let board = Board::from_fen("2r5/3P4/8/8/8/8/6k1/4K3 w - - 0 1").unwrap();
-
+        println!("{}\n{}", board.to_fen(), board);
         let all = generate_moves(&board, MoveFilter::All);
         let captures = generate_moves(&board, MoveFilter::Captures);
         let quiets = generate_moves(&board, MoveFilter::Quiets);
@@ -656,7 +685,11 @@ mod tests {
                 .count()
         };
         assert_eq!(push_promos(&all), 4, "All should have 4 push-promos");
-        assert_eq!(push_promos(&quiets), 4, "Quiets should have 4 push-promos");
+        assert_eq!(
+            push_promos(&tacticals),
+            4,
+            "Tacticals should have 4 push-promos"
+        );
         assert_eq!(
             push_promos(&captures),
             0,
@@ -739,6 +772,20 @@ mod tests {
         for mv in tacticals.iter() {
             let (piece, _) = board.piece_on_square(mv.from()).unwrap();
             assert_eq!(piece, Piece::King);
+        }
+    }
+
+    #[test]
+    fn no_quiets_with_tactical_movegen() {
+        let fen = "3r4/8/3p4/3QP3/8/8/8/4K1k1 w - - 0 1";
+        let board = Board::from_fen(fen).unwrap();
+        println!("{}", board);
+        let moves = move_generation::legal::generate_moves(&board, MoveFilter::Tacticals);
+        for mv in moves.iter() {
+            let is_capture = board.captured(mv).is_some();
+            let is_queen_promo = mv.flag() == MoveFlag::PromotionQueen;
+            assert!(is_capture || is_queen_promo);
+            println!("{}", mv.to_long_algebraic());
         }
     }
 }

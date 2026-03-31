@@ -23,25 +23,13 @@ use super::side::Side;
 use super::{bitboard::Bitboard, pieces::Piece};
 
 /// Represents a chessboard position.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Board {
     bitboards: [Bitboard; NumberOf::PIECE_TYPES + NumberOf::SIDES],
     pieces: [Option<Piece>; NumberOf::SQUARES],
     pub(crate) history: BoardHistory,
     state: BoardState,
     zobrist_values: ZobristRandomValues,
-}
-
-impl Clone for Board {
-    fn clone(&self) -> Self {
-        Self {
-            bitboards: self.bitboards,
-            pieces: self.pieces,
-            history: self.history.clone(),
-            state: self.state,
-            zobrist_values: self.zobrist_values.clone(),
-        }
-    }
 }
 
 impl Default for Board {

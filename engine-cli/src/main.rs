@@ -81,7 +81,13 @@ fn main() {
     match args.command {
         Some(command) => match command {
             Command::Bench { depth, epd_file } => {
-                bench::bench(depth, &epd_file);
+                // Spawn bench on a thread with 8 MiB stack to match the UCI handler.
+                let handle = std::thread::Builder::new()
+                    .name("bench".to_string())
+                    .stack_size(8 * 1024 * 1024)
+                    .spawn(move || bench::bench(depth, &epd_file))
+                    .unwrap();
+                handle.join().unwrap();
             }
             Command::Perft {
                 depth,

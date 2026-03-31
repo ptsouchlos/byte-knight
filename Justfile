@@ -126,7 +126,7 @@ cache-main: (build-target-release "byte-knight")
 [group('dev')]
 compare-to-main threads: (build-target-release "byte-knight")
     echo "Comparing byte-knight to bk-main"
-    fastchess -engine cmd="./target/release/byte-knight{{ exe_postfix }}" name="dev" -engine cmd="./bk-main{{ exe_postfix }}" name="bk-main" -openings file="./data/Pohl.epd" format=epd order=random -each tc=10+0.1 -rounds 200 -repeat -concurrency {{ threads }} -sprt elo0=0 elo1=5 alpha=0.05 beta=0.1 model=normalized -output format=cutechess
+    fastchess -engine cmd="./target/release/byte-knight{{ exe_postfix }}" name="dev" -engine cmd="./bk-main{{ exe_postfix }}" name="bk-main" -openings file="./data/Pohl.epd" format=epd order=random -each tc=10+0.1 -recover -pgnout file=repro.pgn -rounds 200 -repeat -concurrency {{ threads }} -sprt elo0=0 elo1=5 alpha=0.05 beta=0.1 model=normalized -output format=cutechess
 
 [doc('Format all Rust code')]
 [group('dev')]
