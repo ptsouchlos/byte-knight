@@ -14,14 +14,10 @@ use std::{
 };
 
 use chess::{moves::Move, pieces::SQUARE_NAME};
+use engine::{defs::About, engine::Engine, search::SearchParameters};
 use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
-use crate::{
-    defs::About,
-    engine::Engine,
-    input_handler::{CommandProxy, EngineCommand, InputHandler},
-    search::SearchParameters,
-};
+use crate::input_handler::{CommandProxy, EngineCommand, InputHandler};
 
 fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
     uci_parser::Square::from_str(SQUARE_NAME[square as usize]).unwrap()
