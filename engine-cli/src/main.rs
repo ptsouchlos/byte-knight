@@ -4,12 +4,14 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 mod bench;
+mod input_handler;
 mod perft;
+mod uci_handler;
 
+use crate::uci_handler::UciHandler;
 use chess::definitions::DEFAULT_FEN;
 use clap::{Parser, Subcommand};
 use engine::defs::About;
-use engine::uci_handler::UciHandler;
 
 shadow_rs::shadow!(build);
 
