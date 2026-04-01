@@ -35,27 +35,36 @@ pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
         bail!("Empty line")
     }
 
+    let line_trimmed = line.trim_matches(';');
+
     let mut replace_pattern = String::default();
-    let split_point = if let Some(idx) = line.rfind("ce") {
+    let split_point = if let Some(idx) = line_trimmed.rfind("ce") {
         replace_pattern = "ce".to_string();
         idx
-    } else if let Some(idx) = (1..10).find_map(|num| line.rfind(format!("c{}", num).as_str())) {
-        replace_pattern = line.get(idx..idx + 2).unwrap().to_owned();
+    } else if let Some(idx) = line_trimmed.rfind("c9") {
+        replace_pattern = line_trimmed.get(idx..idx + 2).unwrap().to_owned();
+        idx
+    } else if let Some(idx) = line_trimmed.rfind(";") {
+        replace_pattern = ";".to_string();
         idx
     } else {
-        line.rfind(' ').unwrap()
+        line_trimmed.rfind(' ').unwrap()
     };
 
-    let fen_split_point = if let Some(idx) = line.rfind("ce") {
+    let fen_split_point = if let Some(idx) = line_trimmed.rfind("ce") {
         idx
-    } else if let Some(idx) = (0..10).find_map(|num| line.find(format!("c{}", num).as_str())) {
+    } else if let Some(idx) = line_trimmed.rfind(";") {
+        idx
+    } else if let Some(idx) =
+        (0..10).find_map(|num| line_trimmed.find(format!("c{}", num).as_str()))
+    {
         idx
     } else {
         split_point
     };
 
-    let fen = &line[..fen_split_point].trim();
-    let result = &line[split_point..]
+    let fen = &line_trimmed[..fen_split_point].trim();
+    let result = &line_trimmed[split_point..]
         .replace(replace_pattern.as_str(), "")
         .trim()
         .to_string();
@@ -115,8 +124,9 @@ pub(crate) fn parse_epd_line(line: &str) -> Result<TuningPosition> {
 /// - 0-1;
 /// - [draw]
 /// - draw;
+/// - w
 ///
-/// The function will return the game result as a f64.
+/// The function will return the game result as a f64 from White's perspective.
 ///
 /// # Arguments
 /// - `part` - A part of the EPD line that contains the game result.
@@ -135,6 +145,12 @@ fn get_game_result(part: &str) -> Result<f64> {
         Ok(1.0)
     } else if part.starts_with("0-1") {
         Ok(0.0)
+    } else if part.starts_with("w") {
+        Ok(1.0)
+    } else if part.starts_with("b") {
+        Ok(0.0)
+    } else if part.starts_with("d") {
+        Ok(0.5)
     } else {
         // try to parse as f64 directly
         part.parse::<f64>()
@@ -323,16 +339,19 @@ mod tests {
     }
 
     #[test]
-    fn custom_filtered_epd_data() {
+    fn clockwork_data() {
         let lines = [
-            "r3rbk1/p1pbqpp1/2p4p/3pP3/1P1B1P2/3B4/P1P3PP/1R1Q1R1K b - b3 c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
-            "r3rbk1/2pbqpp1/2p4p/p2pP3/1P1B1P2/3B4/P1P3PP/1R1Q1R1K w - a6 c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
-            "r3rbk1/2pbqpp1/2p4p/p2pP3/1P1B1P2/P2B4/2P3PP/1R1Q1R1K b - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
-            "r3rbk1/2pbqpp1/2p4p/3pP3/1p1B1P2/P2B4/2P3PP/1R1Q1R1K w - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
-            "r3rbk1/2pbqpp1/2p4p/3pP3/1P1B1P2/3B4/2P3PP/1R1Q1R1K b - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
-            "1r2rbk1/2pbqpp1/2p4p/3pP3/1P1B1P2/3B4/2P3PP/1R1Q1R1K w - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
-            "1r2rbk1/2pbqpp1/2p4p/3pP3/1P1B1P2/2PB4/6PP/1R1Q1R1K b - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
-            "1r2rbk1/2pbqp2/2p3pp/3pP3/1P1B1P2/2PB4/6PP/1R1Q1R1K w - - c0 i-play-atomic-Larsen-b3 Rated Bullet game https://lichess.org/UkOcG61J 2026.01.01; c1 0-1;",
+            "5rk1/3b2pp/1b1P1P2/8/pp1n4/3NB1P1/PP3K1P/2R4R w - - 1 32;w",
+            "r2kqb1r/ppp4p/2np1p1p/3N4/2P1Pp2/3P3P/PP2B2P/R2QK2R w KQ - 0 13;b",
+            "8/3K3p/1p4rk/8/7r/5B2/7p/4R3 b - - 3 64;b",
+            "8/7p/5K1k/8/8/1p5r/1R6/7r b - - 1 73;b",
+            "B7/4K2p/6rk/8/8/1p5r/1R5p/8 b - - 3 68;b",
+            "8/4R2p/1pB1K2k/6r1/Pr6/7p/8/8 b - - 4 60;b",
+            "8/p4pkp/1p2rNp1/6P1/3rN2P/bP1P4/P3K3/5R2 b - - 6 36;b",
+            "8/8/7p/3K3k/8/7r/8/1q6 b - - 1 60;b",
+            "8/8/1K6/8/2N2k2/8/6Q1/8 b - - 8 73;w",
+            "5rk1/1r2b1pp/2ppbn2/4p1B1/N1n4P/P4PN1/1P4P1/2KR1B1R w - - 2 24;w",
+            "4r1r1/pp6/2kp1p2/2p5/2Pp4/P3nNP1/1P1N3P/4R1KR b - c3 0 27;b",
         ];
 
         let eval = ByteKnightEvaluation::default();
@@ -340,7 +359,6 @@ mod tests {
 
         let parsed_results = test_epd_lines(&lines);
         for (pos, board, result) in parsed_results {
-            assert_eq!(result, 0.0);
             assert_eq!(pos.game_result, result);
             let expected_value = eval.eval(&board);
             // tuning position evaluation is always from white's perspective
