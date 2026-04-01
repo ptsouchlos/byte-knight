@@ -582,15 +582,15 @@ impl Display for MagicNumber {
 
 #[cfg(test)]
 mod tests {
-    use crate::{definitions::Squares, move_generation::MoveGenerator};
+    use crate::{definitions::Squares, move_generation};
 
     use super::*;
 
     #[test]
     fn test_magic_number_index() {
         // test a1 for the rook
-        let relevant_bits = MoveGenerator::relevant_rook_bits(Squares::A1);
-        let blockers = MoveGenerator::create_blocker_permutations(relevant_bits);
+        let relevant_bits = move_generation::relevant_rook_bits(Squares::A1);
+        let blockers = move_generation::create_blocker_permutations(relevant_bits);
         let magic_value = 684547693657194778;
         let magic = MagicNumber::new(
             relevant_bits,
@@ -611,7 +611,7 @@ mod tests {
     #[test]
     fn magic_number_display() {
         // test a1 for the rook
-        let relevant_bits = MoveGenerator::relevant_rook_bits(Squares::A1);
+        let relevant_bits = move_generation::relevant_rook_bits(Squares::A1);
         let magic_value = 684547693657194778;
         let magic = MagicNumber::new(
             relevant_bits,

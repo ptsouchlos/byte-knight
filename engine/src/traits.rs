@@ -27,4 +27,16 @@ pub trait EvalValues {
     fn tempo_bonus(&self, side: Side) -> Self::ReturnScore;
     fn open_file_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn semi_open_file_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
+    fn pawn_shield_value(
+        &self,
+        file_index: usize,
+        rank_index: usize,
+        side: Side,
+    ) -> Self::ReturnScore;
+    fn pawn_storm_value(
+        &self,
+        file_index: usize,
+        rank_index: usize,
+        side: Side,
+    ) -> Self::ReturnScore;
 }

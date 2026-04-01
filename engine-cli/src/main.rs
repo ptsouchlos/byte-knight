@@ -4,13 +4,14 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 mod bench;
+mod input_handler;
 mod perft;
+mod uci_handler;
 
+use crate::uci_handler::UciHandler;
 use chess::definitions::DEFAULT_FEN;
-use chess::move_generation::MoveGenerator;
 use clap::{Parser, Subcommand};
 use engine::defs::About;
-use engine::uci_handler::UciHandler;
 
 shadow_rs::shadow!(build);
 
@@ -82,21 +83,26 @@ fn main() {
     match args.command {
         Some(command) => match command {
             Command::Bench { depth, epd_file } => {
-                bench::bench(depth, &epd_file);
+                // Spawn bench on a thread with 8 MiB stack to match the UCI handler.
+                let handle = std::thread::Builder::new()
+                    .name("bench".to_string())
+                    .stack_size(8 * 1024 * 1024)
+                    .spawn(move || bench::bench(depth, &epd_file))
+                    .unwrap();
+                handle.join().unwrap();
             }
             Command::Perft {
                 depth,
                 fen,
                 epd_file,
             } => {
-                let move_gen = MoveGenerator::new();
                 let board = &mut chess::board::Board::from_fen(&fen).unwrap();
                 if let Some(epd) = epd_file {
-                    perft::process_epd_file(&epd, &move_gen);
+                    perft::process_epd_file(&epd);
                 } else {
                     for i in 1..depth + 1 {
                         let now = std::time::Instant::now();
-                        let nodes = chess::perft::perft(board, &move_gen, i, false).unwrap();
+                        let nodes = chess::perft::perft(board, i, false).unwrap();
                         let elapsed = now.elapsed();
                         let nps = nodes as f64 / elapsed.as_secs_f64();
                         println!(
@@ -115,10 +121,8 @@ fn main() {
                 print_moves,
             } => {
                 println!("running split perft at depth {}", depth);
-                let move_gen = MoveGenerator::new();
                 let board = &mut chess::board::Board::from_fen(&fen).unwrap();
-                let move_results =
-                    chess::perft::split_perft(board, &move_gen, depth, print_moves).unwrap();
+                let move_results = chess::perft::split_perft(board, depth, print_moves).unwrap();
                 for res in &move_results {
                     println!("{}: {}", res.mv.to_long_algebraic(), res.nodes);
                 }

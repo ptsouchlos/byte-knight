@@ -1,6 +1,6 @@
 [package]
 name = "byte-knight"
-version = "3.0.0"
+version = "4.0.0"
 edition = { workspace = true }
 authors = { workspace = true }
 license = { workspace = true }
@@ -11,8 +11,10 @@ engine = { workspace = true }
 chess = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 colored = { workspace = true }
+anyhow = { workspace = true }
 rayon = { workspace = true }
-shadow-rs = { version = "1.7.0", default-features = false }
+uci-parser = { workspace = true, features = ["parse-go-perft", "parse-position-kiwipete", "types", "clamp-negatives"] }
+shadow-rs = { version = "1.7.1", default-features = false }
 
 [build-dependencies]
-shadow-rs = "1.7.0"
+shadow-rs = "1.7.1"

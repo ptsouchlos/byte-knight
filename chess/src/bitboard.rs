@@ -12,7 +12,7 @@ use std::{
     },
 };
 
-use crate::{bitboard_helpers, square::Square};
+use crate::{bitboard_helpers, definitions::EMPTY, square::Square};
 
 /// Bitboard representation of a chess board.
 /// LSB (bit 0) is a1, MSB (bit 63) is h8.
@@ -83,6 +83,15 @@ impl Bitboard {
     /// Convert to a 64-bit unsigned integer.
     pub const fn as_number(&self) -> u64 {
         self.data
+    }
+
+    /// Check if the current [`Bitboard`] is empty.
+    /// This is equivalent to having no occupied squares.
+    ///
+    /// # Returns
+    /// True if the [`Bitboard`] is empty, false otherwise.
+    pub const fn is_empty(&self) -> bool {
+        self.data == EMPTY
     }
 
     /// Check if the bitboard intersects with another bitboard.
@@ -467,6 +476,13 @@ mod tests {
         let bb = Bitboard::new(0b10110);
         let squares: Vec<u8> = bb.iter().collect();
         assert_eq!(squares, vec![1, 2, 4]);
+        // construct bb from squares
+        let mut new_bb = Bitboard::default();
+        for sq in squares {
+            new_bb |= Bitboard::from_square(sq);
+        }
+
+        assert_eq!(new_bb, bb);
 
         // Now check the default position
         let bb = Bitboard::new(0xFFFF00000000FFFF);
@@ -479,5 +495,12 @@ mod tests {
                 55, 56, 57, 58, 59, 60, 61, 62, 63
             ]
         );
+
+        new_bb = Bitboard::default();
+        for sq in squares {
+            new_bb |= Bitboard::from_square(sq);
+        }
+
+        assert_eq!(new_bb, bb);
     }
 }

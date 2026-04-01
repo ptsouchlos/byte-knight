@@ -27,7 +27,7 @@ pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
     positions
 }
 
-fn process_epd_line(line: &str) -> Result<(Board, f64)> {
+pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     // find the split point between the FEN and the result
     let split_point = if let Some(idx) = line.rfind("ce") {
         idx
@@ -53,7 +53,7 @@ fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     Ok((board, game_result))
 }
 
-fn parse_epd_line(line: &str) -> Result<TuningPosition> {
+pub(crate) fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     let (board, game_result) = process_epd_line(line)?;
 
     let tracing = TracingValues::new();

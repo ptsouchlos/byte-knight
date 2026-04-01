@@ -15,10 +15,12 @@ use std::{
 };
 
 use anyhow::{Result, bail};
-use arrayvec::ArrayVec;
 use chess::{
-    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
-    move_list::MoveList, moves::Move, pieces::Piece,
+    board::Board,
+    definitions::MAX_MOVE_LIST_SIZE,
+    move_generation::{self, move_filter::MoveFilter},
+    moves::Move,
+    pieces::Piece,
 };
 use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
 
@@ -27,23 +29,25 @@ use crate::{
     defs::{MAX_DEPTH, MAX_PLY},
     evaluation::ByteKnightEvaluation,
     history_table::{self, HistoryTable},
-    inplace_incremental_sort::InplaceIncrementalSort,
+    killers_table::KillerMovesTable,
     lmr,
     log_level::LogLevel,
-    move_order::MoveOrder,
+    move_picker,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
     table::Table,
     traits::Eval,
-    ttable::{self, TranspositionTableEntry},
+    ttable,
     tuneable::{
-        FUTILITY_COEFF, FUTILITY_MAX_DEPTH, FUTILITY_OFFSET, IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH,
-        LMP_MIN_THRESHOLD_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
         NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
+        lmp_max_depth,
     },
 };
 use ttable::TranspositionTable;
+
+mod params;
 
 /// Result for a search.
 #[derive(Clone, Debug)]
@@ -152,8 +156,9 @@ impl Display for SearchParameters {
 pub struct Search<'search_lifetime, Log> {
     transposition_table: &'search_lifetime mut TranspositionTable,
     history_table: &'search_lifetime mut HistoryTable,
-    move_gen: MoveGenerator,
+    killers_table: &'search_lifetime mut KillerMovesTable,
     nodes: u64,
+    seldepth: ScoreType,
     parameters: SearchParameters,
     eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
@@ -168,17 +173,22 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         parameters: &SearchParameters,
         ttable: &'a mut TranspositionTable,
         history_table: &'a mut HistoryTable,
+        killers_table: &'a mut KillerMovesTable,
         output: &'a mut dyn Write,
     ) -> Self {
         // Initialize our LMR table as a 2D array of our LMR formula for depth and moves played
         let mut table = Table::<f64, 32_000>::new(MAX_DEPTH as usize, MAX_MOVE_LIST_SIZE);
         table.fill(lmr::formula);
 
+        // Clear killers as this is a new position.
+        killers_table.clear();
+
         Self {
             transposition_table: ttable,
             history_table,
-            move_gen: MoveGenerator::new(),
+            killers_table,
             nodes: 0,
+            seldepth: 0,
             parameters: parameters.clone(),
             eval: ByteKnightEvaluation::default(),
             stop_flag: None,
@@ -211,13 +221,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             self.send_message(format!("searching {}", self.parameters));
         }
 
-        let mut ml = MoveList::new();
-        self.move_gen.generate_legal_moves(board, &mut ml);
+        let ml = move_generation::legal::generate_moves(board, MoveFilter::All);
         let mut result = match ml.len() {
             0 => {
                 // Draw or something else?
                 let result = SearchResult {
-                    score: if board.is_in_check(&self.move_gen) {
+                    score: if move_generation::is_in_check(board) {
                         -Score::MATE
                     } else {
                         Score::DRAW
@@ -267,27 +276,34 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // stop flag set
     }
 
+    /// Send UCI info to the the output.
+    #[allow(clippy::too_many_arguments)]
     fn send_info(
         &mut self,
         depth: u8,
+        seldepth: ScoreType,
         nodes: u64,
         score: Score,
         nps: f32,
         time: u64,
+        hashfull: u16,
         pv: &PrincipleVariation,
     ) {
         // create UciInfo and print it
         let info = UciInfo::new()
             .depth(depth)
+            .seldepth(seldepth)
             .nodes(nodes)
             .score(score)
             .nps(nps.trunc())
             .time(time)
+            .hashfull(hashfull)
             .pv(pv.iter().map(|m| m.to_long_algebraic()));
         let message = UciResponse::info(info);
         let _unused = writeln!(self.output, "{message}");
     }
 
+    /// Write a string to the output.
     fn send_message(&mut self, message: String) {
         let info = UciInfo::default().string(message);
         let message = UciResponse::info(info);
@@ -299,7 +315,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     fn verify_pv_moves(&self, pv: &PrincipleVariation, board: &Board) -> Result<()> {
         let mut board_cpy = board.clone();
         let all_ok = pv.iter().all(|mv| {
-            let mv_ok = board_cpy.make_move(mv, &self.move_gen);
+            let mv_ok = board_cpy.make_move(mv);
             mv_ok.is_ok()
         });
         if !all_ok {
@@ -317,9 +333,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     fn iterative_deepening(&mut self, board: &mut Board) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::default();
-        let mut move_list = MoveList::new();
 
-        self.move_gen.generate_legal_moves(board, &mut move_list);
+        let move_list = move_generation::legal::generate_moves(board, MoveFilter::All);
         if !move_list.is_empty() {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
@@ -331,6 +346,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 .as_ref()
                 .is_some_and(|f| f.load(Ordering::Relaxed))
         {
+            // reset seldepth for this iteration
+            self.seldepth = 0;
+
             // create an aspiration window around the best result so far
             let mut aspiration_window =
                 AspirationWindow::around(best_result.score, best_result.depth as ScoreType);
@@ -385,11 +403,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 // send UCI info
                 self.send_info(
                     best_result.depth,
+                    self.seldepth,
                     self.nodes,
                     best_result.score,
                     (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32())
                         .trunc(),
                     self.parameters.start_time.elapsed().as_millis() as u64,
+                    self.transposition_table.hashfull(),
                     &best_result.pv,
                 );
             }
@@ -406,10 +426,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // send UCI info
             self.send_info(
                 best_result.depth,
+                self.seldepth,
                 self.nodes,
                 best_result.score,
                 (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
                 self.parameters.start_time.elapsed().as_millis() as u64,
+                self.transposition_table.hashfull(),
                 &best_result.pv,
             );
         }
@@ -436,6 +458,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     {
         // increment node count
         self.nodes += 1;
+        self.seldepth = self.seldepth.max(ply);
+
+        // Ply guard: prevent unbounded recursion
+        if ply >= MAX_PLY {
+            return self.eval.eval(board);
+        }
 
         if depth <= 0 {
             return self.quiescence::<Node>(board, ply, alpha, beta, pv);
@@ -489,33 +517,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return score;
         }
 
-        // get all legal moves
-        let mut move_list = MoveList::new();
-        let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        self.move_gen.generate_legal_moves(board, &mut move_list);
-
-        // do we have moves?
-        if move_list.is_empty() {
-            return if board.is_in_check(&self.move_gen) {
-                -Score::MATE + ply
-            } else {
-                Score::DRAW
-            };
-        }
-
-        let classify_res = MoveOrder::classify_all(
-            board.side_to_move(),
-            move_list.as_slice(),
-            &tt_move,
-            self.history_table,
-            &mut order_list,
-        );
-
-        // TODO(PT): Should we log a message to the CLI or a log?
-        assert!(classify_res.is_ok());
-
-        // sort moves by MVV/LVA
-        let move_iter = InplaceIncrementalSort::new(move_list.as_mut_slice(), &mut order_list);
+        // Build move picker. Move generation is lazy (deferred to stage machine).
+        let mut picker = move_picker::MovePicker::new(tt_move, self.killers_table, ply as u8);
 
         // Really "bad" initial score
         let mut best_score = -Score::INF;
@@ -523,9 +526,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut moves_seen = 0;
         let static_eval = self.eval.eval(board);
 
-        // Loop through all moves
-        #[allow(clippy::explicit_counter_loop)]
-        for (loop_counter, mv) in move_iter.into_iter().enumerate() {
+        // Loop through all moves in best-first order.
+        while let Some(mv) = picker.next(board, self.history_table) {
+            let loop_counter = picker.moves_yielded() - 1;
+
             // Calculate the LMR reduction and depth which will be used later in FP
             let lmr_table_value = self.lmr_table.at(depth as usize, loop_counter);
             let base_reduction = if let Some(table_val) = lmr_table_value {
@@ -535,9 +539,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             };
 
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
-            let is_in_check = board.is_in_check(&self.move_gen);
+            let is_mated = best_score.mated();
+            let is_in_check = picker.in_check();
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
+            let is_quiet = board.captured(&mv).is_none() && !mv.is_promotion();
+            let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
 
             // Move-loop pruning techniques
 
@@ -557,12 +564,16 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // We assume our move ordering is just too good, so if we're under a certain depth
             // and have made more than a certain number of moves, we can assume that later moves
             // won't be as good, so we prune them.
-            if !is_root && !is_pv && !is_in_check && !best_score.mated() {
-                let min_lmp_moves =
-                    LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
-                if loop_counter >= min_lmp_moves {
-                    break;
-                }
+            // ---------------------------------------------------------------------------------
+            if !is_root
+                && !is_pv
+                && !is_in_check
+                && !is_mated
+                && is_quiet
+                && depth <= lmp_max_depth() as i16
+                && moves_seen > params::late_move_threshold(depth as i32)
+            {
+                break;
             }
 
             // local PV is for each node below this one is different when we call negamax recursively
@@ -571,6 +582,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // make the move
             board.make_move_unchecked(&mv).unwrap();
+            self.transposition_table.prefetch(board.zobrist_hash());
             let mut score = Score::DRAW;
 
             // Don't bother searching drawn positions
@@ -580,8 +592,15 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if moves_seen == 0 {
                     -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
                 } else {
-                    let reduction = if mv.is_quiet() && depth >= LMR_MIN_DEPTH && moves_seen >= LMR_MIN_MOVES_SEEN {
-                        lmr_reduction
+                    let is_killer = self.killers_table.get(ply as u8).iter().any(|entry|entry.is_some_and(|k|k.matches(mv, piece)));
+                    // No LMR reduction for killer moves
+                    let reduction = if is_quiet && depth >= LMR_MIN_DEPTH && moves_seen as usize >= LMR_MIN_MOVES_SEEN {
+                        if is_killer {
+                            // Reduce less if the move is a killer
+                            (lmr_reduction-1).max(1)
+                        } else {
+                            lmr_reduction
+                        }
                     } else {
                         1
                     };
@@ -620,7 +639,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 best_score = score;
                 best_move = Some(mv);
                 if Node::PV {
-                    // assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
+                    // assert_pv_is_legal(board, mv, &local_pv);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -628,26 +647,30 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 // Did we fail high?
                 if alpha >= beta {
                     // update history table for quiets
-                    if mv.is_quiet() {
+                    if is_quiet {
+                        // Update the killers table
+                        self.killers_table.update(ply as u8, mv, piece);
+
                         // calculate history bonus
                         let bonus = history_table::calculate_bonus_for_depth(depth);
                         self.history_table.update(
                             board.side_to_move(),
-                            mv.piece(),
+                            piece,
                             mv.to(),
                             bonus as LargeScoreType,
                         );
 
-                        // apply a penalty to all quiets searched so far
-                        for mv in move_list
-                            .iter()
-                            .take(loop_counter)
-                            .filter(|mv| mv.is_quiet())
-                        {
+                        // Apply a penalty to all quiets searched so far.
+                        // The board is already in the parent state (we already unmade the move)
+                        // so it's safe to look up the piece on the board using mv.from().
+                        for &(prev_mv, prev_piece) in picker.searched_quiets() {
+                            if prev_mv == mv {
+                                continue;
+                            }
                             self.history_table.update(
                                 board.side_to_move(),
-                                mv.piece(),
-                                mv.to(),
+                                prev_piece,
+                                prev_mv.to(),
                                 -bonus as LargeScoreType,
                             );
                         }
@@ -662,6 +685,15 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             }
         }
 
+        // No moves were yielded: checkmate or stalemate.
+        if picker.moves_yielded() == 0 {
+            return if picker.in_check() {
+                -Score::MATE + ply
+            } else {
+                Score::DRAW
+            };
+        }
+
         if let Some(bm) = best_move {
             // store the best move in the transposition table
             let flag = if best_score <= alpha_original {
@@ -672,14 +704,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 ttable::EntryFlag::Exact
             };
 
-            self.transposition_table
-                .store_entry(TranspositionTableEntry::new(
-                    board.zobrist_hash(),
-                    depth as u8,
-                    best_score.remove_ply_bias(ply),
-                    flag,
-                    bm,
-                ));
+            self.transposition_table.store_entry(
+                board.zobrist_hash(),
+                depth as u8,
+                best_score.remove_ply_bias(ply),
+                flag,
+                bm,
+            );
         }
         best_score
     }
@@ -704,7 +735,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         alpha: Score,
     ) -> Option<Score> {
         // no pruning if we are in check or if we are in a PV node
-        if board.is_in_check(&self.move_gen) || Node::PV {
+        if move_generation::is_in_check(board) || Node::PV {
             return None;
         }
 
@@ -758,6 +789,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let null_move_depth = depth - NMP_DEPTH_REDUCTION - 1;
             let mut null_board = board.clone();
             null_board.null_move();
+            self.transposition_table.prefetch(null_board.zobrist_hash());
             let mut nmp_pv = PrincipleVariation::new();
             let null_score = -self.negamax::<NonPvNode>(
                 &mut null_board,
@@ -800,12 +832,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Quiescence search shouldn't be called at root
         debug_assert!(ply > 0);
 
+        self.seldepth = self.seldepth.max(ply);
+
         // Are we in a draw?
         if ply > 0 && board.is_draw() {
             return Score::DRAW;
         }
 
-        let in_check = board.is_in_check(&self.move_gen);
+        let in_check = move_generation::is_in_check(board);
         let standing_eval = self.eval.eval(board);
 
         // Have we exceeded max ply?
@@ -823,34 +857,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         } else {
             alpha
         };
-
-        let mut move_list = MoveList::new();
-        let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
-        self.move_gen.generate_legal_moves(board, &mut move_list);
-
-        let mut local_pv = PrincipleVariation::new();
-        // clear the current PV because this is a new position
-        pv.clear();
-
-        // When in check we must consider all moves; otherwise captures only.
-        let mut moves: Vec<Move> = if in_check {
-            move_list.iter().copied().collect()
-        } else {
-            move_list
-                .iter()
-                .filter(|mv| mv.captured_piece().is_some())
-                .copied()
-                .collect()
-        };
-
-        if moves.is_empty() {
-            // In check with no legal moves: checkmate
-            if in_check {
-                return Score::new_mated() + ply;
-            }
-            // Quiet position with no captures: stand pat
-            return standing_eval;
-        }
 
         // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
         // Check if we have a transposition table entry and if we can return early
@@ -872,32 +878,26 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             ttable::ProbeResult::Empty => None,
         };
 
-        // sort moves by MVV/LVA
-        let classify_res = MoveOrder::classify_all(
-            board.side_to_move(),
-            moves.as_slice(),
-            &tt_move,
-            self.history_table,
-            &mut move_order_list,
-        );
+        // When in check we must consider all moves; otherwise tacticals only.
+        let mut picker = move_picker::MovePicker::new_qsearch(tt_move, in_check);
 
-        // TODO(PT): Should we log a message to the CLI or a log?
-        assert!(classify_res.is_ok());
-
-        let moves_slice = moves.as_mut_slice();
-        let move_iter = InplaceIncrementalSort::new(moves_slice, &mut move_order_list);
+        let mut local_pv = PrincipleVariation::new();
+        // clear the current PV because this is a new position
+        pv.clear();
 
         // When in check there is no stand-pat floor, so begin from -INF.
         let mut best = if in_check { -Score::INF } else { standing_eval };
         let mut best_move = tt_move;
         let original_alpha = alpha_use;
 
-        for mv in move_iter.into_iter() {
+        while let Some(mv) = picker.next(board, self.history_table) {
             // local PV is for each node below this one is different when we call negamax recursively
             // so we have to clear it
             local_pv.clear();
 
             board.make_move_unchecked(&mv).unwrap();
+            self.transposition_table.prefetch(board.zobrist_hash());
+
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
@@ -906,6 +906,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 self.nodes += 1;
                 eval
             };
+
             board.unmake_move().unwrap();
 
             if score > best {
@@ -914,7 +915,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 // extend PV if we're in a PV node
                 if Node::PV {
-                    // assert_pv_is_legal(board, mv, &local_pv, &self.move_gen);
+                    // assert_pv_is_legal(board, mv, &local_pv);
                     pv.extend(mv, &local_pv);
                 }
 
@@ -931,6 +932,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             }
         }
 
+        // In check with no legal moves: checkmate.
+        // When not in check, standing_eval already covers the stand-pat case.
+        if picker.moves_yielded() == 0 && in_check {
+            return Score::new_mated() + ply;
+        }
+
         if let Some(bm) = best_move {
             // store the best move in the transposition table
             let flag = if best <= original_alpha {
@@ -941,14 +948,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 ttable::EntryFlag::Exact
             };
 
-            self.transposition_table
-                .store_entry(TranspositionTableEntry::new(
-                    board.zobrist_hash(),
-                    0u8,
-                    best.remove_ply_bias(ply),
-                    flag,
-                    bm,
-                ));
+            self.transposition_table.store_entry(
+                board.zobrist_hash(),
+                0u8,
+                best.remove_ply_bias(ply),
+                flag,
+                bm,
+            );
         }
 
         best
@@ -956,18 +962,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 }
 
 #[allow(dead_code)]
-fn assert_pv_is_legal(
-    board: &Board,
-    mv: Move,
-    local_pv: &PrincipleVariation,
-    move_gen: &MoveGenerator,
-) {
+fn assert_pv_is_legal(board: &Board, mv: Move, local_pv: &PrincipleVariation) {
     let fen = board.to_fen();
     let mut board_cpy = board.clone();
 
     for local_mv in [&mv].into_iter().chain(local_pv.iter()) {
         assert!(
-            board_cpy.is_legal(local_mv, move_gen),
+            move_generation::is_legal(&board_cpy, local_mv),
             "Illegal PV move {local_mv} after move {local_mv} in position {fen}\nFull PV: {}\nResulting FEN: {}",
             [local_mv]
                 .into_iter()
@@ -978,7 +979,7 @@ fn assert_pv_is_legal(
             board_cpy.to_fen()
         );
 
-        let mv_ok = board_cpy.make_move(local_mv, move_gen);
+        let mv_ok = board_cpy.make_move(local_mv);
         assert!(
             mv_ok.is_ok(),
             "Failed to make PV move {local_mv} in position {fen}"
@@ -1005,9 +1006,15 @@ mod tests {
     fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchParameters) {
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
+        let mut killers_table = Default::default();
         let mut sink = io::sink();
-        let mut search =
-            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
 
         for (fen, expected_move) in test_pairs {
             let mut board = Board::from_fen(fen).unwrap();
@@ -1030,9 +1037,15 @@ mod tests {
 
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
+        let mut killers_table = Default::default();
         let mut sink = io::sink();
-        let mut search =
-            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -1052,9 +1065,15 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
+        let mut killers_table = Default::default();
         let mut sink = io::sink();
-        let mut search =
-            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -1107,9 +1126,15 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
+        let mut killers_table = Default::default();
         let mut sink = io::sink();
-        let mut search =
-            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -1127,9 +1152,15 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
+        let mut killers_table = Default::default();
         let mut sink = io::sink();
-        let mut search =
-            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -1146,9 +1177,15 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
+        let mut killers_table = Default::default();
         let mut sink = io::sink();
-        let mut search =
-            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -1165,9 +1202,15 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
+        let mut killers_table = Default::default();
         let mut sink = io::sink();
-        let mut search =
-            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -1227,9 +1270,15 @@ mod tests {
 
             let mut ttable = Default::default();
             let mut history_table = Default::default();
+            let mut killers_table = Default::default();
             let mut sink = io::sink();
-            let mut search =
-                Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
+            let mut search = Search::<LogDebug>::new(
+                &config,
+                &mut ttable,
+                &mut history_table,
+                &mut killers_table,
+                &mut sink,
+            );
             let res = search.search(&mut board, None);
             drop(search);
 
@@ -1279,13 +1328,191 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
+        let mut killers_table = Default::default();
         let mut sink = io::sink();
-        let mut search =
-            Search::<LogDebug>::new(&config, &mut ttable, &mut history_table, &mut sink);
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
         let mv = res.best_move.unwrap();
         println!("{}", mv.to_long_algebraic());
+    }
+
+    /// Helper: run a search at the given depth and assert it doesn't panic.
+    fn search_position(board: &mut Board, depth: u8) {
+        let config = SearchParameters {
+            max_depth: depth,
+            ..Default::default()
+        };
+        let mut ttable = TranspositionTable::default();
+        let mut history_table = Default::default();
+        let mut killers_table = Default::default();
+        let mut sink = io::sink();
+        let mut search = Search::<LogDebug>::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killers_table,
+            &mut sink,
+        );
+        let res = search.search(board, None);
+        assert!(res.best_move.is_some(), "Search must return a move");
+    }
+
+    /// Regression tests for positions that caused crashes during fastchess play.
+    /// Each position is from a game where the engine disconnected.
+    /// We search the starting FEN of each crash game at high depth to trigger
+    /// the same code paths that caused the crash.
+    #[test]
+    fn repro_crash_positions() {
+        let crash_fens = [
+            // Round 7: shortest crash (4 ply before disconnect)
+            "r2qkb1r/2p2ppp/p1npbn2/1p2p3/4P3/2P2N2/PPBP1PPP/RNBQR1K1 w kq - 2 9",
+            // Round 1: 42 ply crash
+            "r1bq1rk1/ppppn1bp/2n3p1/4p2P/4p3/2NP2P1/PPP1NPB1/R1BQK2R w KQ - 0 9",
+            // Round 60: 24 ply crash
+            "r3k2r/pp1npp1p/1qpp1p1b/5b2/3P4/1NP3P1/PP2PPBP/R2QK1NR w KQkq - 5 9",
+            // Round 93: 46 ply crash
+            "rnbqkb1r/p3nppp/1p2p3/2ppP3/3P1BP1/2PB1N2/PP3P1P/RN1QK2R w KQkq - 2 9",
+        ];
+
+        for fen in &crash_fens {
+            println!("Testing: {fen}");
+            let mut board = Board::from_fen(fen).unwrap();
+            search_position(&mut board, 12);
+        }
+    }
+
+    /// Integration tests: inject invalid TT entries that simulate hash collisions,
+    /// then verify the search completes without crashing.
+    ///
+    /// Each test stores a poisoned move into the TT at the exact index the
+    /// position will probe, forcing the move picker to encounter it as a TT move.
+    mod tt_collision_tests {
+        use std::io;
+
+        use chess::{
+            board::Board,
+            definitions::Squares,
+            moves::{Move, MoveFlag},
+            square::Square,
+        };
+
+        use crate::{
+            log_level::LogDebug,
+            score::Score,
+            search::{Search, SearchParameters},
+            ttable::{EntryFlag, TranspositionTable},
+        };
+
+        /// Inject a poisoned move into the TT and run a search.
+        /// The search must complete without panicking.
+        fn search_with_poisoned_tt(fen: &str, bad_move: Move, depth: u8) {
+            let mut board = Board::from_fen(fen).unwrap();
+            let zobrist = board.zobrist_hash();
+
+            let mut ttable = TranspositionTable::default();
+            // Store the bad move at the position's zobrist hash so the search
+            // will find it on the first TT probe.
+            ttable.store_entry(
+                zobrist,
+                depth + 2, // high depth so the TT entry is trusted
+                Score::new(50),
+                EntryFlag::Exact,
+                bad_move,
+            );
+
+            let config = SearchParameters {
+                max_depth: depth,
+                ..Default::default()
+            };
+            let mut history_table = Default::default();
+            let mut killers_table = Default::default();
+            let mut sink = io::sink();
+            let mut search = Search::<LogDebug>::new(
+                &config,
+                &mut ttable,
+                &mut history_table,
+                &mut killers_table,
+                &mut sink,
+            );
+            let res = search.search(&mut board, None);
+            assert!(res.best_move.is_some(), "Search must return a move");
+        }
+
+        #[test]
+        fn tt_collision_pawn_to_promotion_rank() {
+            // Position with White pawn on a7. Inject a7a8 as Standard (no promo flag).
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::A7),
+                Square::from_square_index(Squares::A8),
+                MoveFlag::Standard,
+            );
+            search_with_poisoned_tt("3qk3/P7/8/8/8/8/8/4K3 w - - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_pawn_to_back_rank() {
+            // Position with White pawn on b2. Inject b2a1 as Standard.
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::B2),
+                Square::from_square_index(Squares::A1),
+                MoveFlag::Standard,
+            );
+            search_with_poisoned_tt("4k3/8/8/8/8/8/1P6/4K3 w - - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_castle_with_occupied_square() {
+            // White can castle kingside but we inject the castle move for a
+            // position where f1 is occupied by a bishop — the move should be
+            // rejected by is_legal.
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::E1),
+                Square::from_square_index(Squares::G1),
+                MoveFlag::CastleK,
+            );
+            search_with_poisoned_tt("4k3/8/8/8/8/8/8/4KB1R w K - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_en_passant_without_target() {
+            // White pawn on e5, no EP square set. Inject EP move e5f6.
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::E5),
+                Square::from_square_index(Squares::F6),
+                MoveFlag::EnPassant,
+            );
+            search_with_poisoned_tt("4k3/8/8/4P3/8/8/8/4K3 w - - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_castle_without_rook() {
+            // King on e1, no rook on h1 but has K rights (bogus FEN).
+            // Inject kingside castle.
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::E1),
+                Square::from_square_index(Squares::G1),
+                MoveFlag::CastleK,
+            );
+            search_with_poisoned_tt("4k3/8/8/8/8/8/4PPPP/4K3 w K - 0 1", bad_move, 8);
+        }
+
+        #[test]
+        fn tt_collision_black_pawn_to_back_rank() {
+            // Black pawn on g7. Inject g7h8 as Standard (backward to rank 7).
+            let bad_move = Move::new(
+                Square::from_square_index(Squares::G7),
+                Square::from_square_index(Squares::H8),
+                MoveFlag::Standard,
+            );
+            search_with_poisoned_tt("4k3/6p1/8/8/8/8/8/4K3 b - - 0 1", bad_move, 8);
+        }
     }
 }

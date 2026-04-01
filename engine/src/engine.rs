@@ -9,10 +9,10 @@ use std::{
 };
 
 use chess::board::Board;
-use chess::move_generation::MoveGenerator;
 
 use crate::{
     history_table::HistoryTable,
+    killers_table::KillerMovesTable,
     log_level::{LogDebug, LogInfo},
     search::{Search, SearchParameters, SearchResult},
     ttable::{self, TranspositionTable},
@@ -22,7 +22,7 @@ pub struct Engine {
     board: Board,
     transposition_table: TranspositionTable,
     history_table: HistoryTable,
-    move_gen: MoveGenerator,
+    killers_table: KillerMovesTable,
     debug: bool,
 }
 
@@ -32,7 +32,7 @@ impl Engine {
             board: Board::default_board(),
             transposition_table: TranspositionTable::default(),
             history_table: HistoryTable::default(),
-            move_gen: MoveGenerator::new(),
+            killers_table: KillerMovesTable::default(),
             debug: false,
         }
     }
@@ -41,6 +41,7 @@ impl Engine {
         self.board = Board::default_board();
         self.transposition_table.clear();
         self.history_table.clear();
+        self.killers_table.clear();
     }
 
     pub fn set_position(&mut self, fen: Option<&str>, moves: &[String]) -> anyhow::Result<()> {
@@ -87,11 +88,14 @@ impl Engine {
         stop_flag: Arc<AtomicBool>,
         output: &mut dyn Write,
     ) -> SearchResult {
+        // Increment the age of the TT
+        self.transposition_table.increment_age();
         if self.debug {
             Search::<LogDebug>::new(
                 &params,
                 &mut self.transposition_table,
                 &mut self.history_table,
+                &mut self.killers_table,
                 output,
             )
             .search(&mut self.board, Some(stop_flag))
@@ -100,6 +104,7 @@ impl Engine {
                 &params,
                 &mut self.transposition_table,
                 &mut self.history_table,
+                &mut self.killers_table,
                 output,
             )
             .search(&mut self.board, Some(stop_flag))
@@ -107,7 +112,7 @@ impl Engine {
     }
 
     pub fn perft(&mut self, depth: u16) -> u64 {
-        chess::perft::perft(&mut self.board, &self.move_gen, depth as usize, false).unwrap()
+        chess::perft::perft(&mut self.board, depth as usize, false).unwrap()
     }
 
     pub fn board(&self) -> &Board {
@@ -136,6 +141,10 @@ impl Engine {
 
     pub fn history_table(&self) -> &HistoryTable {
         &self.history_table
+    }
+
+    pub fn killers_table(&self) -> &KillerMovesTable {
+        &self.killers_table
     }
 }
 

@@ -52,6 +52,9 @@ impl NumberOf {
     pub const BISHOP_MOVES: usize = 13;
     pub const ROOK_MOVES: usize = 14;
     pub const QUEEN_MOVES: usize = 27;
+    pub const PAWN_SHIELD_RANKS: usize = 4;
+    pub const PAWN_STORM_RANKS: usize = 4;
+    pub const KING_FLANK_FILES: usize = 3;
 }
 
 pub const EMPTY: u64 = 0;

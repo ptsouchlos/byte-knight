@@ -1,6 +1,16 @@
 // Part of the byte-knight project.
 // Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
 
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
+use rayon::{
+    iter::{IntoParallelRefIterator, ParallelIterator},
+    slice::ParallelSlice,
+};
+
 use crate::{offsets::PARAMETER_COUNT, parameters::Parameters, tuning_position::TuningPosition};
 
 pub(crate) struct Tuner<'a> {
@@ -33,17 +43,51 @@ impl<'a> Tuner<'a> {
     }
 
     pub(crate) fn tune(&mut self) -> &Parameters {
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_clone = stop.clone();
+        ctrlc::try_set_handler(move || {
+            println!("Received Ctrl+C, stopping training...");
+            stop_clone.store(true, Ordering::Relaxed);
+        })
+        .expect("Error setting Ctrl+C handler");
+
         println!("Computing optimal K value...");
         let computed_k: f64 = self.compute_k();
         println!("Optimal K value: {computed_k:.8}");
         println!("Using {} positions", self.positions.len());
 
+        let mut last_error = f64::MAX;
+        let patience = 5;
+        let mut stale_epochs = 0;
+        let mse_error_delta_threshold = 0.00000001;
+
         for epoch in 1..=self.max_epochs {
+            if stop.load(Ordering::Relaxed) {
+                println!("Early stopping at epoch {epoch} due to interrupt signal.");
+                break;
+            }
+
             self.run_epoch(computed_k);
 
             if epoch % 100 == 0 {
+                // Calculate the MSE
                 let error = self.mean_square_error(computed_k);
-                println!("Epoch: {epoch} error {error:.7}");
+                println!("Epoch: {epoch} error {error:.8}");
+                // Check for improvement
+                if last_error - error < mse_error_delta_threshold {
+                    // Stale epoch, no significant improvement
+                    stale_epochs += 1;
+                    // Have we exceeded our patience?
+                    if stale_epochs >= patience {
+                        println!("Early stopping at epoch {epoch} due to lack of improvement.");
+                        break;
+                    }
+                } else {
+                    // Improving epoch, reset stale counter
+                    stale_epochs = 0;
+                }
+                // Update the error
+                last_error = error;
             }
         }
 
@@ -63,43 +107,19 @@ impl<'a> Tuner<'a> {
     }
 
     fn gradients(&self, k: f64) -> Parameters {
-        let chunk_size = self
-            .positions
-            .len()
-            .div_ceil(std::thread::available_parallelism().unwrap().into());
-        std::thread::scope(|s| {
-            self.positions
-                .chunks(chunk_size)
-                .map(|chunk| s.spawn(|| self.weights.gradient_batch(k, chunk)))
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|p| p.join().unwrap_or_default())
-                .fold(Parameters::default(), |a, b| a + b)
-        })
+        let chunk_size = self.positions.len().div_ceil(rayon::current_num_threads());
+        self.positions
+            .par_chunks(chunk_size)
+            .map(|chunk| self.weights.gradient_batch(k, chunk))
+            .reduce(Parameters::default, |a, b| a + b)
     }
 
     pub(crate) fn mean_square_error(&self, k: f64) -> f64 {
-        let chunk_size = self
+        let total_error: f64 = self
             .positions
-            .len()
-            .div_ceil(std::thread::available_parallelism().unwrap().into());
-        let total_error = std::thread::scope(|s| {
-            self.positions
-                .chunks(chunk_size)
-                .map(|chunk| {
-                    s.spawn(|| {
-                        chunk
-                            .iter()
-                            .map(|point| point.error(k, &self.weights))
-                            .sum::<f64>()
-                    })
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|p| p.join().unwrap_or_default())
-                .sum::<f64>()
-        });
-
+            .par_iter()
+            .map(|point| point.error(k, &self.weights))
+            .sum();
         total_error / self.positions.len() as f64
     }
 
@@ -132,7 +152,7 @@ mod tests {
 
     #[test]
     fn offsets() {
-        assert_eq!(PARAMETER_COUNT, 513);
+        assert_eq!(PARAMETER_COUNT, 537);
     }
 
     #[test]
