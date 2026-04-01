@@ -41,8 +41,8 @@ use crate::{
     ttable,
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
-        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
-        lmp_max_depth,
+        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN, fp_base,
+        fp_max_depth, fp_scale, lmp_max_depth,
     },
 };
 use ttable::TranspositionTable;
@@ -552,12 +552,17 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // Futility pruning: https://www.chessprogramming.org/Futility_Pruning
             // If we are at a shallow depth and have already found a good score, we start skipping moves
             // --------------------------------------------------------------------------------------------------------
-            if !is_root && !is_pv && !is_in_check && !best_score.mated() {
-                let fp_margin = depth * FUTILITY_COEFF + FUTILITY_OFFSET;
-                if mv.is_quiet() && depth <= FUTILITY_MAX_DEPTH && static_eval + fp_margin <= alpha
-                {
-                    continue;
-                }
+            let fp_margin = fp_base() + depth as i32 * fp_scale();
+            if !is_root
+                && !is_pv
+                && !is_in_check
+                && !is_mated
+                && is_quiet
+                && (depth as i32) < fp_max_depth()
+                && static_eval.0 as i32 + fp_margin <= alpha.0 as i32
+            {
+                picker.skip_quiets = true;
+                continue;
             }
 
             // LMP - Late Move Pruning
