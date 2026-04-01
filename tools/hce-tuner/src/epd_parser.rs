@@ -365,7 +365,7 @@ mod tests {
         for (i, (pos, board, result)) in parsed_results.iter().enumerate() {
             assert_eq!(pos.game_result, EXPECTED_PARSED_GAME_RESULTS[i]);
             assert_eq!(*result, EXPECTED_PARSED_GAME_RESULTS[i]);
-            let expected_value = eval.eval(&board);
+            let expected_value = eval.eval(board);
             // tuning position evaluation is always from white's perspective
             let val = match board.side_to_move() {
                 Side::White => pos.evaluate(&params),
