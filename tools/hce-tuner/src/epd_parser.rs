@@ -352,14 +352,19 @@ mod tests {
             "8/8/1K6/8/2N2k2/8/6Q1/8 b - - 8 73;w",
             "5rk1/1r2b1pp/2ppbn2/4p1B1/N1n4P/P4PN1/1P4P1/2KR1B1R w - - 2 24;w",
             "4r1r1/pp6/2kp1p2/2p5/2Pp4/P3nNP1/1P1N3P/4R1KR b - c3 0 27;b",
+            "4r1r1/pp6/2kp1p2/2p5/2Pp4/P3nNP1/1P1N3P/4R1KR b - c3 0 27;d",
         ];
+
+        const EXPECTED_PARSED_GAME_RESULTS: [f64; 12] =
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.5];
 
         let eval = ByteKnightEvaluation::default();
         let params = Parameters::create_from_engine_values();
 
         let parsed_results = test_epd_lines(&lines);
-        for (pos, board, result) in parsed_results {
-            assert_eq!(pos.game_result, result);
+        for (i, (pos, board, result)) in parsed_results.iter().enumerate() {
+            assert_eq!(pos.game_result, EXPECTED_PARSED_GAME_RESULTS[i]);
+            assert_eq!(*result, EXPECTED_PARSED_GAME_RESULTS[i]);
             let expected_value = eval.eval(&board);
             // tuning position evaluation is always from white's perspective
             let val = match board.side_to_move() {
