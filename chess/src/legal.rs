@@ -156,7 +156,7 @@ fn is_pseudo_legal_pawn(
         }
         MoveFlag::CastleK | MoveFlag::CastleQ => {
             // Invalid pawn move
-            return false;
+            false
         }
         _ => {
             let file_diff = (File::of(from) as u8).abs_diff(File::of(to) as u8);
