@@ -17,6 +17,7 @@ pub mod definitions;
 pub mod fen;
 pub mod file;
 pub mod magics;
+pub mod legal;
 pub mod move_generation;
 pub mod move_history;
 pub mod move_list;
