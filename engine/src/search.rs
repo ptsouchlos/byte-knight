@@ -260,6 +260,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         if result.best_move.is_none()
             && let Some(mv) = ml.as_slice().first().copied()
         {
+            self.send_message("error no best move found, using random move".to_string());
             result.best_move = Some(mv);
             result.score = self.eval.eval(board);
         }
@@ -390,7 +391,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             best_result.best_move = self
                 .transposition_table
                 .get_entry(board.zobrist_hash())
-                .map(|e| e.board_move);
+                .map(|e| e.board_move)
+                .filter(|mv| chess::legal::is_pseudo_legal(board, mv));
             best_result.pv = pv;
 
             // verify the PV as a sanity check, but only in debug
@@ -522,7 +524,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // Really "bad" initial score
         let mut best_score = -Score::INF;
-        let mut best_move = tt_move;
+        let mut best_move: Option<Move> = None;
         let mut moves_seen = 0;
 
         // Loop through all moves in best-first order.
@@ -875,7 +877,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // When in check there is no stand-pat floor, so begin from -INF.
         let mut best = if in_check { -Score::INF } else { standing_eval };
-        let mut best_move = tt_move;
+        let mut best_move: Option<Move> = None;
         let original_alpha = alpha_use;
 
         while let Some(mv) = picker.next(board, self.history_table) {

@@ -166,9 +166,14 @@ impl MovePicker {
     pub(crate) fn next(&mut self, board: &Board, history_table: &HistoryTable) -> Option<Move> {
         if self.stage == Stage::TtMove {
             self.stage = Stage::GenerateTacticals;
-            if let Some(tt_mv) = self.tt_move
-                && move_generation::is_legal(board, &tt_mv)
-            {
+            // Compute metadata now so it can be reused by GenerateTacticals/GenerateQuiets.
+            let meta = move_generation::metadata::compute(board);
+            let tt_legal = self.tt_move.is_some_and(|tt_mv| {
+                chess::legal::is_pseudo_legal(board, &tt_mv)
+                    && chess::legal::is_legal_with_metadata(board, &tt_mv, &meta)
+            });
+            self.metadata = Some(meta);
+            if let Some(tt_mv) = self.tt_move.filter(|_| tt_legal) {
                 // Track as a searched quiet if this is a quiet move.
                 if board.captured(&tt_mv).is_none() && !tt_mv.is_promotion() {
                     let piece = board
@@ -186,7 +191,11 @@ impl MovePicker {
 
         if self.stage == Stage::GenerateTacticals {
             self.pick_index = 0;
-            let meta = move_generation::metadata::compute(board);
+            // Reuse metadata computed in TtMove stage if available.
+            let meta = self
+                .metadata
+                .get_or_insert_with(|| move_generation::metadata::compute(board))
+                .clone();
             self.moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
             for (i, mv) in self.moves.iter().enumerate() {
                 let maybe_victim = board.captured(mv);
@@ -213,7 +222,6 @@ impl MovePicker {
                     }
                 }
             }
-            self.metadata = Some(meta);
             self.stage = Stage::Tacticals;
         }
 
