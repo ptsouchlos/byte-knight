@@ -97,81 +97,12 @@ impl Board {
     }
 
     /// Helper function to check the preconditions of a move before making it.
-    fn check_move_preconditions(&mut self, mv: &Move) -> Result<()> {
-        let from = mv.from();
-        let to: u8 = mv.to();
-        let (piece, piece_side) = self.piece_on_square(from).ok_or_else(|| {
-            anyhow::anyhow!(
-                "No piece on square {} to move from",
-                SQUARE_NAME[from as usize]
-            )
-        })?;
-
-        let us = self.side_to_move();
-        let them = us.opposite();
-
-        if piece_side != us {
-            bail!("Invalid piece on square");
+    fn check_move_preconditions(&self, mv: &Move) -> Result<()> {
+        if crate::legal::is_pseudo_legal(self, mv) {
+            Ok(())
+        } else {
+            bail!("Move is not pseudo-legal in this position")
         }
-
-        let maybe_captured_piece = self.piece_on_square(to);
-
-        // we don't handle en passant captures here
-        if !mv.is_en_passant_capture()
-            && let Some((captured_piece, cap_side)) = maybe_captured_piece
-        {
-            // check that the capture piece matches and is not our own
-            if cap_side != them {
-                bail!("Invalid captured piece on square");
-            }
-
-            if captured_piece == Piece::King {
-                bail!("Invalid move, cannot capture king");
-            }
-        }
-
-        mv.flag().validate(piece)?;
-
-        // En passant: verify the EP square matches and the target pawn exists.
-        if mv.is_en_passant_capture() {
-            let ep_sq = self.en_passant_square();
-            if ep_sq != Some(to) {
-                bail!("En passant: board EP square does not match move destination");
-            }
-            let captured_pawn_sq = if us == Side::White { to - 8 } else { to + 8 };
-            let has_target = self
-                .piece_on_square(captured_pawn_sq)
-                .is_some_and(|(p, s)| p == Piece::Pawn && s == them);
-            if !has_target {
-                bail!("En passant: no enemy pawn to capture");
-            }
-        }
-
-        // Castling: verify the rook is on its expected square and the
-        // intermediate squares are empty. TT hash collisions can produce
-        // castle flags for positions where castling is not actually possible.
-        if mv.is_castle() {
-            let (rook_sq, between) = match to {
-                Squares::G1 => (Squares::H1, &[Squares::F1, Squares::G1][..]),
-                Squares::C1 => (Squares::A1, &[Squares::D1, Squares::C1, Squares::B1][..]),
-                Squares::G8 => (Squares::H8, &[Squares::F8, Squares::G8][..]),
-                Squares::C8 => (Squares::A8, &[Squares::D8, Squares::C8, Squares::B8][..]),
-                _ => bail!("Invalid castling destination"),
-            };
-            let has_rook = self
-                .piece_on_square(rook_sq)
-                .is_some_and(|(p, s)| p == Piece::Rook && s == us);
-            if !has_rook {
-                bail!("Castling: no rook on expected square");
-            }
-            for &sq in between {
-                if self.piece_on_square(sq).is_some() {
-                    bail!("Castling: intermediate square occupied");
-                }
-            }
-        }
-
-        Ok(())
     }
 
     /// Make a move on the board without checking if it is legal.
