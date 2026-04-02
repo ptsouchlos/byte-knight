@@ -260,6 +260,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         if result.best_move.is_none()
             && let Some(mv) = ml.as_slice().first().copied()
         {
+            self.send_message("error no best move found, using random move".to_string());
             result.best_move = Some(mv);
             result.score = self.eval.eval(board);
         }
