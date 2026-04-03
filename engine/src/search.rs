@@ -388,11 +388,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // update the best result
             best_result.score = score;
-            best_result.best_move = self
-                .transposition_table
-                .get_entry(board.zobrist_hash())
-                .map(|e| e.board_move)
-                .filter(|mv| chess::legal::is_pseudo_legal(board, mv));
+            if let Some(mv) = pv.iter().next().copied() {
+                best_result.best_move = Some(mv);
+            }
             best_result.pv = pv;
 
             // verify the PV as a sanity check, but only in debug
