@@ -310,7 +310,14 @@ pub fn is_legal_with_metadata(board: &Board, mv: &Move, meta: &CheckPinMetadata)
     // Single check evasion: non-king piece must capture the checker or block the ray.
     if meta.in_check() {
         let to_bb = Bitboard::from_square(to);
-        return to_bb.intersects(meta.capture_mask | meta.push_mask);
+        if !to_bb.intersects(meta.capture_mask | meta.push_mask) {
+            return false;
+        }
+        // A pinned piece that evades check must still stay on its pin ray.
+        if Bitboard::from_square(from).intersects(meta.pinned) {
+            return pinned_move_is_on_ray(meta, from, to, king_sq, board.pieces(them));
+        }
+        return true;
     }
 
     // Pinned piece: destination must stay on the pin ray.
