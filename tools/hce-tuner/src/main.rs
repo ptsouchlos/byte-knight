@@ -94,7 +94,11 @@ enum Command {
     },
     /// Interleave multiple datasets into a single EPD file for tuning.
     Interleave {
-        #[clap(short, long, help = "Path to TOML config file specifying datasets to interleave.")]
+        #[clap(
+            short,
+            long,
+            help = "Path to TOML config file specifying datasets to interleave."
+        )]
         config: String,
     },
 }
