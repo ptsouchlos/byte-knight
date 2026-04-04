@@ -310,7 +310,14 @@ pub fn is_legal_with_metadata(board: &Board, mv: &Move, meta: &CheckPinMetadata)
     // Single check evasion: non-king piece must capture the checker or block the ray.
     if meta.in_check() {
         let to_bb = Bitboard::from_square(to);
-        return to_bb.intersects(meta.capture_mask | meta.push_mask);
+        if !to_bb.intersects(meta.capture_mask | meta.push_mask) {
+            return false;
+        }
+        // A pinned piece that evades check must still stay on its pin ray.
+        if Bitboard::from_square(from).intersects(meta.pinned) {
+            return pinned_move_is_on_ray(meta, from, to, king_sq, board.pieces(them));
+        }
+        return true;
     }
 
     // Pinned piece: destination must stay on the pin ray.
@@ -691,6 +698,32 @@ mod tests {
         // KiwiPete — classic tricky position with many edge cases.
         assert_make_free_agrees_with_make(
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        );
+    }
+
+    #[test]
+    fn make_free_pinned_piece_in_single_check() {
+        // White king d1, rook d3 pinned on d-file by Black rook d8, bishop f3
+        // gives check. Rd3xf3 captures the checker but leaves king exposed to
+        // Rd8 along the d-file — must be rejected.
+        assert_make_free_agrees_with_make("3r3k/8/8/8/8/3R1b2/8/3K4 w - - 0 1");
+    }
+
+    #[test]
+    fn reject_pinned_piece_captures_checker() {
+        // Same position as above — specific regression test for the move Rd3xf3.
+        let board = Board::from_fen("3r3k/8/8/8/8/3R1b2/8/3K4 w - - 0 1").unwrap();
+        let meta = metadata::compute(&board);
+        let d3 = Square::from_square_index(Squares::D3);
+        let f3 = Square::from_square_index(Squares::F3);
+        let mv = Move::new(d3, f3, MoveFlag::Standard);
+        assert!(
+            is_pseudo_legal(&board, &mv),
+            "Rd3xf3 should be pseudo-legal (rook can reach f3)"
+        );
+        assert!(
+            !is_legal_with_metadata(&board, &mv, &meta),
+            "Rd3xf3 should be illegal (rook is pinned on d-file)"
         );
     }
 }
