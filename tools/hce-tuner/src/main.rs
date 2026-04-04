@@ -14,8 +14,10 @@ use tuner::Tuner;
 use tuner_score::TuningScore;
 use tuning_position::TuningPosition;
 
+use crate::epd_parser::WdlModel;
 use crate::offsets::Offsets;
 mod epd_parser;
+mod interleave;
 mod math;
 mod offsets;
 mod parameters;
@@ -36,6 +38,26 @@ enum ParameterStartType {
     EngineValues,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+enum WdlModelArg {
+    /// Auto-detect: 0.0/0.5/1.0 = white-relative, else side-to-move.
+    Auto,
+    /// All results are from white's perspective.
+    WhiteRelative,
+    /// All results are from the side-to-move's perspective.
+    SideToMove,
+}
+
+impl From<WdlModelArg> for WdlModel {
+    fn from(arg: WdlModelArg) -> Self {
+        match arg {
+            WdlModelArg::Auto => WdlModel::Auto,
+            WdlModelArg::WhiteRelative => WdlModel::WhiteRelative,
+            WdlModelArg::SideToMove => WdlModel::SideToMove,
+        }
+    }
+}
+
 const INPUT_DATA_HELP: &str = "Filtered, marked EPD or 'book' input data.";
 #[derive(Subcommand, Debug)]
 enum Command {
@@ -46,6 +68,8 @@ enum Command {
         epochs: Option<usize>,
         #[arg(value_enum, short, long, help = "How to start the parameters", default_value_t = ParameterStartType::Zero)]
         param_start_type: ParameterStartType,
+        #[arg(value_enum, short, long, help = "How to interpret WDL game results", default_value_t = WdlModelArg::Auto)]
+        wdl_model: WdlModelArg,
     },
     PlotK {
         #[clap(short, long, help = INPUT_DATA_HELP)]
@@ -67,6 +91,11 @@ enum Command {
         epochs: usize,
         #[clap(short, long, help = INPUT_DATA_HELP, default_value = "data/lichess-test.book")]
         input_data: String,
+    },
+    /// Interleave multiple datasets into a single EPD file for tuning.
+    Interleave {
+        #[clap(short, long, help = "Path to TOML config file specifying datasets to interleave.")]
+        config: String,
     },
 }
 
@@ -303,9 +332,9 @@ fn plot_k(tuner: &Tuner) {
         .nice();
 }
 
-fn parse_data(input_data: &str) -> Vec<TuningPosition> {
+fn parse_data(input_data: &str, wdl_model: WdlModel) -> Vec<TuningPosition> {
     println!("Reading data from: {input_data}");
-    let positions = epd_parser::parse_epd_file(input_data);
+    let positions = epd_parser::parse_epd_file(input_data, wdl_model);
     println!("Read {} positions", positions.len());
     positions
 }
@@ -322,8 +351,9 @@ fn main() {
             input_data,
             epochs,
             param_start_type,
+            wdl_model,
         } => {
-            let positions = parse_data(&input_data);
+            let positions = parse_data(&input_data, wdl_model.into());
             let parameters = match param_start_type {
                 ParameterStartType::Zero => Parameters::default(),
                 ParameterStartType::EngineValues => Parameters::create_from_engine_values(),
@@ -335,13 +365,13 @@ fn main() {
             print_params(tuned_results);
         }
         Command::PlotK { input_data } => {
-            let positions = parse_data(&input_data);
+            let positions = parse_data(&input_data, WdlModel::Auto);
             let parameters = Parameters::create_from_engine_values();
             let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
             plot_k(&tuner);
         }
         Command::ComputeError { input_data, k } => {
-            let positions = parse_data(&input_data);
+            let positions = parse_data(&input_data, WdlModel::Auto);
             let parameters = Parameters::create_from_engine_values();
             let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
             let error = tuner.mean_square_error(k);
@@ -349,7 +379,7 @@ fn main() {
         }
         Command::Bench { epochs, input_data } => {
             let read_start = std::time::Instant::now();
-            let positions = parse_data(&input_data);
+            let positions = parse_data(&input_data, WdlModel::Auto);
             let read_elapsed = read_start.elapsed();
             println!(
                 "Read {} in {:.3}s",
@@ -378,6 +408,9 @@ fn main() {
                 elapsed.as_secs_f64(),
                 elapsed.as_secs_f64() * 1000.0 / epochs as f64
             );
+        }
+        Command::Interleave { config } => {
+            interleave::run_interleave(&config);
         }
     }
 }

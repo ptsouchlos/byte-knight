@@ -12,14 +12,47 @@ use engine::{evaluation::Evaluation, traits::Eval};
 
 use crate::{tracing_values::TracingValues, tuning_position::TuningPosition};
 
-pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
+/// How WDL (win/draw/loss) game results should be interpreted.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum WdlModel {
+    /// Result is always from white's perspective.
+    WhiteRelative,
+    /// Result is from the side-to-move's perspective.
+    SideToMove,
+    /// Auto-detect: 0.0/0.5/1.0 treated as white-relative, anything else as side-to-move.
+    Auto,
+}
+
+/// Convert a raw game result to white-relative given a [`WdlModel`].
+pub(crate) fn to_white_relative(board: &Board, game_result: f64, wdl_model: WdlModel) -> f64 {
+    match wdl_model {
+        WdlModel::WhiteRelative => game_result,
+        WdlModel::SideToMove => match board.side_to_move() {
+            Side::White => game_result,
+            Side::Black => 1.0 - game_result,
+        },
+        WdlModel::Auto => {
+            let is_white_relative = matches!(game_result, 0.0 | 0.5 | 1.0);
+            if is_white_relative {
+                game_result
+            } else {
+                match board.side_to_move() {
+                    Side::White => game_result,
+                    Side::Black => 1.0 - game_result,
+                }
+            }
+        }
+    }
+}
+
+pub(crate) fn parse_epd_file(file_path: &str, wdl_model: WdlModel) -> Vec<TuningPosition> {
     let mut positions = Vec::new();
     let file =
         File::open(file_path).unwrap_or_else(|_| panic!("Failed to open file: {}", file_path));
     let reader = BufReader::new(file);
     for line in reader.lines() {
         let line = line.expect("Failed to read line");
-        let pos = parse_epd_line(line.as_str());
+        let pos = parse_epd_line(line.as_str(), wdl_model);
         if let Ok(pos) = pos {
             positions.push(pos);
         } else {
@@ -55,10 +88,6 @@ pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
         idx
     } else if let Some(idx) = line_trimmed.rfind(";") {
         idx
-    } else if let Some(idx) =
-        (0..10).find_map(|num| line_trimmed.find(format!("c{}", num).as_str()))
-    {
-        idx
     } else {
         split_point
     };
@@ -78,22 +107,14 @@ pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     Ok((board, game_result))
 }
 
-pub(crate) fn parse_epd_line(line: &str) -> Result<TuningPosition> {
+pub(crate) fn parse_epd_line(line: &str, wdl_model: WdlModel) -> Result<TuningPosition> {
     if let Ok((board, game_result)) = process_epd_line(line) {
         let tracing = TracingValues::new();
         let eval = Evaluation::new(tracing);
         let _ = eval.eval(&board);
         let (white_indexes, black_indexes, scaled_phase) = eval.into_values().into_trace();
 
-        let is_white_relative = matches!(game_result, 0.0 | 0.5 | 1.0);
-        let result = if is_white_relative {
-            game_result
-        } else {
-            match board.side_to_move() {
-                Side::White => game_result,
-                Side::Black => 1.0 - game_result,
-            }
-        };
+        let result = to_white_relative(&board, game_result, wdl_model);
 
         return Ok(TuningPosition::new(
             white_indexes,
@@ -190,7 +211,8 @@ mod tests {
     fn test_epd_lines(lines: &[&str]) -> Vec<(TuningPosition, Board, f64)> {
         let mut results = Vec::new();
         for line in lines.iter() {
-            let position: Result<TuningPosition, anyhow::Error> = super::parse_epd_line(line);
+            let position: Result<TuningPosition, anyhow::Error> =
+                super::parse_epd_line(line, super::WdlModel::Auto);
             assert!(position.is_ok());
             let pos = position.unwrap();
             let (board, result) = process_epd_line(line).unwrap();
@@ -219,14 +241,17 @@ mod tests {
             "3r1rk1/pR3pbp/2p1pnp1/4q3/2P4P/P3P1P1/2Q2PB1/2B2RK1 b - - 0 4 [0.0]",
             "3b4/5k2/6r1/3pP3/p1pP1p1p/P1P2P1P/1PR3P1/6K1 b - - 0 1 [0.0]",
             "r2q1rk1/ppp1npbp/4b1p1/1P3nN1/2Pp4/3P4/PB1NBPPP/R2QR1K1 b - - 0 1 [0.0]",
+            "2kr1b1r/pp3ppp/5n2/2pP1q2/2PQp3/8/PP2BPPP/R1B2RK1 w - c6 0 1 [0.0]",
         ];
 
-        let mut expected_game_phases: [f64; 10] = [7., 18., 12., 10., 10., 8., 17., 20., 5., 24.];
+        let mut expected_game_phases: [f64; 11] =
+            [7., 18., 12., 10., 10., 8., 17., 20., 5., 24., 20.];
         for phase in &mut expected_game_phases {
             *phase /= GAME_PHASE_MAX as f64;
         }
 
-        const EXPECTED_GAME_RESULTS: [f64; 10] = [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        const EXPECTED_GAME_RESULTS: [f64; 11] =
+            [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let eval = ByteKnightEvaluation::default();
         let params = Parameters::create_from_engine_values();
 
