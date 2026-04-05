@@ -11,7 +11,6 @@ use std::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
-    time::{Duration, Instant},
 };
 
 use anyhow::{Result, bail};
@@ -22,7 +21,7 @@ use chess::{
     moves::Move,
     pieces::Piece,
 };
-use uci_parser::{UciInfo, UciResponse, UciScore, UciSearchOptions};
+use uci_parser::{UciInfo, UciResponse, UciScore};
 
 use crate::{
     aspiration_window::AspirationWindow,
@@ -36,6 +35,7 @@ use crate::{
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
+    search::limits::SearchLimits,
     table::Table,
     traits::Eval,
     ttable,
@@ -47,6 +47,7 @@ use crate::{
 };
 use ttable::TranspositionTable;
 
+pub mod limits;
 mod params;
 
 /// Result for a search.
@@ -86,80 +87,13 @@ impl Display for SearchResult {
     }
 }
 
-/// Input parameters for the search.
-#[derive(Clone, Debug)]
-pub struct SearchParameters {
-    pub max_depth: u8,
-    pub start_time: Instant,
-    pub soft_timeout: Duration,
-    pub hard_timeout: Duration,
-    pub max_nodes: u64,
-}
-
-impl Default for SearchParameters {
-    fn default() -> Self {
-        SearchParameters {
-            max_depth: MAX_DEPTH,
-            start_time: Instant::now(),
-            soft_timeout: Duration::MAX,
-            hard_timeout: Duration::MAX,
-            max_nodes: u64::MAX,
-        }
-    }
-}
-
-impl SearchParameters {
-    /// Creates a new set of search parameters from the UCI options and the current board.
-    pub fn new(uci_options: &UciSearchOptions, board: &Board) -> Self {
-        let mut params = Self::default();
-        if let Some(depth) = uci_options.depth {
-            params.max_depth = depth as u8;
-        }
-
-        if let Some(nodes) = uci_options.nodes {
-            params.max_nodes = nodes as u64;
-        }
-
-        if let Some(time) = uci_options.movetime {
-            params.soft_timeout = time;
-            params.hard_timeout = time;
-        } else {
-            let (time, increment) = if board.side_to_move().is_white() {
-                (uci_options.wtime, uci_options.winc)
-            } else {
-                (uci_options.btime, uci_options.binc)
-            };
-
-            // do we have valid time
-            if let Some(time) = time {
-                // TODO: How can we tune these params?
-                let inc = increment.unwrap_or(Duration::ZERO) / 2;
-                params.soft_timeout = time / 20 + inc;
-                params.hard_timeout = time / 5 + inc;
-            }
-        }
-
-        params
-    }
-}
-
-impl Display for SearchParameters {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "max depth {} start_time {:?} soft_timeout {:?} hard_timeout {:?}",
-            self.max_depth, self.start_time, self.soft_timeout, self.hard_timeout
-        )
-    }
-}
-
 pub struct Search<'search_lifetime, Log> {
     transposition_table: &'search_lifetime mut TranspositionTable,
     history_table: &'search_lifetime mut HistoryTable,
     killers_table: &'search_lifetime mut KillerMovesTable,
     nodes: u64,
     seldepth: ScoreType,
-    parameters: SearchParameters,
+    limits: SearchLimits,
     eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
     lmr_table: Table<f64, 32_000>,
@@ -170,7 +104,7 @@ pub struct Search<'search_lifetime, Log> {
 
 impl<'a, Log: LogLevel> Search<'a, Log> {
     pub fn new(
-        parameters: &SearchParameters,
+        limits: &SearchLimits,
         ttable: &'a mut TranspositionTable,
         history_table: &'a mut HistoryTable,
         killers_table: &'a mut KillerMovesTable,
@@ -189,7 +123,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             killers_table,
             nodes: 0,
             seldepth: 0,
-            parameters: parameters.clone(),
+            limits: limits.clone(),
             eval: ByteKnightEvaluation::default(),
             stop_flag: None,
             lmr_table: table,
@@ -218,7 +152,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         if Log::DEBUG {
             self.send_message(format!("starting search for FEN {}", board.to_fen()));
-            self.send_message(format!("searching {}", self.parameters));
+            self.send_message(format!("searching {}", self.limits));
         }
 
         let ml = move_generation::legal::generate_moves(board, MoveFilter::All);
@@ -271,8 +205,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     }
 
     fn should_stop_searching(&self) -> bool {
-        self.parameters.start_time.elapsed() >= self.parameters.hard_timeout // hard timeout
-            || self.nodes >= self.parameters.max_nodes // node limit reached
+        self.limits.start_time.elapsed() >= self.limits.hard_timeout // hard timeout
+            || self.nodes >= self.limits.max_nodes // node limit reached
             || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed))
         // stop flag set
     }
@@ -340,8 +274,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
 
-        'deepening: while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
-            && best_result.depth <= self.parameters.max_depth
+        'deepening: while self.limits.start_time.elapsed() <= self.limits.soft_timeout
+            && best_result.depth <= self.limits.max_depth
             && !self
                 .stop_flag
                 .as_ref()
@@ -406,9 +340,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     self.seldepth,
                     self.nodes,
                     best_result.score,
-                    (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32())
-                        .trunc(),
-                    self.parameters.start_time.elapsed().as_millis() as u64,
+                    (self.nodes as f32 / self.limits.start_time.elapsed().as_secs_f32()).trunc(),
+                    self.limits.start_time.elapsed().as_millis() as u64,
                     self.transposition_table.hashfull(),
                     &best_result.pv,
                 );
@@ -429,8 +362,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 self.seldepth,
                 self.nodes,
                 best_result.score,
-                (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
-                self.parameters.start_time.elapsed().as_millis() as u64,
+                (self.nodes as f32 / self.limits.start_time.elapsed().as_secs_f32()).trunc(),
+                self.limits.start_time.elapsed().as_millis() as u64,
                 self.transposition_table.hashfull(),
                 &best_result.pv,
             );
@@ -985,13 +918,13 @@ mod tests {
         evaluation::ByteKnightEvaluation,
         log_level::LogDebug,
         score::Score,
-        search::{Search, SearchParameters},
+        search::{Search, SearchLimits},
         ttable::TranspositionTable,
     };
 
     use super::LargeScoreType;
 
-    fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchParameters) {
+    fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchLimits) {
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
         let mut killers_table = Default::default();
@@ -1018,7 +951,7 @@ mod tests {
     fn white_mate_in_1() {
         let fen = "k7/8/KQ6/8/8/8/8/8 w - - 0 1";
         let board = Board::from_fen(fen).unwrap();
-        let config = SearchParameters {
+        let config = SearchLimits {
             max_depth: 2,
             ..Default::default()
         };
@@ -1046,7 +979,7 @@ mod tests {
     fn black_mated_in_1() {
         let fen = "1k6/8/KQ6/2Q5/8/8/8/8 b - - 0 1";
         let mut board = Board::from_fen(fen).unwrap();
-        let config = SearchParameters {
+        let config = SearchLimits {
             max_depth: 3,
             ..Default::default()
         };
@@ -1081,7 +1014,7 @@ mod tests {
             ("k7/8/8/8/8/5r1p/6r1/K7 b - - 0 1", "f3f1"),
         ];
 
-        let params = SearchParameters {
+        let params = SearchLimits {
             max_depth: 3,
             ..Default::default()
         };
@@ -1099,7 +1032,7 @@ mod tests {
             ("4k3/8/8/2p5/1N1P4/8/8/4K3 b - - 0 1", "c5b4"),
         ];
 
-        let params = SearchParameters {
+        let params = SearchLimits {
             max_depth: 3,
             ..Default::default()
         };
@@ -1110,7 +1043,7 @@ mod tests {
     fn stalemate() {
         let fen = "k7/8/KQ6/8/8/8/8/8 b - - 0 1";
         let mut board = Board::from_fen(fen).unwrap();
-        let config = SearchParameters::default();
+        let config = SearchLimits::default();
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
@@ -1132,7 +1065,7 @@ mod tests {
     #[ignore = "Timing on this is not consistent when instrumentation is enabled"]
     fn do_not_exceed_time() {
         let mut board = Board::default_board();
-        let config = SearchParameters {
+        let config = SearchLimits {
             soft_timeout: Duration::from_millis(100),
             hard_timeout: Duration::from_millis(1000),
             ..Default::default()
@@ -1158,7 +1091,7 @@ mod tests {
     #[test]
     fn starting_position() {
         let mut board = Board::default_board();
-        let config = SearchParameters {
+        let config = SearchLimits {
             max_depth: 8,
             ..Default::default()
         };
@@ -1182,7 +1115,7 @@ mod tests {
     #[test]
     fn no_time() {
         let mut board = Board::from_fen("8/7p/5p2/2K1qp2/7P/8/6k1/4q3 w - - 1 2").unwrap();
-        let config = SearchParameters {
+        let config = SearchLimits {
             soft_timeout: Duration::from_millis(0),
             hard_timeout: Duration::from_millis(0),
             ..Default::default()
@@ -1234,7 +1167,7 @@ mod tests {
 
     #[test]
     fn quiets_ordered_after_captures() {
-        let config = SearchParameters {
+        let config = SearchLimits {
             max_depth: 6,
             ..Default::default()
         };
@@ -1309,7 +1242,7 @@ mod tests {
 
         let is_repetiton = board.is_repetition();
         assert!(!is_repetiton, "Expected position to not be a repetition");
-        let config = SearchParameters {
+        let config = SearchLimits {
             max_depth: 24,
             ..Default::default()
         };
@@ -1334,7 +1267,7 @@ mod tests {
 
     /// Helper: run a search at the given depth and assert it doesn't panic.
     fn search_position(board: &mut Board, depth: u8) {
-        let config = SearchParameters {
+        let config = SearchLimits {
             max_depth: depth,
             ..Default::default()
         };
@@ -1395,7 +1328,7 @@ mod tests {
         use crate::{
             log_level::LogDebug,
             score::Score,
-            search::{Search, SearchParameters},
+            search::{Search, SearchLimits},
             ttable::{EntryFlag, TranspositionTable},
         };
 
@@ -1416,7 +1349,7 @@ mod tests {
                 bad_move,
             );
 
-            let config = SearchParameters {
+            let config = SearchLimits {
                 max_depth: depth,
                 ..Default::default()
             };
