@@ -8,7 +8,7 @@ use std::io;
 use chess::board::Board;
 use engine::{
     log_level::LogNone,
-    search::{Search, SearchParameters},
+    search::{Search, limits::SearchLimits},
 };
 
 const BENCHMARKS: [&str; 56] = [
@@ -103,7 +103,7 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
         benchmark_strings.len()
     );
 
-    let config = SearchParameters {
+    let config = SearchLimits {
         max_depth: depth,
         ..Default::default()
     };
