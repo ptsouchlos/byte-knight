@@ -24,6 +24,14 @@ pub(crate) enum WdlModel {
 }
 
 /// Convert a raw game result to white-relative given a [`WdlModel`].
+///
+/// # Arguments
+/// - `board`: The current [`Board`] position.
+/// - `game_result`: The result of the game.
+/// - `wdl_model`: The WDL model of the result.
+///
+/// # Returns
+/// Normalized game result to be white-relative.
 pub(crate) fn to_white_relative(board: &Board, game_result: f64, wdl_model: WdlModel) -> f64 {
     match wdl_model {
         WdlModel::WhiteRelative => game_result,
@@ -45,6 +53,15 @@ pub(crate) fn to_white_relative(board: &Board, game_result: f64, wdl_model: WdlM
     }
 }
 
+/// Parse the given EPD file at the given path with the given WDL model.
+///
+/// # Arguments
+///
+/// - `file_path`: Full path to the EPD file to parse.
+/// - `wdl_model`: WDL model for the file.
+///
+/// # Returns
+/// Vector of tuning positions read from the file.
 pub(crate) fn parse_epd_file(file_path: &str, wdl_model: WdlModel) -> Vec<TuningPosition> {
     let mut positions = Vec::new();
     let file =
@@ -62,6 +79,15 @@ pub(crate) fn parse_epd_file(file_path: &str, wdl_model: WdlModel) -> Vec<Tuning
     positions
 }
 
+/// Process a single line from an EPD file.
+///
+/// # Arguments
+///
+/// - `line`: The line to process.
+///
+/// # Returns
+///
+/// - A pair of (`Board`, `f64`).
 pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     // find the split point between the FEN and the result
     if line.is_empty() {
@@ -107,6 +133,7 @@ pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     Ok((board, game_result))
 }
 
+/// Parse a single EPD file line.
 pub(crate) fn parse_epd_line(line: &str, wdl_model: WdlModel) -> Result<TuningPosition> {
     if let Ok((board, game_result)) = process_epd_line(line) {
         let tracing = TracingValues::new();
