@@ -92,7 +92,7 @@ impl Engine {
         self.transposition_table.increment_age();
         if self.debug {
             Search::<LogDebug>::new(
-                &params,
+                params,
                 &mut self.transposition_table,
                 &mut self.history_table,
                 &mut self.killers_table,
@@ -101,7 +101,7 @@ impl Engine {
             .search(&mut self.board, Some(stop_flag))
         } else {
             Search::<LogInfo>::new(
-                &params,
+                params,
                 &mut self.transposition_table,
                 &mut self.history_table,
                 &mut self.killers_table,

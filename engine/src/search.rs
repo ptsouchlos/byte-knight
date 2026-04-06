@@ -104,7 +104,7 @@ pub struct Search<'search_lifetime, Log> {
 
 impl<'a, Log: LogLevel> Search<'a, Log> {
     pub fn new(
-        limits: &SearchLimits,
+        limits: SearchLimits,
         ttable: &'a mut TranspositionTable,
         history_table: &'a mut HistoryTable,
         killers_table: &'a mut KillerMovesTable,
@@ -930,7 +930,7 @@ mod tests {
         let mut killers_table = Default::default();
         let mut sink = io::sink();
         let mut search = Search::<LogDebug>::new(
-            &config,
+            config,
             &mut ttable,
             &mut history_table,
             &mut killers_table,
@@ -961,7 +961,7 @@ mod tests {
         let mut killers_table = Default::default();
         let mut sink = io::sink();
         let mut search = Search::<LogDebug>::new(
-            &config,
+            config,
             &mut ttable,
             &mut history_table,
             &mut killers_table,
@@ -989,7 +989,7 @@ mod tests {
         let mut killers_table = Default::default();
         let mut sink = io::sink();
         let mut search = Search::<LogDebug>::new(
-            &config,
+            config,
             &mut ttable,
             &mut history_table,
             &mut killers_table,
@@ -1050,7 +1050,7 @@ mod tests {
         let mut killers_table = Default::default();
         let mut sink = io::sink();
         let mut search = Search::<LogDebug>::new(
-            &config,
+            config,
             &mut ttable,
             &mut history_table,
             &mut killers_table,
@@ -1076,7 +1076,7 @@ mod tests {
         let mut killers_table = Default::default();
         let mut sink = io::sink();
         let mut search = Search::<LogDebug>::new(
-            &config,
+            config,
             &mut ttable,
             &mut history_table,
             &mut killers_table,
@@ -1101,7 +1101,7 @@ mod tests {
         let mut killers_table = Default::default();
         let mut sink = io::sink();
         let mut search = Search::<LogDebug>::new(
-            &config,
+            config,
             &mut ttable,
             &mut history_table,
             &mut killers_table,
@@ -1126,7 +1126,7 @@ mod tests {
         let mut killers_table = Default::default();
         let mut sink = io::sink();
         let mut search = Search::<LogDebug>::new(
-            &config,
+            config,
             &mut ttable,
             &mut history_table,
             &mut killers_table,
@@ -1194,7 +1194,7 @@ mod tests {
             let mut killers_table = Default::default();
             let mut sink = io::sink();
             let mut search = Search::<LogDebug>::new(
-                &config,
+                config,
                 &mut ttable,
                 &mut history_table,
                 &mut killers_table,
@@ -1252,7 +1252,7 @@ mod tests {
         let mut killers_table = Default::default();
         let mut sink = io::sink();
         let mut search = Search::<LogDebug>::new(
-            &config,
+            config,
             &mut ttable,
             &mut history_table,
             &mut killers_table,
@@ -1276,7 +1276,7 @@ mod tests {
         let mut killers_table = Default::default();
         let mut sink = io::sink();
         let mut search = Search::<LogDebug>::new(
-            &config,
+            config,
             &mut ttable,
             &mut history_table,
             &mut killers_table,
@@ -1357,7 +1357,7 @@ mod tests {
             let mut killers_table = Default::default();
             let mut sink = io::sink();
             let mut search = Search::<LogDebug>::new(
-                &config,
+                config,
                 &mut ttable,
                 &mut history_table,
                 &mut killers_table,
