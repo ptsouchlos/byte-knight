@@ -8,8 +8,10 @@ use uci_parser::UciSearchOptions;
 
 use crate::defs::MAX_DEPTH;
 
+pub const UCI_OVERHEAD_MS: u64 = 50;
+
 /// Input parameters for the search.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub struct SearchLimits {
     pub max_depth: u8,
     pub start_time: Instant,
@@ -52,16 +54,40 @@ impl SearchLimits {
                 (uci_options.btime, uci_options.binc)
             };
 
-            // do we have valid time
-            if let Some(time) = time {
+            // Validate we have valide time and increment
+            if let (Some(time), Some(inc)) = (time, increment) {
                 // TODO: How can we tune these params?
-                let inc = increment.unwrap_or(Duration::ZERO) / 2;
-                params.soft_timeout = time / 20 + inc;
-                params.hard_timeout = time / 5 + inc;
+                let (hard, soft) = SearchLimits::calculate_time_limits(time, inc);
+                params.soft_timeout = soft;
+                params.hard_timeout = hard;
             }
         }
 
         params
+    }
+
+    pub(crate) fn scaled_soft_limit(&self, best_move_stability: u64) -> Option<Duration> {
+        if self.soft_timeout.is_zero() {
+            return None;
+        }
+
+        let scaled =
+            self.soft_timeout.as_secs_f32() * Self::best_move_stability_scale(best_move_stability);
+
+        Some(Duration::from_secs_f32(scaled))
+    }
+
+    fn best_move_stability_scale(best_move_stability: u64) -> f32 {
+        1.0 - best_move_stability as f32 * 0.1
+    }
+
+    fn calculate_time_limits(time: Duration, inc: Duration) -> (Duration, Duration) {
+        let max_time =
+            Duration::from_millis((time.as_millis() as u64).saturating_sub(UCI_OVERHEAD_MS));
+        let hard = max_time / 20 - inc / 2;
+        let soft = hard.as_secs_f64() * 0.6;
+
+        (hard, Duration::from_secs_f64(soft))
     }
 }
 
