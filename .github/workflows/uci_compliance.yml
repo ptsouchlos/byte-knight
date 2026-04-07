@@ -19,7 +19,7 @@ jobs:
           lfs: true
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Checkout fastchess
         uses: actions/checkout@v6

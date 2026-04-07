@@ -24,6 +24,6 @@ jobs:
         with:
           lfs: true
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
       - name: Run tests
         run: just test ${{ matrix.build-type }}
