@@ -109,3 +109,74 @@ impl Display for SearchLimits {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn time_limits_typical() {
+        let (hard, soft) = SearchLimits::calculate_time_limits(
+            Duration::from_millis(100),
+            Duration::from_millis(100),
+        );
+        assert!(soft > Duration::ZERO);
+        assert!(hard > Duration::ZERO);
+        assert!(hard >= soft);
+    }
+
+    #[test]
+    fn time_limits_no_increment() {
+        let (hard, soft) =
+            SearchLimits::calculate_time_limits(Duration::from_millis(10), Duration::ZERO);
+        assert!(hard >= soft);
+    }
+
+    #[test]
+    fn time_limits_zero_time() {
+        // Must not panic; both limits may be zero but that is acceptable.
+        let (hard, soft) = SearchLimits::calculate_time_limits(Duration::ZERO, Duration::ZERO);
+        let _ = (hard, soft);
+    }
+
+    #[test]
+    fn stability_scale_initial() {
+        assert!((SearchLimits::best_move_stability_scale(0) - 1.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn stability_scale_mid() {
+        assert!((SearchLimits::best_move_stability_scale(5) - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn stability_scale_clamp() {
+        // At stability=100 the raw value would be deeply negative; must clamp to floor.
+        assert!(SearchLimits::best_move_stability_scale(100) >= BEST_MOVE_TIME_MIN_SCALE);
+    }
+
+    #[test]
+    fn new_with_time_no_increment_gives_finite_limits() {
+        use chess::board::Board;
+        use uci_parser::UciSearchOptions;
+
+        let board = Board::default_board();
+        let opts = UciSearchOptions {
+            wtime: Some(Duration::from_secs(10)),
+            ..Default::default()
+        };
+        // winc intentionally left as None
+
+        let limits = SearchLimits::new(&opts, &board);
+        assert_ne!(
+            limits.soft_timeout,
+            Duration::MAX,
+            "soft_timeout should be finite"
+        );
+        assert_ne!(
+            limits.hard_timeout,
+            Duration::MAX,
+            "hard_timeout should be finite"
+        );
+    }
+}
