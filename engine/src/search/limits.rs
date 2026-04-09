@@ -73,6 +73,11 @@ impl SearchLimits {
             return None;
         }
 
+        // No time control set (depth/nodes-only search): don't scale.
+        if self.soft_timeout == Duration::MAX {
+            return Some(Duration::MAX);
+        }
+
         let scaled =
             self.soft_timeout.as_secs_f32() * Self::best_move_stability_scale(best_move_stability);
 
