@@ -184,7 +184,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             _ => self.iterative_deepening(board),
         };
         if Log::DEBUG {
-            self.send_message(format!("search ended after {} nodes", self.thread_data.nodes));
+            self.send_message(format!(
+                "search ended after {} nodes",
+                self.thread_data.nodes
+            ));
         }
 
         // Try to ensure we have a move
@@ -201,7 +204,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         result
     }
 
-/// Send UCI info to the the output.
+    /// Send UCI info to the the output.
     #[allow(clippy::too_many_arguments)]
     fn send_info(
         &mut self,
@@ -296,12 +299,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 if aspiration_window.failed_low(score) {
                     // fail low, widen the window
-                    aspiration_window
-                        .widen_down(score, self.thread_data.depth as ScoreType);
+                    aspiration_window.widen_down(score, self.thread_data.depth as ScoreType);
                 } else if aspiration_window.failed_high(score) {
                     // fail high, widen the window
-                    aspiration_window
-                        .widen_up(score, self.thread_data.depth as ScoreType);
+                    aspiration_window.widen_up(score, self.thread_data.depth as ScoreType);
                 } else {
                     // we have a valid score, break the loop
                     break 'aspiration_window;
