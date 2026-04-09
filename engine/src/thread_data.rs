@@ -65,10 +65,6 @@ impl ThreadData {
     }
 
     pub fn should_stop(&self, limit_type: LimitType) -> bool {
-        if self.depth <= 1 {
-            return false;
-        }
-
         match limit_type {
             LimitType::Soft => self.soft_limit_reached(),
             LimitType::Hard => self.hard_limit_reached(),
