@@ -8,7 +8,7 @@ use uci_parser::UciSearchOptions;
 
 use crate::defs::MAX_DEPTH;
 
-pub const UCI_OVERHEAD_MS: u64 = 50;
+pub const UCI_OVERHEAD_MS: u64 = 100;
 const BEST_MOVE_TIME_BASE: f32 = 1.;
 const BEST_MOVE_TIME_FACTOR: f32 = 0.05;
 const BEST_MOVE_TIME_MIN_SCALE: f32 = 0.5;
