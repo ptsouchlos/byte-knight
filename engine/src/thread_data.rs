@@ -5,20 +5,18 @@
 
 //! This module defines a thread data structure that holds information and data that is used in search.
 
-use std::time::Instant;
-
-use chess::board::Board;
+use chess::{board::Board, moves::Move};
 use uci_parser::UciSearchOptions;
 
 use crate::{score::ScoreType, search::limits::SearchLimits};
 
 pub struct ThreadData {
-    bestmove_stability: u64,
-    limits: SearchLimits,
-    start_time: Instant,
-    depth: i32,
-    seldepth: i32,
-    nodes: u64,
+    pub(crate) bestmove_stability: u64,
+    pub(crate) prev_best_move: Option<Move>,
+    pub(crate) limits: SearchLimits,
+    pub(crate) depth: i32,
+    pub(crate) seldepth: ScoreType,
+    pub(crate) nodes: u64,
 }
 
 pub enum LimitType {
@@ -28,10 +26,15 @@ pub enum LimitType {
 
 impl ThreadData {
     pub fn new(uci_options: &UciSearchOptions, board: &Board) -> Self {
+        Self::from_limits(SearchLimits::new(uci_options, board))
+    }
+
+    /// Create [`ThreadData`] from pre-built [`SearchLimits`].
+    pub fn from_limits(limits: SearchLimits) -> Self {
         ThreadData {
             bestmove_stability: 0,
-            limits: SearchLimits::new(uci_options, board),
-            start_time: Instant::now(),
+            prev_best_move: None,
+            limits,
             depth: 1,
             seldepth: 0,
             nodes: 0,
@@ -43,6 +46,22 @@ impl ThreadData {
         self.nodes = 0;
         self.seldepth = 0;
         self.bestmove_stability = 0;
+        self.prev_best_move = None;
+    }
+
+    /// Update best-move stability based on the new root best move. If the new
+    /// best move matches the previous iteration's best move, increment the
+    /// stability counter; otherwise reset it to zero.
+    pub fn update_bestmove_stability(&mut self, new_best: Option<Move>) {
+        match (self.prev_best_move, new_best) {
+            (Some(prev), Some(new)) if prev == new => {
+                self.bestmove_stability += 1;
+            }
+            _ => {
+                self.bestmove_stability = 0;
+            }
+        }
+        self.prev_best_move = new_best;
     }
 
     pub fn should_stop(&self, depth: ScoreType, limit_type: LimitType) -> bool {
@@ -57,17 +76,17 @@ impl ThreadData {
     }
 
     /// Check if the soft limit has been reached.
-    /// This includes
     fn soft_limit_reached(&self) -> bool {
         let best_move_stability = self.bestmove_stability;
-        if let Some(soft_time) = self.limits.scaled_soft_limit(best_move_stability) {
-            if self.start_time.elapsed() >= soft_time {
-                return true;
-            }
+        if let Some(soft_time) = self.limits.scaled_soft_limit(best_move_stability)
+            && self.limits.start_time.elapsed() >= soft_time
+        {
+            return true;
         }
 
-        // Always check for depth limits
-        if self.depth >= self.limits.max_depth as i32 {
+        // Stop once the next iteration would exceed max_depth. The current
+        // iteration at `depth == max_depth` must still run.
+        if self.depth > self.limits.max_depth as i32 {
             return true;
         }
 
@@ -75,9 +94,11 @@ impl ThreadData {
     }
 
     /// Check if the hard limit has been reached.
-    /// This includes time, nodes and depth.
+    /// This includes time and nodes. The max-depth boundary is handled by the
+    /// iterative-deepening loop via the soft limit; checking it here would
+    /// cause in-tree stop checks to abort the final iteration mid-search.
     fn hard_limit_reached(&self) -> bool {
-        if self.start_time.elapsed() >= self.limits.hard_timeout {
+        if self.limits.start_time.elapsed() >= self.limits.hard_timeout {
             return true;
         }
 
@@ -85,8 +106,7 @@ impl ThreadData {
             return true;
         }
 
-        // Always check for depth limits
-        if self.depth >= self.limits.max_depth as i32 {
+        if self.depth > self.limits.max_depth as i32 {
             return true;
         }
 
