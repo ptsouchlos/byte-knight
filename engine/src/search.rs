@@ -37,6 +37,7 @@ use crate::{
     score::{LargeScoreType, Score, ScoreType},
     search::limits::SearchLimits,
     table::Table,
+    thread_data::{LimitType, ThreadData},
     traits::Eval,
     ttable,
     tuneable::{
@@ -91,9 +92,7 @@ pub struct Search<'search_lifetime, Log> {
     transposition_table: &'search_lifetime mut TranspositionTable,
     history_table: &'search_lifetime mut HistoryTable,
     killers_table: &'search_lifetime mut KillerMovesTable,
-    nodes: u64,
-    seldepth: ScoreType,
-    limits: SearchLimits,
+    thread_data: ThreadData,
     eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
     lmr_table: Table<f64, 32_000>,
@@ -121,9 +120,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             transposition_table: ttable,
             history_table,
             killers_table,
-            nodes: 0,
-            seldepth: 0,
-            limits: limits.clone(),
+            thread_data: ThreadData::from_limits(limits),
             eval: ByteKnightEvaluation::default(),
             stop_flag: None,
             lmr_table: table,
@@ -152,7 +149,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         if Log::DEBUG {
             self.send_message(format!("starting search for FEN {}", board.to_fen()));
-            self.send_message(format!("searching {}", self.limits));
+            self.send_message(format!("searching {}", self.thread_data.limits));
         }
 
         let ml = move_generation::legal::generate_moves(board, MoveFilter::All);
@@ -170,7 +167,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     depth: 0,
                     pv: PrincipleVariation::new(),
                 };
-                self.nodes += 1;
+                self.thread_data.nodes += 1;
                 if Log::DEBUG {
                     self.send_message(
                         format!(
@@ -187,7 +184,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             _ => self.iterative_deepening(board),
         };
         if Log::DEBUG {
-            self.send_message(format!("search ended after {} nodes", self.nodes));
+            self.send_message(format!("search ended after {} nodes", self.thread_data.nodes));
         }
 
         // Try to ensure we have a move
@@ -199,14 +196,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             result.score = self.eval.eval(board);
         }
 
-        // search ended, reset our node count
-        self.nodes = 0;
+        // search ended, reset our per-search thread state
+        self.thread_data.reset();
         result
     }
 
     fn should_stop_searching(&self) -> bool {
-        self.limits.start_time.elapsed() >= self.limits.hard_timeout // hard timeout
-            || self.nodes >= self.limits.max_nodes // node limit reached
+        let depth = self.thread_data.depth as ScoreType;
+        self.thread_data.should_stop(depth, LimitType::Hard)
             || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed))
         // stop flag set
     }
@@ -274,15 +271,25 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
 
-        'deepening: while self.limits.start_time.elapsed() <= self.limits.soft_timeout
-            && best_result.depth <= self.limits.max_depth
-            && !self
-                .stop_flag
-                .as_ref()
-                .is_some_and(|f| f.load(Ordering::Relaxed))
-        {
+        'deepening: loop {
+            // sync the iteration depth into thread_data so in-tree hard-limit
+            // checks see the current ID depth (and the `depth <= 1` guard keeps
+            // the first iteration from being interrupted).
+            self.thread_data.depth = best_result.depth as i32;
+
+            if self
+                .thread_data
+                .should_stop(best_result.depth as ScoreType, LimitType::Soft)
+                || self
+                    .stop_flag
+                    .as_ref()
+                    .is_some_and(|f| f.load(Ordering::Relaxed))
+            {
+                break 'deepening;
+            }
+
             // reset seldepth for this iteration
-            self.seldepth = 0;
+            self.thread_data.seldepth = 0;
 
             // create an aspiration window around the best result so far
             let mut aspiration_window =
@@ -335,35 +342,43 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             if Log::INFO {
                 // send UCI info
+                let nodes = self.thread_data.nodes;
+                let elapsed = self.thread_data.limits.start_time.elapsed();
                 self.send_info(
                     best_result.depth,
-                    self.seldepth,
-                    self.nodes,
+                    self.thread_data.seldepth,
+                    nodes,
                     best_result.score,
-                    (self.nodes as f32 / self.limits.start_time.elapsed().as_secs_f32()).trunc(),
-                    self.limits.start_time.elapsed().as_millis() as u64,
+                    (nodes as f32 / elapsed.as_secs_f32()).trunc(),
+                    elapsed.as_millis() as u64,
                     self.transposition_table.hashfull(),
                     &best_result.pv,
                 );
             }
+
+            // update best-move stability for soft-limit scaling on the next iter
+            self.thread_data
+                .update_bestmove_stability(best_result.best_move);
 
             // increment depth for next iteration
             best_result.depth += 1;
         }
 
         // update total nodes for the current search
-        best_result.nodes = self.nodes;
+        best_result.nodes = self.thread_data.nodes;
 
         if Log::INFO {
             // Send one last info line with the final result
             // send UCI info
+            let nodes = self.thread_data.nodes;
+            let elapsed = self.thread_data.limits.start_time.elapsed();
             self.send_info(
                 best_result.depth,
-                self.seldepth,
-                self.nodes,
+                self.thread_data.seldepth,
+                nodes,
                 best_result.score,
-                (self.nodes as f32 / self.limits.start_time.elapsed().as_secs_f32()).trunc(),
-                self.limits.start_time.elapsed().as_millis() as u64,
+                (nodes as f32 / elapsed.as_secs_f32()).trunc(),
+                elapsed.as_millis() as u64,
                 self.transposition_table.hashfull(),
                 &best_result.pv,
             );
@@ -390,8 +405,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         Node: NodeType,
     {
         // increment node count
-        self.nodes += 1;
-        self.seldepth = self.seldepth.max(ply);
+        self.thread_data.nodes += 1;
+        self.thread_data.seldepth = self.thread_data.seldepth.max(ply);
 
         // Ply guard: prevent unbounded recursion
         if ply >= MAX_PLY {
@@ -753,7 +768,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Quiescence search shouldn't be called at root
         debug_assert!(ply > 0);
 
-        self.seldepth = self.seldepth.max(ply);
+        self.thread_data.seldepth = self.thread_data.seldepth.max(ply);
 
         // Are we in a draw?
         if ply > 0 && board.is_draw() {
@@ -824,7 +839,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             } else {
                 let eval =
                     -self.quiescence::<Node>(board, ply + 1, -beta, -alpha_use, &mut local_pv);
-                self.nodes += 1;
+                self.thread_data.nodes += 1;
                 eval
             };
 
