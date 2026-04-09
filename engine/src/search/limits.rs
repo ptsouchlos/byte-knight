@@ -9,6 +9,8 @@ use uci_parser::UciSearchOptions;
 use crate::defs::MAX_DEPTH;
 
 pub const UCI_OVERHEAD_MS: u64 = 50;
+const BEST_MOVE_TIME_BASE: f32 = 1.5;
+const BEST_MOVE_TIME_FACTOR: f32 = 0.1;
 
 /// Input parameters for the search.
 #[derive(Clone, Debug, Copy)]
@@ -78,7 +80,7 @@ impl SearchLimits {
     }
 
     fn best_move_stability_scale(best_move_stability: u64) -> f32 {
-        1.0 - best_move_stability as f32 * 0.1
+        BEST_MOVE_TIME_BASE - BEST_MOVE_TIME_FACTOR * best_move_stability as f32
     }
 
     fn calculate_time_limits(time: Duration, inc: Duration) -> (Duration, Duration) {
