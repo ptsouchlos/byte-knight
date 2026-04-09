@@ -9,8 +9,8 @@ use uci_parser::UciSearchOptions;
 use crate::defs::MAX_DEPTH;
 
 pub const UCI_OVERHEAD_MS: u64 = 50;
-const BEST_MOVE_TIME_BASE: f32 = 1.5;
-const BEST_MOVE_TIME_FACTOR: f32 = 0.1;
+const BEST_MOVE_TIME_BASE: f32 = 1.;
+const BEST_MOVE_TIME_FACTOR: f32 = 0.05;
 const BEST_MOVE_TIME_MIN_SCALE: f32 = 0.5;
 
 /// Input parameters for the search.
@@ -70,13 +70,9 @@ impl SearchLimits {
     }
 
     pub(crate) fn scaled_soft_limit(&self, best_move_stability: u64) -> Option<Duration> {
-        if self.soft_timeout.is_zero() {
-            return None;
-        }
-
         // No time control set (depth/nodes-only search): don't scale.
-        if self.soft_timeout == Duration::MAX {
-            return Some(Duration::MAX);
+        if self.soft_timeout.is_zero() || self.soft_timeout == Duration::MAX {
+            return None;
         }
 
         let scaled =
@@ -91,10 +87,10 @@ impl SearchLimits {
     }
 
     fn calculate_time_limits(time: Duration, inc: Duration) -> (Duration, Duration) {
-        let max_time =
-            Duration::from_millis((time.as_millis() as u64).saturating_sub(UCI_OVERHEAD_MS));
-        let soft = max_time / 20 + inc;
-        let hard = max_time / 5 + inc;
+        let overhead = Duration::from_millis(UCI_OVERHEAD_MS);
+        let budget = time.saturating_sub(overhead);
+        let soft = budget / 20 + inc / 2;
+        let hard = (budget / 5 + inc / 2).min(budget).max(soft);
 
         (hard, soft)
     }
@@ -141,12 +137,12 @@ mod tests {
 
     #[test]
     fn stability_scale_initial() {
-        assert!((SearchLimits::best_move_stability_scale(0) - 1.5).abs() < f32::EPSILON);
+        assert!((SearchLimits::best_move_stability_scale(0) - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]
     fn stability_scale_mid() {
-        assert!((SearchLimits::best_move_stability_scale(5) - 1.0).abs() < f32::EPSILON);
+        assert!((SearchLimits::best_move_stability_scale(5) - 0.75).abs() < f32::EPSILON);
     }
 
     #[test]
