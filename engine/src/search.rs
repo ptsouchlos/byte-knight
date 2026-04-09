@@ -201,14 +201,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         result
     }
 
-    fn should_stop_searching(&self) -> bool {
-        let depth = self.thread_data.depth as ScoreType;
-        self.thread_data.should_stop(depth, LimitType::Hard)
-            || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed))
-        // stop flag set
-    }
-
-    /// Send UCI info to the the output.
+/// Send UCI info to the the output.
     #[allow(clippy::too_many_arguments)]
     fn send_info(
         &mut self,
@@ -272,14 +265,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         'deepening: loop {
-            // sync the iteration depth into thread_data so in-tree hard-limit
-            // checks see the current ID depth (and the `depth <= 1` guard keeps
-            // the first iteration from being interrupted).
-            self.thread_data.depth = best_result.depth as i32;
-
-            if self
-                .thread_data
-                .should_stop(best_result.depth as ScoreType, LimitType::Soft)
+            if self.thread_data.should_stop(LimitType::Soft)
                 || self
                     .stop_flag
                     .as_ref()
@@ -293,7 +279,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // create an aspiration window around the best result so far
             let mut aspiration_window =
-                AspirationWindow::around(best_result.score, best_result.depth as ScoreType);
+                AspirationWindow::around(best_result.score, self.thread_data.depth as ScoreType);
             let mut pv = PrincipleVariation::new();
 
             let mut score: Score;
@@ -301,7 +287,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 // search the tree, starting at the current depth (starts at 1)
                 score = self.negamax::<RootNode>(
                     board,
-                    best_result.depth as ScoreType,
+                    self.thread_data.depth as ScoreType,
                     0,
                     aspiration_window.alpha(),
                     aspiration_window.beta(),
@@ -310,25 +296,33 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 if aspiration_window.failed_low(score) {
                     // fail low, widen the window
-                    aspiration_window.widen_down(score, best_result.depth as ScoreType);
+                    aspiration_window
+                        .widen_down(score, self.thread_data.depth as ScoreType);
                 } else if aspiration_window.failed_high(score) {
                     // fail high, widen the window
-                    aspiration_window.widen_up(score, best_result.depth as ScoreType);
+                    aspiration_window
+                        .widen_up(score, self.thread_data.depth as ScoreType);
                 } else {
                     // we have a valid score, break the loop
                     break 'aspiration_window;
                 }
 
                 // check stop conditions
-                if self.should_stop_searching() {
+                if self.thread_data.should_stop(LimitType::Hard)
+                    || self
+                        .stop_flag
+                        .as_ref()
+                        .is_some_and(|f| f.load(Ordering::Relaxed))
+                {
                     // we have to stop searching now, use the best result we have
                     // no score update
                     break 'deepening;
                 }
             }
 
-            // update the best result
+            // update the best result (commit the completed iteration)
             best_result.score = score;
+            best_result.depth = self.thread_data.depth as u8;
             if let Some(mv) = pv.iter().next().copied() {
                 best_result.best_move = Some(mv);
             }
@@ -361,7 +355,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 .update_bestmove_stability(best_result.best_move);
 
             // increment depth for next iteration
-            best_result.depth += 1;
+            self.thread_data.depth += 1;
         }
 
         // update total nodes for the current search
@@ -616,7 +610,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             }
 
             // do we need to stop searching?
-            if self.should_stop_searching() {
+            if self.thread_data.should_stop(LimitType::Hard)
+                || self
+                    .stop_flag
+                    .as_ref()
+                    .is_some_and(|f| f.load(Ordering::Relaxed))
+            {
                 break;
             }
         }
@@ -863,7 +862,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 }
             }
 
-            if self.should_stop_searching() {
+            if self.thread_data.should_stop(LimitType::Hard)
+                || self
+                    .stop_flag
+                    .as_ref()
+                    .is_some_and(|f| f.load(Ordering::Relaxed))
+            {
                 break;
             }
         }
