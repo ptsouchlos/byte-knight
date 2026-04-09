@@ -64,8 +64,8 @@ impl ThreadData {
         self.prev_best_move = new_best;
     }
 
-    pub fn should_stop(&self, depth: ScoreType, limit_type: LimitType) -> bool {
-        if depth <= 1 {
+    pub fn should_stop(&self, limit_type: LimitType) -> bool {
+        if self.depth <= 1 {
             return false;
         }
 
