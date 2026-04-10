@@ -26,6 +26,7 @@ pub mod pawn_structure;
 pub mod phased_score;
 pub(crate) mod principle_variation;
 pub mod score;
+mod scored_move;
 pub mod search;
 pub mod structure;
 pub(crate) mod table;
