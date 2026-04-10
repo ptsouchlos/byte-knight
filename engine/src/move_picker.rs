@@ -305,26 +305,16 @@ impl MovePicker {
     /// Selection sort: find the highest-scored move in `moves[pick_index..range_end]`,
     /// swap it to `pick_index`, advance `pick_index`, and return the move.
     fn selection_sort_pick(&mut self) -> Move {
+        let slice = self.scored_moves.as_mut_slice();
         let mut best_idx = self.pick_index;
-        for i in (self.pick_index + 1)..self.scored_moves.len() {
-            if let (Some(mv_i), Some(mv_best)) =
-                (self.scored_moves.at(i), self.scored_moves.at(best_idx))
-            {
-                if mv_i.score > mv_best.score {
-                    best_idx = i;
-                }
+        for i in (self.pick_index + 1)..slice.len() {
+            if slice[i].score > slice[best_idx].score {
+                best_idx = i;
             }
         }
-
-        if best_idx != self.pick_index {
-            self.scored_moves
-                .as_mut_slice()
-                .swap(self.pick_index, best_idx);
-        }
-
-        let mv = self.scored_moves.as_slice()[self.pick_index];
+        slice.swap(self.pick_index, best_idx);
         self.pick_index += 1;
-        mv.mv
+        slice[self.pick_index - 1].mv
     }
 }
 
