@@ -9,8 +9,8 @@ use uci_parser::UciSearchOptions;
 use crate::defs::MAX_DEPTH;
 
 pub const UCI_OVERHEAD_MS: u64 = 100;
-const BEST_MOVE_TIME_BASE: f32 = 1.;
-const BEST_MOVE_TIME_FACTOR: f32 = 0.05;
+const BEST_MOVE_TIME_BASE: f32 = 1.5;
+const BEST_MOVE_TIME_FACTOR: f32 = 0.1;
 const BEST_MOVE_TIME_MIN_SCALE: f32 = 0.5;
 
 /// Input parameters for the search.
@@ -70,14 +70,18 @@ impl SearchLimits {
         params
     }
 
-    pub(crate) fn scaled_soft_limit(&self, best_move_stability: u64) -> Option<Duration> {
+    pub(crate) fn scaled_soft_limit(&self, best_move_stability: Option<u64>) -> Option<Duration> {
         // No time control set (depth/nodes-only search): don't scale.
         if self.soft_timeout.is_zero() || self.soft_timeout == Duration::MAX {
             return None;
         }
 
-        let scaled =
-            self.soft_timeout.as_secs_f32() * Self::best_move_stability_scale(best_move_stability);
+        let best_move_stability_scale = match best_move_stability {
+            Some(value) => Self::best_move_stability_scale(value),
+            None => 1.0,
+        };
+
+        let scaled = self.soft_timeout.as_secs_f32() * best_move_stability_scale;
 
         Some(Duration::from_secs_f32(scaled))
     }
