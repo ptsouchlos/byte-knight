@@ -29,6 +29,7 @@ pub mod score;
 pub mod search;
 pub mod structure;
 pub(crate) mod table;
+pub mod thread_data;
 pub mod traits;
 pub mod ttable;
 pub mod tuneable;

@@ -14,7 +14,7 @@ use crate::{
     history_table::HistoryTable,
     killers_table::KillerMovesTable,
     log_level::{LogDebug, LogInfo},
-    search::{Search, SearchParameters, SearchResult},
+    search::{Search, SearchResult, limits::SearchLimits},
     ttable::{self, TranspositionTable},
 };
 
@@ -84,7 +84,7 @@ impl Engine {
 
     pub fn search(
         &mut self,
-        params: SearchParameters,
+        params: SearchLimits,
         stop_flag: Arc<AtomicBool>,
         output: &mut dyn Write,
     ) -> SearchResult {
@@ -92,7 +92,7 @@ impl Engine {
         self.transposition_table.increment_age();
         if self.debug {
             Search::<LogDebug>::new(
-                &params,
+                params,
                 &mut self.transposition_table,
                 &mut self.history_table,
                 &mut self.killers_table,
@@ -101,7 +101,7 @@ impl Engine {
             .search(&mut self.board, Some(stop_flag))
         } else {
             Search::<LogInfo>::new(
-                &params,
+                params,
                 &mut self.transposition_table,
                 &mut self.history_table,
                 &mut self.killers_table,

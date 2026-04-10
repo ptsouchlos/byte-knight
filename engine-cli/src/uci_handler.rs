@@ -14,7 +14,7 @@ use std::{
 };
 
 use chess::{moves::Move, pieces::SQUARE_NAME};
-use engine::{defs::About, engine::Engine, search::SearchParameters};
+use engine::{defs::About, engine::Engine, search::limits::SearchLimits};
 use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
 use crate::input_handler::{CommandProxy, EngineCommand, InputHandler};
@@ -122,8 +122,7 @@ impl<W: Write> UciHandler<W> {
 
                         // Reset stop flag before building search parameters
                         self.stop_flag.store(false, Ordering::Relaxed);
-                        let search_params =
-                            SearchParameters::new(&search_options, self.engine.board());
+                        let search_params = SearchLimits::new(&search_options, self.engine.board());
                         let stop_flag = Arc::clone(&self.stop_flag);
                         // Split borrow because UciHandler owns the engine and the output, but seach need mutable output to the output.
                         let output: &mut dyn Write = &mut self.output;
