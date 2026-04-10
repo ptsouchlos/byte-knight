@@ -161,6 +161,12 @@ mod tests {
     }
 
     #[test]
+    fn stability_scale_middle() {
+        // stability=5: 1.5 - 0.1*5 = 1.0 (neutral point)
+        assert!((SearchLimits::best_move_stability_scale(5) - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
     fn initial_scaled_soft_limits() {
         let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
         // Make sure our initial scaled soft limits make sense at the start of a search where we have no data.
