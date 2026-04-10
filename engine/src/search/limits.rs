@@ -51,14 +51,15 @@ impl SearchLimits {
             params.soft_timeout = time;
             params.hard_timeout = time;
         } else {
+            // Get the time and increment
             let (time, increment) = if board.side_to_move().is_white() {
                 (uci_options.wtime, uci_options.winc)
             } else {
                 (uci_options.btime, uci_options.binc)
             };
 
+            // Calculate our soft/hard limits
             if let Some(time) = time {
-                // TODO: How can we tune these params?
                 let inc = increment.unwrap_or(Duration::ZERO);
                 let (hard, soft) = SearchLimits::calculate_time_limits(time, inc);
                 params.soft_timeout = soft;
@@ -174,5 +175,49 @@ mod tests {
             Duration::MAX,
             "hard_timeout should be finite"
         );
+    }
+
+    #[test]
+    fn new_with_all_params() {
+        use chess::board::Board;
+        use uci_parser::UciSearchOptions;
+
+        let board = Board::default_board();
+        let opts = UciSearchOptions {
+            movetime: Some(Duration::from_secs(10)),
+            depth: Some(15),
+            nodes: Some(30_000),
+            ..Default::default()
+        };
+
+        let limits = SearchLimits::new(&opts, &board);
+        assert_eq!(limits.max_nodes, 30_000);
+        assert_eq!(limits.max_depth, 15);
+        // These should be equal because we used movetime
+        assert_eq!(limits.hard_timeout, limits.soft_timeout);
+    }
+
+    #[test]
+    fn new_fischer_time_same_both_sides() {
+        use chess::board::Board;
+        use uci_parser::UciSearchOptions;
+
+        let mut board = Board::default_board();
+        let opts = UciSearchOptions {
+            wtime: Some(Duration::from_secs(10)),
+            winc: Some(Duration::from_secs(1)),
+            btime: Some(Duration::from_secs(10)),
+            binc: Some(Duration::from_secs(1)),
+            ..Default::default()
+        };
+
+        let limits_w = SearchLimits::new(&opts, &board);
+        // Make a move to change side to move
+        board.make_uci_move("e2e4").unwrap();
+
+        let limits_b = SearchLimits::new(&opts, &board);
+
+        assert_eq!(limits_w.soft_timeout, limits_b.soft_timeout);
+        assert_eq!(limits_w.hard_timeout, limits_b.hard_timeout);
     }
 }
