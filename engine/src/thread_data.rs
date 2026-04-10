@@ -4,6 +4,7 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 //! This module defines a thread data structure that holds information and data that is used in search.
+//! Credit to the Hobbes author for this original setup which has been adapted for use in byte-knight.
 
 use chess::{board::Board, moves::Move};
 use uci_parser::UciSearchOptions;
