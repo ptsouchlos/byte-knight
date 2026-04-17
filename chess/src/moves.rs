@@ -65,41 +65,35 @@ impl MoveFlag {
             MoveFlag::PromotionBishop
             | MoveFlag::PromotionKnight
             | MoveFlag::PromotionQueen
-            | MoveFlag::PromotionRook => {
-                if moving_piece != Piece::Pawn {
-                    bail!(
-                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
-                        self,
-                        moving_piece
-                    );
-                }
+            | MoveFlag::PromotionRook
+                if moving_piece != Piece::Pawn =>
+            {
+                bail!(
+                    "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                    self,
+                    moving_piece
+                );
             }
-            MoveFlag::DoublePush => {
-                if moving_piece != Piece::Pawn {
-                    bail!(
-                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
-                        self,
-                        moving_piece
-                    );
-                }
+            MoveFlag::DoublePush if moving_piece != Piece::Pawn => {
+                bail!(
+                    "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                    self,
+                    moving_piece
+                );
             }
-            MoveFlag::EnPassant => {
-                if moving_piece != Piece::Pawn {
-                    bail!(
-                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
-                        self,
-                        moving_piece
-                    );
-                }
+            MoveFlag::EnPassant if moving_piece != Piece::Pawn => {
+                bail!(
+                    "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                    self,
+                    moving_piece
+                );
             }
-            MoveFlag::CastleK | MoveFlag::CastleQ => {
-                if moving_piece != Piece::King {
-                    bail!(
-                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
-                        self,
-                        moving_piece
-                    );
-                }
+            MoveFlag::CastleK | MoveFlag::CastleQ if moving_piece != Piece::King => {
+                bail!(
+                    "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                    self,
+                    moving_piece
+                );
             }
             _ => {}
         }
