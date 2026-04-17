@@ -178,6 +178,16 @@ mod tests {
     }
 
     #[test]
+    fn scaled_soft_limits_with_stability() {
+        let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
+        // Same scaling as stability_scale_middle test, so we expect a 15% reduction in time.
+        let duration = limits.scaled_soft_limit(Some(5));
+        assert!(duration.is_some_and(|val| {
+            (val.as_secs_f32() - limits.soft_timeout.as_secs_f32() * 0.85).abs() < f32::EPSILON
+        }));
+    }
+
+    #[test]
     fn stability_scale_clamp() {
         // At stability=100 the raw value would be deeply negative; must clamp to floor.
         assert!(SearchLimits::best_move_stability_scale(100) >= BEST_MOVE_TIME_MIN_SCALE);
