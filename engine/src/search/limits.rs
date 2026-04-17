@@ -162,8 +162,8 @@ mod tests {
 
     #[test]
     fn stability_scale_middle() {
-        // stability=5: 1.5 - 0.1*5 = 1.0 (neutral point)
-        assert!((SearchLimits::best_move_stability_scale(5) - 1.0).abs() < f32::EPSILON);
+        // stability=5: 1.1 - 0.05*5 = 0.85 (neutral point)
+        assert!((SearchLimits::best_move_stability_scale(5) - 0.85).abs() < f32::EPSILON);
     }
 
     #[test]
