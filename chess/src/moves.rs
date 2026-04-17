@@ -65,41 +65,35 @@ impl MoveFlag {
             MoveFlag::PromotionBishop
             | MoveFlag::PromotionKnight
             | MoveFlag::PromotionQueen
-            | MoveFlag::PromotionRook => {
-                if moving_piece != Piece::Pawn {
-                    bail!(
-                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
-                        self,
-                        moving_piece
-                    );
-                }
+            | MoveFlag::PromotionRook
+                if moving_piece != Piece::Pawn =>
+            {
+                bail!(
+                    "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                    self,
+                    moving_piece
+                );
             }
-            MoveFlag::DoublePush => {
-                if moving_piece != Piece::Pawn {
-                    bail!(
-                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
-                        self,
-                        moving_piece
-                    );
-                }
+            MoveFlag::DoublePush if moving_piece != Piece::Pawn => {
+                bail!(
+                    "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                    self,
+                    moving_piece
+                );
             }
-            MoveFlag::EnPassant => {
-                if moving_piece != Piece::Pawn {
-                    bail!(
-                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
-                        self,
-                        moving_piece
-                    );
-                }
+            MoveFlag::EnPassant if moving_piece != Piece::Pawn => {
+                bail!(
+                    "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                    self,
+                    moving_piece
+                );
             }
-            MoveFlag::CastleK | MoveFlag::CastleQ => {
-                if moving_piece != Piece::King {
-                    bail!(
-                        "Invalid move flag: {:?} cannot be used with moving piece {:?}",
-                        self,
-                        moving_piece
-                    );
-                }
+            MoveFlag::CastleK | MoveFlag::CastleQ if moving_piece != Piece::King => {
+                bail!(
+                    "Invalid move flag: {:?} cannot be used with moving piece {:?}",
+                    self,
+                    moving_piece
+                );
             }
             _ => {}
         }
@@ -402,5 +396,55 @@ mod tests {
         assert!(mv.flag() == MoveFlag::DoublePush);
         assert_eq!(mv.from(), from.to_square_index());
         assert_eq!(mv.to(), to.to_square_index());
+    }
+
+    #[test]
+    fn move_validation() {
+        let from = Square::new(File::A, Rank::R2);
+        let to = Square::new(File::A, Rank::R4);
+
+        // Test pawn moves
+        for flag in [
+            MoveFlag::PromotionQueen,
+            MoveFlag::PromotionRook,
+            MoveFlag::PromotionBishop,
+            MoveFlag::PromotionKnight,
+            MoveFlag::DoublePush,
+            MoveFlag::EnPassant,
+        ] {
+            let mv = Move::new(from, to, flag);
+            assert!(mv.flag().validate(Piece::Pawn).is_ok());
+            assert!(mv.flag().validate(Piece::Knight).is_err());
+            assert!(mv.flag().validate(Piece::Bishop).is_err());
+            assert!(mv.flag().validate(Piece::Rook).is_err());
+            assert!(mv.flag().validate(Piece::Queen).is_err());
+            assert!(mv.flag().validate(Piece::King).is_err());
+        }
+
+        // test castle moves
+        let mv = Move::new(from, to, MoveFlag::CastleK);
+        assert!(mv.flag().validate(Piece::King).is_ok());
+        assert!(mv.flag().validate(Piece::Pawn).is_err());
+        assert!(mv.flag().validate(Piece::Knight).is_err());
+        assert!(mv.flag().validate(Piece::Bishop).is_err());
+        assert!(mv.flag().validate(Piece::Rook).is_err());
+        assert!(mv.flag().validate(Piece::Queen).is_err());
+
+        let mv = Move::new(from, to, MoveFlag::CastleQ);
+        assert!(mv.flag().validate(Piece::King).is_ok());
+        assert!(mv.flag().validate(Piece::Pawn).is_err());
+        assert!(mv.flag().validate(Piece::Knight).is_err());
+        assert!(mv.flag().validate(Piece::Bishop).is_err());
+        assert!(mv.flag().validate(Piece::Rook).is_err());
+        assert!(mv.flag().validate(Piece::Queen).is_err());
+
+        // standard
+        let mv = Move::new(from, to, MoveFlag::Standard);
+        assert!(mv.flag().validate(Piece::Pawn).is_ok());
+        assert!(mv.flag().validate(Piece::Knight).is_ok());
+        assert!(mv.flag().validate(Piece::Bishop).is_ok());
+        assert!(mv.flag().validate(Piece::Rook).is_ok());
+        assert!(mv.flag().validate(Piece::Queen).is_ok());
+        assert!(mv.flag().validate(Piece::King).is_ok());
     }
 }

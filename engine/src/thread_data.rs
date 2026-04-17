@@ -74,7 +74,7 @@ impl ThreadData {
 
     /// Check if the soft limit has been reached.
     fn soft_limit_reached(&self) -> bool {
-        let best_move_stability = self.bestmove_stability;
+        let best_move_stability = self.bestmove_stability_for_scaling();
         if let Some(soft_time) = self.limits.scaled_soft_limit(best_move_stability)
             && self.limits.start_time.elapsed() >= soft_time
         {
@@ -108,5 +108,14 @@ impl ThreadData {
         }
 
         false
+    }
+
+    fn bestmove_stability_for_scaling(&self) -> Option<u64> {
+        // Only return a value if the previous move has a value.
+        if self.prev_best_move.is_some() {
+            Some(self.bestmove_stability)
+        } else {
+            None
+        }
     }
 }

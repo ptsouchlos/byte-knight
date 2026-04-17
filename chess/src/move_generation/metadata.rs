@@ -119,9 +119,9 @@ pub fn compute(board: &Board) -> CheckPinMetadata {
             let mut checkers_clone = checkers;
             let checker = bitboard_helpers::next_bit(&mut checkers_clone) as u8;
 
-            let ray = rays::between(king_sq, checker as u8);
+            let ray = rays::between(king_sq, checker);
 
-            if let Some((piece, side)) = board.piece_on_square(checker as u8) {
+            if let Some((piece, side)) = board.piece_on_square(checker) {
                 debug_assert!(side == them);
                 let is_slider = piece.is_slider();
                 if is_slider {
