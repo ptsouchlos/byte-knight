@@ -529,13 +529,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     && depth >= LMR_MIN_DEPTH
                     && moves_seen as usize >= LMR_MIN_MOVES_SEEN
                 {
-                    // Reduce reduction for killer moves.
+                    // Apply less LMR reduction for killer moves.
                     if is_killer {
                         (lmr_reduction - 1).max(1)
                     } else {
                         lmr_reduction
                     }
                 } else {
+                    // No LMR reduction, so just the normal step.
                     1
                 };
 
@@ -586,6 +587,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 }
 
                 // PV first move, or null-window re-search beat alpha, so now do a full window search
+                // // Check the null-window result before deciding to re-search
                 if Node::PV && (moves_seen == 0 || (score > alpha && score < beta)) {
                     score = -self.negamax::<Node::Next>(
                         board,
