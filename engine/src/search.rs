@@ -32,7 +32,7 @@ use crate::{
     lmr,
     log_level::LogLevel,
     move_picker,
-    node_types::{NodeType, NonPvNode, PvNode, RootNode},
+    node_types::{NodeType, NonPvNode, RootNode},
     principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
     search::limits::SearchLimits,
@@ -518,46 +518,84 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // Don't bother searching drawn positions
             if !board.is_draw() {
-                score =
-                // Principal Variation Search (PVS)
-                if moves_seen == 0 {
-                    -self.negamax::<Node::Next>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
-                } else {
-                    let is_killer = self.killers_table.get(ply as u8).iter().any(|entry|entry.is_some_and(|k|k.matches(mv, piece)));
-                    // No LMR reduction for killer moves
-                    let reduction = if is_quiet && depth >= LMR_MIN_DEPTH && moves_seen as usize >= LMR_MIN_MOVES_SEEN {
-                        if is_killer {
-                            // Reduce less if the move is a killer
-                            (lmr_reduction-1).max(1)
-                        } else {
-                            lmr_reduction
-                        }
+                let is_killer = self
+                    .killers_table
+                    .get(ply as u8)
+                    .iter()
+                    .any(|entry| entry.is_some_and(|k| k.matches(mv, piece)));
+
+                // Compute LMR reduction
+                let reduction = if is_quiet
+                    && depth >= LMR_MIN_DEPTH
+                    && moves_seen as usize >= LMR_MIN_MOVES_SEEN
+                {
+                    // Reduce reduction for killer moves.
+                    if is_killer {
+                        (lmr_reduction - 1).max(1)
                     } else {
-                        1
-                    };
-
-                    // Calculate the reduced depth
-                    let reduced_depth = depth.saturating_sub(reduction);
-
-                    // Search with a null window at a reduced depth
-                    let mut temp_score = -self.negamax::<NonPvNode>(board, reduced_depth, ply + 1, -alpha - 1, -alpha, &mut local_pv);
-
-                    // If the reduced depth failed, verify again at full depth with null window to avoid a more expensive full re-search
-                    temp_score = if temp_score > alpha && reduction > 1 {
-                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha - 1, -alpha, &mut local_pv)
+                        lmr_reduction
                     }
-                    else {
-                        temp_score
-                    };
-
-                    // If it fails again, we now know we need to do a full re-search
-                    if temp_score > alpha && temp_score < beta {
-                        -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha, &mut local_pv)
-                    }
-                    else {
-                        temp_score
-                    }
+                } else {
+                    1
                 };
+
+                // -----------------------------------------------------------------------
+                // Principal Variation Search (PVS)
+                // We make the assumption that the first move will be best.
+                // Non-first moves get a null-window search, possibly at reduced depth.
+                // If a move beats alpha, we have to re-search with a full window.
+                // -----------------------------------------------------------------------
+                if moves_seen > 0 {
+                    // Figure out the search depth, factoring in the LMR reduction.
+                    let search_depth = if reduction > 1 {
+                        depth.saturating_sub(reduction)
+                    } else {
+                        depth - 1
+                    };
+                    score = -self.negamax::<NonPvNode>(
+                        board,
+                        search_depth,
+                        ply + 1,
+                        -alpha - 1,
+                        -alpha,
+                        &mut local_pv,
+                    );
+
+                    // Reduced search beat alpha, so now verify at full depth with null window
+                    if score > alpha && reduction > 1 {
+                        score = -self.negamax::<NonPvNode>(
+                            board,
+                            depth - 1,
+                            ply + 1,
+                            -alpha - 1,
+                            -alpha,
+                            &mut local_pv,
+                        );
+                    }
+                }
+                // Non-PV first move: null-window at full depth
+                else if !Node::PV {
+                    score = -self.negamax::<NonPvNode>(
+                        board,
+                        depth - 1,
+                        ply + 1,
+                        -alpha - 1,
+                        -alpha,
+                        &mut local_pv,
+                    );
+                }
+
+                // PV first move, or null-window re-search beat alpha, so now do a full window search
+                if Node::PV && (moves_seen == 0 || (score > alpha && score < beta)) {
+                    score = -self.negamax::<Node::Next>(
+                        board,
+                        depth - 1,
+                        ply + 1,
+                        -beta,
+                        -alpha,
+                        &mut local_pv,
+                    );
+                }
             }
 
             // undo the move
