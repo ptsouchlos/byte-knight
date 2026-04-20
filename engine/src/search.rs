@@ -39,7 +39,7 @@ use crate::{
     table::Table,
     thread_data::{LimitType, ThreadData},
     traits::Eval,
-    ttable,
+    ttable::{self, TranspositionTableEntry},
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
         NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
@@ -430,7 +430,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
         // Check if we have a transposition table entry and if we can return early
-        let tt_move = match self.transposition_table.probe::<Node>(
+        let tt_entry = match self.transposition_table.probe::<Node>(
             depth,
             ply,
             board.zobrist_hash(),
@@ -442,21 +442,23 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if !Node::PV {
                     return entry.score.ply_relative(ply);
                 }
-                Some(entry.board_move)
+                Some(entry)
             }
-            ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
+            ttable::ProbeResult::Hit(entry) => Some(entry),
             ttable::ProbeResult::Empty => None,
         };
 
         // Internal Iterative Reductions: https://www.chessprogramming.org/Internal_Iterative_Reductions
         // If no tt entry was found, searching it will be very costly, so we reduce the depth. This is
         // working under the assumption that the position is likely not important.
-        if tt_move.is_none() && depth >= IIR_MIN_DEPTH {
+        if tt_entry.is_none() && depth >= IIR_MIN_DEPTH {
             depth -= IIR_DEPTH_REDUCTION;
         }
 
+        let tt_move = tt_entry.map(|entry| entry.board_move);
+
         // can we prune the current node with something other than TT?
-        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta, alpha) {
+        if let Some(score) = self.pruned_score::<Node>(tt_entry, board, depth, ply, beta, alpha) {
             return score;
         }
 
@@ -704,6 +706,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     /// The score of the position if it can be pruned, otherwise None.
     fn pruned_score<Node: NodeType>(
         &mut self,
+        tt_entry: Option<TranspositionTableEntry>,
         board: &Board,
         depth: ScoreType,
         ply: ScoreType,
@@ -761,6 +764,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             && depth >= NMP_MIN_DEPTH
             && static_eval >= beta
             && sufficient_material
+            && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
             let null_move_depth = depth - NMP_DEPTH_REDUCTION - 1;
             let mut null_board = board.clone();
