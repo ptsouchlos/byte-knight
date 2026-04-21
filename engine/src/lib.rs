@@ -27,6 +27,7 @@ pub mod phased_score;
 pub(crate) mod principle_variation;
 pub mod score;
 pub mod search;
+pub mod see;
 pub mod structure;
 pub(crate) mod table;
 pub mod thread_data;
