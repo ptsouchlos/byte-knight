@@ -541,6 +541,21 @@ pub fn all_attackers_of(
         | (pawns & pawn_attacks)
 }
 
+/// Get the en-passant capture square for a give target square and attacking side.
+///
+/// # Arguments
+/// - `to`: The target square for a move.
+/// - `side`: The attacking side
+///
+/// # Returns
+/// The square occupied by the pawn that is being EP captured.
+pub fn ep_capture_square(to: u8, side: Side) -> u8 {
+    match side {
+        Side::White => to - 8,
+        Side::Black => to + 8,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
