@@ -86,6 +86,7 @@ tunable_params!(
     see_value_bishop   = 300, 250, 250, 1,      false;
     see_value_rook     = 500, 400, 600, 1,      false;
     see_value_queen    = 900, 800, 1100, 1,     false;
+    qs_see_threshold   = 0, -100, 100, 1,       false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;

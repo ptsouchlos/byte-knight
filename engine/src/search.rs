@@ -36,6 +36,7 @@ use crate::{
     principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
     search::limits::SearchLimits,
+    see,
     table::Table,
     thread_data::{LimitType, ThreadData},
     traits::Eval,
@@ -43,7 +44,7 @@ use crate::{
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
         NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
-        lmp_max_depth,
+        lmp_max_depth, qs_see_threshold,
     },
 };
 use ttable::TranspositionTable;
@@ -871,6 +872,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let original_alpha = alpha_use;
 
         while let Some(mv) = picker.next(board, self.history_table) {
+            // SEE pruning
+            // Skip moves that lose material if we're not in check
+            if !in_check && !see::see(board, mv, qs_see_threshold()) {
+                continue;
+            }
+
             // local PV is for each node below this one is different when we call negamax recursively
             // so we have to clear it
             local_pv.clear();
