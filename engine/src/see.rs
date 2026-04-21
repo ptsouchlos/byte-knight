@@ -38,8 +38,10 @@ fn pop_lva(attackers: Bitboard, board: &Board, side: Side, occ: &mut Bitboard) -
         Piece::Queen,
         Piece::King,
     ] {
+        // Are there any of these piece in the attackers?
         let mut candidates = board.piece_bitboard(piece, side) & attackers;
         if !candidates.is_empty() {
+            // If yes, remove the square of the LVA from the occupancy
             let sq = bitboard_helpers::next_bit(&mut candidates) as u8;
             *occ ^= Bitboard::from_square(sq);
             return Some(piece);
@@ -113,26 +115,22 @@ pub fn see(board: &Board, mv: Move, threshold: i32) -> bool {
     // For en-passant the captured pawn is not on `to`; remove it explicitly so that
     // sliders behind it can be discovered in the swap loop.
     if mv.is_en_passant_capture() {
-        let ep_pawn_sq = if attacker_side == Side::White {
-            to - 8 // White advances north; captured pawn is one rank below `to`.
-        } else {
-            to + 8 // Black advances south; captured pawn is one rank above `to`.
-        };
+        let ep_pawn_sq = attacks::ep_capture_square(to, attacker_side);
         occ ^= Bitboard::from_square(ep_pawn_sq);
     }
 
     // Opponent gets to recapture first.
-    let mut side = attacker_side.opposite();
+    let mut side_to_move = attacker_side.opposite();
 
     loop {
         // All pieces of `side` that still attack `to` with the current occupancy.
-        let attackers = attacks::all_attackers_of(to, board, side, occ) & occ;
+        let attackers = attacks::all_attackers_of(to, board, side_to_move, occ) & occ;
         if attackers.is_empty() {
             break;
         }
 
         // Find and remove the least-valuable attacker from occupancy.
-        let lva = match pop_lva(attackers, board, side, &mut occ) {
+        let lva = match pop_lva(attackers, board, side_to_move, &mut occ) {
             Some(p) => p,
             None => break,
         };
@@ -141,14 +139,15 @@ pub fn see(board: &Board, mv: Move, threshold: i32) -> bool {
         // is the only remaining attacker and the opponent still has defenders, the side
         // forfeits further captures.
         if lva == Piece::King {
-            let opp_defenders = attacks::all_attackers_of(to, board, side.opposite(), occ) & occ;
+            let opp_defenders =
+                attacks::all_attackers_of(to, board, side_to_move.opposite(), occ) & occ;
             if !opp_defenders.is_empty() {
                 break;
             }
         }
 
         // Negamax balance update: flip perspective and charge the attacker's value.
-        side = side.opposite();
+        side_to_move = side_to_move.opposite();
         balance = -balance - 1 - piece_value(lva);
         if balance >= 0 {
             // The side that just captured (before the flip) is demonstrably ahead;
@@ -159,7 +158,7 @@ pub fn see(board: &Board, mv: Move, threshold: i32) -> bool {
 
     // The side that ran out of good attackers loses.  We win if the final `side`
     // is NOT the original attacker's side.
-    side != attacker_side
+    side_to_move != attacker_side
 }
 
 #[cfg(test)]
