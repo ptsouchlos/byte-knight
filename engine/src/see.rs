@@ -8,21 +8,20 @@ use chess::{
     side::Side,
 };
 
-/// Centipawn piece values for SEE, independent of the HCE eval tuning.
-///
-/// Indexed by `Piece as usize`: King=0, Queen=1, Rook=2, Bishop=3, Knight=4, Pawn=5.
-const SEE_VALUES: [i32; 6] = [
-    10_000, // King
-    900,    // Queen
-    500,    // Rook
-    330,    // Bishop
-    320,    // Knight
-    100,    // Pawn
-];
+use crate::tuneable::{
+    see_value_bishop, see_value_knight, see_value_pawn, see_value_queen, see_value_rook,
+};
 
 #[inline(always)]
 fn piece_value(piece: Piece) -> i32 {
-    SEE_VALUES[piece as usize]
+    match piece {
+        Piece::Pawn => see_value_pawn(),
+        Piece::Bishop => see_value_bishop(),
+        Piece::Knight => see_value_knight(),
+        Piece::Rook => see_value_rook(),
+        Piece::Queen => see_value_queen(),
+        Piece::King => 0,
+    }
 }
 
 /// Scans `attackers` for the least-valuable piece belonging to `side` on the board.
