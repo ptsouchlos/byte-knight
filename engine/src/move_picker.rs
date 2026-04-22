@@ -158,6 +158,7 @@ impl MovePicker {
         self.searched_quiets.as_slice()
     }
 
+    #[allow(clippy::expect_used)]
     fn score_move(&self, board: &Board, mv: &Move, history_table: &HistoryTable) -> LargeScoreType {
         let maybe_victim = board.captured(mv);
         if let Some(victim) = maybe_victim {
