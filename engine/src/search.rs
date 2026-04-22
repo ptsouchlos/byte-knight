@@ -536,7 +536,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     && moves_seen as usize >= LMR_MIN_MOVES_SEEN
                 {
                     // Apply less LMR reduction for killer moves.
-                    if is_killer {
+                    if is_killer || is_bad_tactical {
                         (lmr_reduction - 1).max(1)
                     } else {
                         lmr_reduction
