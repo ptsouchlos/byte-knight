@@ -32,4 +32,5 @@ pub mod rays;
 pub mod side;
 pub mod slider_pieces;
 pub mod square;
+pub mod util;
 pub mod zobrist;
