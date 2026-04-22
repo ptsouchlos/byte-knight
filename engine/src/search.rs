@@ -527,16 +527,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     .iter()
                     .any(|entry| entry.is_some_and(|k| k.matches(mv, piece)));
 
-                let is_good_tactical = picker.current_stage() == Stage::Tacticals;
-                let is_bad_tactical = !is_quiet && !is_good_tactical;
-                let lmr_eligible = is_quiet || is_bad_tactical;
                 // Compute LMR reduction
-                let reduction = if lmr_eligible
+                let reduction = if is_quiet
                     && depth >= LMR_MIN_DEPTH
                     && moves_seen as usize >= LMR_MIN_MOVES_SEEN
                 {
                     // Apply less LMR reduction for killer moves.
-                    if is_killer || is_bad_tactical {
+                    if is_killer {
                         (lmr_reduction - 1).max(1)
                     } else {
                         lmr_reduction
