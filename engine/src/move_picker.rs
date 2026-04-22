@@ -23,6 +23,7 @@ use crate::{
     score::{LargeScoreType, Score},
     scored_move::ScoredMove,
     scored_move_list::ScoredMoveList,
+    see,
 };
 
 /// Bonus applied to killer moves in the quiet scoring stage so they sort
@@ -51,6 +52,7 @@ enum Stage {
     Tacticals,
     GenerateQuiets,
     Quiets,
+    BadTacticals,
     Done,
 }
 
@@ -69,6 +71,7 @@ enum Stage {
 pub(crate) struct MovePicker {
     stage: Stage,
     moves: ScoredMoveList,
+    bad_tacticals: ScoredMoveList,
     tt_move: Option<Move>,
     /// True after the TT move has been yielded, so yield stages can skip it.
     tt_move_yielded: bool,
@@ -104,6 +107,7 @@ impl MovePicker {
                 Stage::GenerateTacticals
             },
             moves: ScoredMoveList::new(),
+            bad_tacticals: ScoredMoveList::new(),
             tt_move,
             tt_move_yielded: false,
             killers,
@@ -127,6 +131,7 @@ impl MovePicker {
                 Stage::GenerateTacticals
             },
             moves: ScoredMoveList::new(),
+            bad_tacticals: ScoredMoveList::new(),
             tt_move,
             tt_move_yielded: false,
             killers: [None; 2],
@@ -197,6 +202,19 @@ impl MovePicker {
         }
     }
 
+    fn is_good_tactical(&self, board: &Board, entry: &ScoredMove) -> bool {
+        let mv = entry.mv;
+        if mv.is_promotion() {
+            mv.is_promote_to_queen() || mv.is_promote_to_knight()
+        } else {
+            if entry.score >= KILLER_BONUS {
+                true
+            } else {
+                see::see(board, mv, 0)
+            }
+        }
+    }
+
     fn generate_tactical_moves(&mut self, board: &Board, history_table: &HistoryTable) {
         // Reuse metadata computed in TtMove stage if available.
         let meta = self
@@ -209,10 +227,15 @@ impl MovePicker {
 
         for mv in moves.iter() {
             // TODO: Score move, then push it to the correct list depending on SEE
-            self.moves.push(ScoredMove {
+            let scored_mv = ScoredMove {
                 mv: *mv,
                 score: self.score_move(board, mv, history_table),
-            });
+            };
+            if self.is_good_tactical(board, &scored_mv) {
+                self.moves.push(scored_mv);
+            } else {
+                self.bad_tacticals.push(scored_mv);
+            }
         }
     }
 
@@ -284,7 +307,7 @@ impl MovePicker {
         if self.stage == Stage::GenerateQuiets {
             self.pick_index = 0;
             if self.skip_quiets {
-                self.stage = Stage::Done;
+                self.stage = Stage::BadTacticals;
             } else {
                 self.generate_quiet_moves(board, history_table);
                 self.stage = Stage::Quiets;
@@ -315,6 +338,21 @@ impl MovePicker {
                 self.moves_yielded += 1;
                 return Some(mv);
             }
+            self.stage = Stage::BadTacticals;
+            // Reset the pick index before going to the next phase
+            self.pick_index = 0;
+        }
+
+        if self.stage == Stage::BadTacticals {
+            while self.pick_index < self.bad_tacticals.len() {
+                let mv = self.selection_sort_pick();
+                if self.tt_move_yielded && self.tt_move == Some(mv) {
+                    continue;
+                }
+                self.moves_yielded += 1;
+                return Some(mv);
+            }
+
             self.stage = Stage::Done;
         }
 
@@ -324,18 +362,24 @@ impl MovePicker {
     /// Selection sort: find the highest-scored move in `moves[pick_index..range_end]`,
     /// swap it to `pick_index`, advance `pick_index`, and return the move.
     fn selection_sort_pick(&mut self) -> Move {
+        let mv_list = if self.stage == Stage::BadTacticals {
+            &mut self.bad_tacticals
+        } else {
+            &mut self.moves
+        };
+
         let mut best_idx = self.pick_index;
-        for i in (self.pick_index + 1)..self.moves.len() {
-            if self.moves.as_slice()[i].score > self.moves.as_slice()[best_idx].score {
+        for i in (self.pick_index + 1)..mv_list.len() {
+            if mv_list.as_slice()[i].score > mv_list.as_slice()[best_idx].score {
                 best_idx = i;
             }
         }
 
         if best_idx != self.pick_index {
-            self.moves.as_mut_slice().swap(self.pick_index, best_idx);
+            mv_list.as_mut_slice().swap(self.pick_index, best_idx);
         }
 
-        let scored_mv = self.moves.as_slice()[self.pick_index];
+        let scored_mv = mv_list.as_slice()[self.pick_index];
         self.pick_index += 1;
         scored_mv.mv
     }
