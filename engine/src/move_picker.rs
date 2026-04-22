@@ -197,6 +197,42 @@ impl MovePicker {
         }
     }
 
+    fn generate_tactical_moves(&mut self, board: &Board, history_table: &HistoryTable) {
+        // Reuse metadata computed in TtMove stage if available.
+        let meta = self
+            .metadata
+            .get_or_insert_with(|| move_generation::metadata::compute(board))
+            .clone();
+
+        let moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
+        self.moves.clear();
+
+        for mv in moves.iter() {
+            // TODO: Score move, then push it to the correct list depending on SEE
+            self.moves.push(ScoredMove {
+                mv: *mv,
+                score: self.score_move(board, mv, history_table),
+            });
+        }
+    }
+
+    fn generate_quiet_moves(&mut self, board: &Board, history_table: &HistoryTable) {
+        // Reuse cached metadata to avoid recomputing.
+        let meta = self
+            .metadata
+            .as_ref()
+            .expect("metadata must be set after GenerateTacticals");
+        let moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
+        self.moves.clear();
+
+        for mv in moves.iter() {
+            self.moves.push(ScoredMove {
+                mv: *mv,
+                score: self.score_move(board, mv, history_table),
+            });
+        }
+    }
+
     /// Returns the next best move in staged order, or `None` when exhausted.
     #[allow(clippy::expect_used, clippy::panic)]
     pub(crate) fn next(&mut self, board: &Board, history_table: &HistoryTable) -> Option<Move> {
@@ -209,6 +245,7 @@ impl MovePicker {
                     && chess::legal::is_legal_with_metadata(board, &tt_mv, &meta)
             });
             self.metadata = Some(meta);
+
             if let Some(tt_mv) = self.tt_move.filter(|_| tt_legal) {
                 // Track as a searched quiet if this is a quiet move.
                 if board.captured(&tt_mv).is_none() && !tt_mv.is_promotion() {
@@ -227,22 +264,7 @@ impl MovePicker {
 
         if self.stage == Stage::GenerateTacticals {
             self.pick_index = 0;
-            // Reuse metadata computed in TtMove stage if available.
-            let meta = self
-                .metadata
-                .get_or_insert_with(|| move_generation::metadata::compute(board))
-                .clone();
-
-            let moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
-            self.moves.clear();
-
-            for mv in moves.iter() {
-                // TODO: Score move, then push it to the correct list depending on SEE
-                self.moves.push(ScoredMove {
-                    mv: *mv,
-                    score: self.score_move(board, mv, history_table),
-                });
-            }
+            self.generate_tactical_moves(board, history_table);
             self.stage = Stage::Tacticals;
         }
 
@@ -264,21 +286,7 @@ impl MovePicker {
             if self.skip_quiets {
                 self.stage = Stage::Done;
             } else {
-                // Reuse cached metadata to avoid recomputing.
-                let meta = self
-                    .metadata
-                    .as_ref()
-                    .expect("metadata must be set after GenerateTacticals");
-                let moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
-                self.moves.clear();
-
-                for mv in moves.iter() {
-                    self.moves.push(ScoredMove {
-                        mv: *mv,
-                        score: self.score_move(board, mv, history_table),
-                    });
-                }
-
+                self.generate_quiet_moves(board, history_table);
                 self.stage = Stage::Quiets;
             }
         }
