@@ -31,7 +31,7 @@ use crate::{
     killers_table::KillerMovesTable,
     lmr,
     log_level::LogLevel,
-    move_picker::{self, Stage},
+    move_picker,
     node_types::{NodeType, NonPvNode, RootNode},
     principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
@@ -490,6 +490,20 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let is_pv = Node::PV;
             let is_quiet = board.captured(&mv).is_none() && !mv.is_promotion();
             let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
+
+            let is_bad_tactical = picker.current_stage() == move_picker::Stage::BadTacticals;
+
+            // SEE prune bad tacticals at shallow depth
+            if !is_root
+                && !is_pv
+                && !is_in_check
+                && !is_mated
+                && is_bad_tactical
+                && depth <= 6
+                && !see::see(board, mv, -(depth as i32) * 50)
+            {
+                continue;
+            }
 
             // Move-loop pruning techniques
 
