@@ -11,7 +11,6 @@ use chess::{
         self, legal::generate_moves_with_metadata, metadata::CheckPinMetadata,
         move_filter::MoveFilter,
     },
-    move_list::MoveList,
     moves::Move,
     pieces::Piece,
 };
@@ -22,6 +21,8 @@ use crate::{
     history_table::HistoryTable,
     killers_table::{KillerEntry, KillerMovesTable},
     score::{LargeScoreType, Score},
+    scored_move::ScoredMove,
+    scored_move_list::ScoredMoveList,
 };
 
 /// Bonus applied to killer moves in the quiet scoring stage so they sort
@@ -67,9 +68,7 @@ enum Stage {
 /// never generated.
 pub(crate) struct MovePicker {
     stage: Stage,
-    moves: MoveList,
-    /// Scores parallel to `moves`. Populated per stage.
-    scores: [LargeScoreType; MAX_MOVE_LIST_SIZE],
+    moves: ScoredMoveList,
     tt_move: Option<Move>,
     /// True after the TT move has been yielded, so yield stages can skip it.
     tt_move_yielded: bool,
@@ -104,8 +103,7 @@ impl MovePicker {
             } else {
                 Stage::GenerateTacticals
             },
-            moves: MoveList::new(),
-            scores: [0; MAX_MOVE_LIST_SIZE],
+            moves: ScoredMoveList::new(),
             tt_move,
             tt_move_yielded: false,
             killers,
@@ -128,8 +126,7 @@ impl MovePicker {
             } else {
                 Stage::GenerateTacticals
             },
-            moves: MoveList::new(),
-            scores: [0; MAX_MOVE_LIST_SIZE],
+            moves: ScoredMoveList::new(),
             tt_move,
             tt_move_yielded: false,
             killers: [None; 2],
@@ -159,6 +156,44 @@ impl MovePicker {
     /// Used by the caller to apply history penalties on a beta cutoff.
     pub(crate) fn searched_quiets(&self) -> &[(Move, Piece)] {
         self.searched_quiets.as_slice()
+    }
+
+    fn score_move(&self, board: &Board, mv: &Move, history_table: &HistoryTable) -> LargeScoreType {
+        let maybe_victim = board.captured(mv);
+        if let Some(victim) = maybe_victim {
+            let piece = board
+                .piece_on_square(mv.from())
+                .map(|(pc, _)| pc)
+                .expect("Move from-square must have a piece");
+
+            let base = if mv.is_promote_to_queen() {
+                QUEEN_CAPTURE_PROMO_BONUS
+            } else {
+                0
+            };
+
+            base + mvv_lva(victim, piece)
+        } else if mv.is_promotion() {
+            if mv.is_promote_to_queen() {
+                QUEEN_PUSH_PROMO_BONUS
+            } else {
+                Evaluation::<ByteKnightValues>::piece_value(mv.promotion_piece().unwrap())
+            }
+        } else {
+            let piece = board
+                .piece_on_square(mv.from())
+                .map(|(pc, _)| pc)
+                .expect("Move from-square must have a piece");
+            let is_killer = self
+                .killers
+                .iter()
+                .any(|k| k.is_some_and(|k| k.matches(*mv, piece)));
+            if is_killer {
+                KILLER_BONUS
+            } else {
+                history_table.get(board.side_to_move(), piece, mv.to())
+            }
+        }
     }
 
     /// Returns the next best move in staged order, or `None` when exhausted.
@@ -196,31 +231,16 @@ impl MovePicker {
                 .metadata
                 .get_or_insert_with(|| move_generation::metadata::compute(board))
                 .clone();
-            self.moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
-            for (i, mv) in self.moves.iter().enumerate() {
-                let maybe_victim = board.captured(mv);
-                if let Some(victim) = maybe_victim {
-                    let piece = board
-                        .piece_on_square(mv.from())
-                        .map(|(pc, _)| pc)
-                        .expect("Move from-square must have a piece");
 
-                    let base = if mv.is_promote_to_queen() {
-                        QUEEN_CAPTURE_PROMO_BONUS
-                    } else {
-                        0
-                    };
+            let moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
+            self.moves.clear();
 
-                    self.scores[i] = base + mvv_lva(victim, piece);
-                } else if mv.is_promotion() {
-                    if mv.is_promote_to_queen() {
-                        self.scores[i] = QUEEN_PUSH_PROMO_BONUS;
-                    } else {
-                        self.scores[i] = Evaluation::<ByteKnightValues>::piece_value(
-                            mv.promotion_piece().unwrap(),
-                        );
-                    }
-                }
+            for mv in moves.iter() {
+                // TODO: Score move, then push it to the correct list depending on SEE
+                self.moves.push(ScoredMove {
+                    mv: *mv,
+                    score: self.score_move(board, mv, history_table),
+                });
             }
             self.stage = Stage::Tacticals;
         }
@@ -248,23 +268,14 @@ impl MovePicker {
                     .metadata
                     .as_ref()
                     .expect("metadata must be set after GenerateTacticals");
-                self.moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
+                let moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
+                self.moves.clear();
 
-                let stm = board.side_to_move();
-                for (i, mv) in self.moves.iter().enumerate() {
-                    let piece = board
-                        .piece_on_square(mv.from())
-                        .map(|(pc, _)| pc)
-                        .expect("Move from-square must have a piece");
-                    let is_killer = self
-                        .killers
-                        .iter()
-                        .any(|k| k.is_some_and(|k| k.matches(*mv, piece)));
-                    self.scores[i] = if is_killer {
-                        KILLER_BONUS
-                    } else {
-                        history_table.get(stm, piece, mv.to())
-                    };
+                for mv in moves.iter() {
+                    self.moves.push(ScoredMove {
+                        mv: *mv,
+                        score: self.score_move(board, mv, history_table),
+                    });
                 }
 
                 self.stage = Stage::Quiets;
@@ -306,19 +317,18 @@ impl MovePicker {
     fn selection_sort_pick(&mut self) -> Move {
         let mut best_idx = self.pick_index;
         for i in (self.pick_index + 1)..self.moves.len() {
-            if self.scores[i] > self.scores[best_idx] {
+            if self.moves.as_slice()[i].score > self.moves.as_slice()[best_idx].score {
                 best_idx = i;
             }
         }
 
         if best_idx != self.pick_index {
-            self.scores.swap(self.pick_index, best_idx);
             self.moves.as_mut_slice().swap(self.pick_index, best_idx);
         }
 
-        let mv = self.moves.as_slice()[self.pick_index];
+        let scored_mv = self.moves.as_slice()[self.pick_index];
         self.pick_index += 1;
-        mv
+        scored_mv.mv
     }
 }
 
