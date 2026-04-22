@@ -46,7 +46,7 @@ fn mvv_lva(victim: Piece, attacker: Piece) -> LargeScoreType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Stage {
+pub(crate) enum Stage {
     TtMove,
     GenerateTacticals,
     Tacticals,
@@ -164,6 +164,10 @@ impl MovePicker {
     /// Used by the caller to apply history penalties on a beta cutoff.
     pub(crate) fn searched_quiets(&self) -> &[(Move, Piece)] {
         self.searched_quiets.as_slice()
+    }
+
+    pub(crate) fn current_stage(&self) -> Stage {
+        self.stage
     }
 
     #[allow(clippy::expect_used)]
