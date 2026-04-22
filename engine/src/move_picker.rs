@@ -87,6 +87,7 @@ pub(crate) struct MovePicker {
     searched_quiets: ArrayVec<(Move, Piece), MAX_MOVE_LIST_SIZE>,
     /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to Done.
     skip_quiets: bool,
+    split_tacticals: bool,
 }
 
 impl MovePicker {
@@ -116,6 +117,7 @@ impl MovePicker {
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
             skip_quiets: false,
+            split_tacticals: true,
         }
     }
 
@@ -140,6 +142,7 @@ impl MovePicker {
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
             skip_quiets: !in_check,
+            split_tacticals: false,
         }
     }
 
@@ -203,6 +206,11 @@ impl MovePicker {
     }
 
     fn is_good_tactical(&self, board: &Board, entry: &ScoredMove) -> bool {
+        // We're not splitting tacticals, so all tacticals are good
+        if !self.split_tacticals {
+            return true;
+        }
+
         let mv = entry.mv;
         if mv.is_promotion() {
             mv.is_promote_to_queen() || mv.is_promote_to_knight()
@@ -239,6 +247,7 @@ impl MovePicker {
         }
     }
 
+    #[allow(clippy::expect_used)]
     fn generate_quiet_moves(&mut self, board: &Board, history_table: &HistoryTable) {
         // Reuse cached metadata to avoid recomputing.
         let meta = self
