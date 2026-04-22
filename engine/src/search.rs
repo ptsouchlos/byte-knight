@@ -872,8 +872,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let original_alpha = alpha_use;
 
         while let Some(mv) = picker.next(board, self.history_table) {
-            // SEE pruning
+            // ------------------------------------------------------------
+            // Quiescence SEE pruning
+            // https://www.chessprogramming.org/Static_Exchange_Evaluation
+            // https://talkchess.com/viewtopic.php?t=41217
             // Skip moves that lose material if we're not in check
+            // ------------------------------------------------------------
             if !in_check && !see::see(board, mv, qs_see_threshold()) {
                 continue;
             }

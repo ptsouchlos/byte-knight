@@ -16,9 +16,9 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 
 ## Strength
 
-| Version | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
-| ------- | --------------- | --------------- |
-| [3.0.0](https://github.com/ptsouchlos/byte-knight/releases/v3.0.0) | 2386 | 2307 |
+| Version                                                            | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
+| ------------------------------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------- |
+| [3.0.0](https://github.com/ptsouchlos/byte-knight/releases/v3.0.0) | 2386                                                  | 2311                                                 |
 
 ## Features
 
@@ -95,10 +95,10 @@ To see all options for a given command, type `byte-knight <cmd> --help`.
 
 ## UCI Options
 
-| Name | Value Range | Default | Description |
-| ---- | ----------- | ------- | ----------- |
-| Hash | [1 - 1024] | 16      | Set the TT table size in MB |
-| Threads | [1]      | 1       | How many threads to use in search |
+| Name    | Value Range | Default | Description                       |
+| ------- | ----------- | ------- | --------------------------------- |
+| Hash    | [1 - 1024]  | 16      | Set the TT table size in MB       |
+| Threads | [1]         | 1       | How many threads to use in search |
 
 ## Build and Run
 
@@ -111,6 +111,7 @@ cargo -r run -p byte-knight
 ### Development Dependencies
 
 To run the full suite of supported tests, benchmarks and other development dependencies, you will need the following tools (in addition to Rust and Cargo):
+
 - [just](https://github.com/casey/just)
 - Rust llvm-profdata component
   - Install with `rustup component add llvm-tools-preview`
@@ -137,4 +138,4 @@ Thanks/acknowledgement for those who have inspired and helped with this project:
 ## Author
 
 | [<img src="https://avatars0.githubusercontent.com/u/6591180?s=460&v=4" width="100"><br><sub>@ptsouchlos</sub>](https://github.com/ptsouchlos) |
-|:----:|
+| :-------------------------------------------------------------------------------------------------------------------------------------------: |
