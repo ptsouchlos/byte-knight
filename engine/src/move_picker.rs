@@ -400,6 +400,7 @@ mod tests {
         killers_table::KillerMovesTable,
         move_picker::MovePicker,
         score::Score,
+        see,
         ttable::{EntryFlag, TranspositionTable},
     };
 
@@ -422,8 +423,6 @@ mod tests {
         out
     }
 
-    // ---- helpers ----
-
     /// FEN with multiple captures available:
     ///   White queen on d5 can capture black rook on d8 (QxR).
     ///   White pawn on e5 can capture black pawn on d6 (PxP).
@@ -438,8 +437,6 @@ mod tests {
     ///   Pawn can capture queen (PxQ) and pawn (PxP); rook can capture queen (RxQ).
     ///   Multiple captures with different MVV-LVA values.
     const MULTI_CAPTURE_FEN: &str = "8/8/3p4/3q4/3PP3/8/8/R3K1k1 w - - 0 1";
-
-    // ---- tests ----
 
     #[test]
     fn tt_move_comes_first() {
@@ -477,11 +474,13 @@ mod tests {
         let mut seen_quiet = false;
         while let Some(mv) = picker.next(&board, &history) {
             let is_capture = board.captured(&mv).is_some();
-            let is_queen_promo = mv.flag() == chess::moves::MoveFlag::PromotionQueen;
-            let is_tactical = is_capture || is_queen_promo;
+            let is_tactical = is_capture || mv.is_promotion();
+            let is_good_tactical = mv.is_promote_to_queen()
+                || mv.is_promote_to_knight()
+                || (is_capture && see::see(&board, mv, 0));
             if seen_quiet {
                 assert!(
-                    !is_tactical,
+                    !is_good_tactical, // Bad tacticals are yielded after quiets
                     "tactical move {:?} yielded after a quiet move",
                     mv.to_long_algebraic()
                 );
