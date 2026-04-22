@@ -215,11 +215,7 @@ impl MovePicker {
         if mv.is_promotion() {
             mv.is_promote_to_queen() || mv.is_promote_to_knight()
         } else {
-            if entry.score >= KILLER_BONUS {
-                true
-            } else {
-                see::see(board, mv, 0)
-            }
+            see::see(board, mv, 0)
         }
     }
 
@@ -234,7 +230,7 @@ impl MovePicker {
         self.moves.clear();
 
         for mv in moves.iter() {
-            // TODO: Score move, then push it to the correct list depending on SEE
+            // Score move, then push it to the correct list depending on SEE
             let scored_mv = ScoredMove {
                 mv: *mv,
                 score: self.score_move(board, mv, history_table),
