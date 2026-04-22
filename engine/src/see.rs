@@ -13,7 +13,7 @@ use crate::tuneable::{
 };
 
 #[inline(always)]
-fn piece_value(piece: Piece) -> i32 {
+pub(crate) fn piece_value(piece: Piece) -> i32 {
     match piece {
         Piece::Pawn => see_value_pawn(),
         Piece::Bishop => see_value_bishop(),
