@@ -31,7 +31,7 @@ use crate::{
     killers_table::KillerMovesTable,
     lmr,
     log_level::LogLevel,
-    move_picker,
+    move_picker::{self, Stage},
     node_types::{NodeType, NonPvNode, RootNode},
     principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
@@ -527,8 +527,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     .iter()
                     .any(|entry| entry.is_some_and(|k| k.matches(mv, piece)));
 
+                let is_good_tactical = picker.current_stage() == Stage::Tacticals;
+                let is_bad_tactical = !is_quiet && !is_good_tactical;
+                let lmr_eligible = is_quiet || is_bad_tactical;
                 // Compute LMR reduction
-                let reduction = if is_quiet
+                let reduction = if lmr_eligible
                     && depth >= LMR_MIN_DEPTH
                     && moves_seen as usize >= LMR_MIN_MOVES_SEEN
                 {
