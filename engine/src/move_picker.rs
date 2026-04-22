@@ -59,7 +59,7 @@ enum Stage {
 /// A staged move picker that yields moves in best-first order.
 ///
 /// Main search stages:
-///   `TtMove → GenerateTacticals → ScoreTacticals → YieldTacticals → GenerateQuiets → ScoreQuiets → YieldQuiets → Done`
+///   `TtMove → GenerateTacticals → Tacticals → GenerateQuiets → Quiets → BadTacticals → Done`
 ///
 /// For quiescence search (`new_qsearch`), the quiet stages are skipped when not
 /// in check (`skip_quiets = true`).
