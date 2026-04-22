@@ -4,8 +4,6 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use crate::score::LargeScoreType;
-use chess::definitions::MAX_MOVE_LIST_SIZE;
-use chess::move_list::MoveList;
 use chess::moves::Move;
 
 #[derive(Default, Debug, Clone, Copy)]
