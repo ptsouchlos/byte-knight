@@ -231,19 +231,14 @@ impl MovePicker {
             .clone();
 
         let moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
-        self.moves.clear();
-
         for mv in moves.iter() {
             // Score move, then push it to the correct list depending on SEE
             let scored_mv = ScoredMove {
                 mv: *mv,
                 score: self.score_move(board, mv, history_table),
             };
-            if self.is_good_tactical(board, &scored_mv) {
-                self.moves.push(scored_mv);
-            } else {
-                self.bad_tacticals.push(scored_mv);
-            }
+            // Defer move classification to yield stage.
+            self.moves.push(scored_mv);
         }
     }
 
@@ -255,7 +250,6 @@ impl MovePicker {
             .as_ref()
             .expect("metadata must be set after GenerateTacticals");
         let moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
-        self.moves.clear();
 
         for mv in moves.iter() {
             self.moves.push(ScoredMove {
@@ -296,25 +290,36 @@ impl MovePicker {
 
         if self.stage == Stage::GenerateTacticals {
             self.pick_index = 0;
+            self.moves.clear();
+            self.bad_tacticals.clear();
             self.generate_tactical_moves(board, history_table);
             self.stage = Stage::Tacticals;
         }
 
         if self.stage == Stage::Tacticals {
             while self.pick_index < self.moves.len() {
-                let mv = self.selection_sort_pick();
+                let scored_mv = self.selection_sort_pick();
                 // Skip the TT move if it was already yielded.
-                if self.tt_move_yielded && self.tt_move == Some(mv) {
+                if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
                     continue;
                 }
-                self.moves_yielded += 1;
-                return Some(mv);
+
+                // Is this a good tactical?
+                if self.is_good_tactical(board, &scored_mv) {
+                    self.moves_yielded += 1;
+                    return Some(scored_mv.mv);
+                } else {
+                    // Push to "bad" list and continue to next move
+                    self.bad_tacticals.push(scored_mv);
+                    continue;
+                }
             }
             self.stage = Stage::GenerateQuiets;
         }
 
         if self.stage == Stage::GenerateQuiets {
             self.pick_index = 0;
+            self.moves.clear();
             if self.skip_quiets {
                 self.stage = Stage::BadTacticals;
             } else {
@@ -325,7 +330,8 @@ impl MovePicker {
 
         if self.stage == Stage::Quiets {
             while self.pick_index < self.moves.len() {
-                let mv = self.selection_sort_pick();
+                let scored_mv = self.selection_sort_pick();
+                let mv = scored_mv.mv;
                 // Skip the TT move if it was already yielded.
                 if self.tt_move_yielded && self.tt_move == Some(mv) {
                     continue;
@@ -354,12 +360,12 @@ impl MovePicker {
 
         if self.stage == Stage::BadTacticals {
             while self.pick_index < self.bad_tacticals.len() {
-                let mv = self.selection_sort_pick();
-                if self.tt_move_yielded && self.tt_move == Some(mv) {
+                let scored_mv = self.selection_sort_pick();
+                if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
                     continue;
                 }
                 self.moves_yielded += 1;
-                return Some(mv);
+                return Some(scored_mv.mv);
             }
 
             self.stage = Stage::Done;
@@ -370,7 +376,7 @@ impl MovePicker {
 
     /// Selection sort: find the highest-scored move in `moves[pick_index..range_end]`,
     /// swap it to `pick_index`, advance `pick_index`, and return the move.
-    fn selection_sort_pick(&mut self) -> Move {
+    fn selection_sort_pick(&mut self) -> ScoredMove {
         let mv_list = if self.stage == Stage::BadTacticals {
             &mut self.bad_tacticals
         } else {
@@ -390,7 +396,7 @@ impl MovePicker {
 
         let scored_mv = mv_list.as_slice()[self.pick_index];
         self.pick_index += 1;
-        scored_mv.mv
+        scored_mv
     }
 }
 
