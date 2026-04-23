@@ -44,7 +44,7 @@ use crate::{
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
         NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
-        lmp_max_depth, qs_delta_margin, qs_see_threshold,
+        lmp_max_depth, qs_big_delta_margin, qs_delta_margin, qs_see_threshold,
     },
 };
 use ttable::TranspositionTable;
@@ -858,6 +858,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
             ttable::ProbeResult::Empty => None,
         };
+
+        // Can we improve alpha even with a really big material gain? If not return early.
+        if !in_check && standing_eval.0 as i32 + qs_big_delta_margin() <= alpha_use.0 as i32 {
+            return standing_eval;
+        }
 
         // When in check we must consider all moves; otherwise tacticals only.
         let mut picker = move_picker::MovePicker::new_qsearch(tt_move, in_check);
