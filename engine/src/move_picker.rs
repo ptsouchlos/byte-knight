@@ -217,7 +217,7 @@ impl MovePicker {
 
         let mv = entry.mv;
         if mv.is_promotion() {
-            mv.is_promote_to_queen() || mv.is_promote_to_knight()
+            mv.is_promote_to_queen()
         } else {
             see::see(board, mv, 0)
         }
