@@ -44,7 +44,7 @@ use crate::{
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
         NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
-        lmp_max_depth, qs_see_threshold,
+        lmp_max_depth, qs_delta_margin, qs_see_threshold,
     },
 };
 use ttable::TranspositionTable;
@@ -872,6 +872,16 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let original_alpha = alpha_use;
 
         while let Some(mv) = picker.next(board, self.history_table) {
+            // ------------------------------------------------------------
+            // Delta pruning
+            // ------------------------------------------------------------
+            if !in_check && !mv.is_promotion() {
+                let captured_val = see::move_gain(board, &mv);
+                if standing_eval.0 as i32 + captured_val + qs_delta_margin() <= alpha_use.0 as i32 {
+                    continue;
+                }
+            }
+
             // ------------------------------------------------------------
             // Quiescence SEE pruning
             // https://www.chessprogramming.org/Static_Exchange_Evaluation

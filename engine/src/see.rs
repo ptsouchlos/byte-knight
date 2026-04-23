@@ -13,7 +13,7 @@ use crate::tuneable::{
 };
 
 #[inline(always)]
-fn piece_value(piece: Piece) -> i32 {
+pub(crate) fn piece_value(piece: Piece) -> i32 {
     match piece {
         Piece::Pawn => see_value_pawn(),
         Piece::Bishop => see_value_bishop(),
@@ -50,14 +50,19 @@ fn pop_lva(attackers: Bitboard, board: &Board, side: Side, occ: &mut Bitboard) -
     None
 }
 
+pub(crate) fn move_gain(board: &Board, mv: &Move) -> i32 {
+    if mv.is_en_passant_capture() {
+        return piece_value(Piece::Pawn);
+    }
+    board.captured(mv).map_or(0, piece_value)
+}
+
 fn move_value(board: &Board, mv: Move) -> i32 {
-    let mut balance = board.captured(&mv).map_or(0, piece_value);
+    let mut balance = move_gain(board, &mv);
     if let Some(promo_piece) = mv.promotion_piece() {
         // The pawn is spent to produce the promoted piece, so net gain is
         // `captured + (promo - pawn)`.
         balance += piece_value(promo_piece) - piece_value(Piece::Pawn);
-    } else if mv.is_en_passant_capture() {
-        balance = piece_value(Piece::Pawn);
     }
     balance
 }
