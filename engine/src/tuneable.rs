@@ -88,7 +88,7 @@ tunable_params!(
     see_value_queen         = 900, 800, 1100, 1,     false;
     qs_see_threshold        = 0, -100, 100, 1,       false;
     qs_delta_margin         = 200, 50, 300, 1,       false;
-    qs_big_delta_margin     = 990, 900, 1500, 1,     false;
+    qs_big_delta_margin     = 1200, 900, 1500, 1,    false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
