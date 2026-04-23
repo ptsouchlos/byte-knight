@@ -618,6 +618,7 @@ mod tests {
         let fens = &[
             "6n1/4PP2/8/6k1/K7/4p3/2p5/8 w - - 0 1",
             "6n1/4PP2/8/6k1/K7/4p3/2p5/8 b - - 0 1",
+            "8/P3k3/8/8/8/8/8/4K3 w - - 0 1",
         ];
         for fen in fens {
             let board = Board::from_fen(fen).unwrap();
