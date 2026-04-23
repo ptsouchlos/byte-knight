@@ -86,9 +86,14 @@ pub(crate) struct MovePicker {
     /// Quiet (non-promotion, non-capture) moves yielded so far, with their moving piece.
     /// Used by the caller for history penalty on a beta cutoff.
     searched_quiets: ArrayVec<(Move, Piece), MAX_MOVE_LIST_SIZE>,
-    /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to Done.
+    /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to BadTacticals.
     skip_quiets: bool,
+    /// When true, apply SEE filtering to captures. False in in-check qsearch so all captures
+    /// count as good evasions.
     split_tacticals: bool,
+    /// When true (all qsearch), the BadTacticals stage is skipped entirely — underpromotions
+    /// and SEE-losing captures are never yielded.
+    skip_bad_tacticals: bool,
 }
 
 impl MovePicker {
@@ -119,6 +124,7 @@ impl MovePicker {
             searched_quiets: ArrayVec::new(),
             skip_quiets: false,
             split_tacticals: true,
+            skip_bad_tacticals: false,
         }
     }
 
@@ -143,7 +149,10 @@ impl MovePicker {
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
             skip_quiets: !in_check,
-            split_tacticals: false,
+            // When in check, all captures are potential evasions so SEE pruning is skipped.
+            // When not in check, SEE pruning applies (only winning captures are good).
+            split_tacticals: !in_check,
+            skip_bad_tacticals: true,
         }
     }
 
@@ -211,16 +220,16 @@ impl MovePicker {
     }
 
     fn is_good_tactical(&self, board: &Board, entry: &ScoredMove) -> bool {
-        // We're not splitting tacticals, so all tacticals are good
-        if !self.split_tacticals {
-            return true;
-        }
-
         let mv = entry.mv;
         if mv.is_promotion() {
+            // Underpromotions are always bad tacticals (never worth searching early).
             mv.is_promote_to_queen()
-        } else {
+        } else if self.split_tacticals {
+            // Apply SEE pruning: skip captures that lose material.
             see::see(board, mv, 0)
+        } else {
+            // In-check qsearch: all captures are potential evasions, skip SEE pruning.
+            true
         }
     }
 
@@ -362,13 +371,15 @@ impl MovePicker {
         }
 
         if self.stage == Stage::BadTacticals {
-            while self.pick_index < self.bad_tacticals.len() {
-                let scored_mv = self.selection_sort_pick();
-                if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
-                    continue;
+            if !self.skip_bad_tacticals {
+                while self.pick_index < self.bad_tacticals.len() {
+                    let scored_mv = self.selection_sort_pick();
+                    if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
+                        continue;
+                    }
+                    self.moves_yielded += 1;
+                    return Some(scored_mv.mv);
                 }
-                self.moves_yielded += 1;
-                return Some(scored_mv.mv);
             }
 
             self.stage = Stage::Done;
