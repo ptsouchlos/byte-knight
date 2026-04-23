@@ -45,6 +45,7 @@ fn mvv_lva(victim: Piece, attacker: Piece) -> LargeScoreType {
             - Evaluation::<ByteKnightValues>::piece_value(attacker))
 }
 
+/// Stages for the move picker.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Stage {
     TtMove,
@@ -223,6 +224,7 @@ impl MovePicker {
         }
     }
 
+    /// Helper to generate tactical moves in the move picker.
     fn generate_tactical_moves(&mut self, board: &Board, history_table: &HistoryTable) {
         // Reuse metadata computed in TtMove stage if available.
         let meta = self
@@ -242,6 +244,7 @@ impl MovePicker {
         }
     }
 
+    /// Helper to generate quiet moves.
     #[allow(clippy::expect_used)]
     fn generate_quiet_moves(&mut self, board: &Board, history_table: &HistoryTable) {
         // Reuse cached metadata to avoid recomputing.
