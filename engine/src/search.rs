@@ -859,7 +859,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             ttable::ProbeResult::Empty => None,
         };
 
-        // Can we improve alpha even with a really big material gain? If not return early.
+        // Can we improve alpha even with a really big material gain (when not in check)?
+        // If not, return the standing pat.
         if !in_check && standing_eval.0 as i32 + qs_big_delta_margin() <= alpha_use.0 as i32 {
             return standing_eval;
         }
