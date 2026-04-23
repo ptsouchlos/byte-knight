@@ -422,7 +422,7 @@ mod tests {
     use crate::{
         history_table::HistoryTable,
         killers_table::KillerMovesTable,
-        move_picker::MovePicker,
+        move_picker::{MovePicker, Stage},
         score::Score,
         see,
         ttable::{EntryFlag, TranspositionTable},
@@ -792,5 +792,18 @@ mod tests {
         let mut picker2 = MovePicker::new(None, &killers, 0);
         let _ = picker2.next(&board_safe, &history);
         assert!(!picker2.in_check(), "in_check() should return false");
+    }
+
+    #[test]
+    fn no_bad_tacticals_in_qsearch() {
+        let board = Board::from_fen("8/P3k3/8/8/8/8/8/4K3 w - - 0 1").unwrap();
+        let history = HistoryTable::new();
+        // Not actually in check, but we want to ensure that bad tacticals (underpromotions) are not yielded in this
+        // scenario.
+        let mut picker = MovePicker::new_qsearch(None, true);
+        assert_eq!(picker.current_stage(), Stage::GenerateTacticals);
+
+        let moves = collect_all(&mut picker, &board, &history);
+        assert_eq!(moves.len(), 6);
     }
 }
