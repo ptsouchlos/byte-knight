@@ -373,7 +373,8 @@ impl MovePicker {
         if self.stage == Stage::BadTacticals {
             if !self.skip_bad_tacticals {
                 while self.pick_index < self.bad_tacticals.len() {
-                    let scored_mv = self.selection_sort_pick();
+                    let scored_mv = self.bad_tacticals.as_slice()[self.pick_index];
+                    self.pick_index += 1;
                     if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
                         continue;
                     }
