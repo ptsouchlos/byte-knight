@@ -341,30 +341,33 @@ impl MovePicker {
         }
 
         if self.stage == Stage::Quiets {
-            while self.pick_index < self.moves.len() {
-                let scored_mv = self.selection_sort_pick();
-                let mv = scored_mv.mv;
-                // Skip the TT move if it was already yielded.
-                if self.tt_move_yielded && self.tt_move == Some(mv) {
-                    continue;
+            if !self.skip_quiets {
+                while self.pick_index < self.moves.len() {
+                    let scored_mv = self.selection_sort_pick();
+                    let mv = scored_mv.mv;
+                    // Skip the TT move if it was already yielded.
+                    if self.tt_move_yielded && self.tt_move == Some(mv) {
+                        continue;
+                    }
+                    let piece = board
+                        .piece_on_square(mv.from())
+                        .map(|(pc, _)| pc)
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "Move from-square must have a piece: {} {}",
+                                board.to_fen(),
+                                mv.to_long_algebraic()
+                            )
+                        });
+                    // Only track truly quiet moves (not underpromotions) for history penalty.
+                    if !mv.is_promotion() {
+                        let _ = self.searched_quiets.try_push((mv, piece));
+                    }
+                    self.moves_yielded += 1;
+                    return Some(mv);
                 }
-                let piece = board
-                    .piece_on_square(mv.from())
-                    .map(|(pc, _)| pc)
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "Move from-square must have a piece: {} {}",
-                            board.to_fen(),
-                            mv.to_long_algebraic()
-                        )
-                    });
-                // Only track truly quiet moves (not underpromotions) for history penalty.
-                if !mv.is_promotion() {
-                    let _ = self.searched_quiets.try_push((mv, piece));
-                }
-                self.moves_yielded += 1;
-                return Some(mv);
             }
+
             self.stage = Stage::BadTacticals;
             // Reset the pick index before going to the next phase
             self.pick_index = 0;
