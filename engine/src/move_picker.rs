@@ -87,7 +87,7 @@ pub(crate) struct MovePicker {
     /// Used by the caller for history penalty on a beta cutoff.
     searched_quiets: ArrayVec<(Move, Piece), MAX_MOVE_LIST_SIZE>,
     /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to BadTacticals.
-    skip_quiets: bool,
+    pub(crate) skip_quiets: bool,
     /// When true, apply SEE filtering to captures. False in in-check qsearch so all captures
     /// count as good evasions.
     split_tacticals: bool,
