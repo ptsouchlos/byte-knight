@@ -44,7 +44,8 @@ use crate::{
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
         NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
-        lmp_max_depth, qs_delta_margin, qs_see_threshold,
+        lmp_max_depth, qs_delta_margin, qs_see_threshold, see_tacticals_margin,
+        see_tacticals_max_depth,
     },
 };
 use ttable::TranspositionTable;
@@ -499,8 +500,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 && !is_in_check
                 && !is_mated
                 && is_bad_tactical
-                && depth <= 6
-                && !see::see(board, mv, -(depth as i32) * 50)
+                && (depth as i32) <= see_tacticals_max_depth()
+                && !see::see(board, mv, -(depth as i32) * see_tacticals_margin())
             {
                 continue;
             }

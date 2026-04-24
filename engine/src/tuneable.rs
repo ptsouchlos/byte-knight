@@ -88,6 +88,8 @@ tunable_params!(
     see_value_queen         = 900, 800, 1100, 1,     false;
     qs_see_threshold        = -100, -100, 100, 1,    false;
     qs_delta_margin         = 200, 50, 300, 1,       false;
+    see_tacticals_max_depth = 6, 4, 10, 1,           false;
+    see_tacticals_margin    = 50, 0, 100, 1,         false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
