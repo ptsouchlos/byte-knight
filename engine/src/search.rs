@@ -473,6 +473,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut moves_seen = 0;
         let static_eval = self.eval.eval(board);
 
+        // How much to extend the depth.
+        let mut extension = 0;
+
         let fp_margin = fp_base() + depth as i32 * fp_scale();
 
         // Loop through all moves in best-first order.
@@ -494,6 +497,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let is_pv = Node::PV;
             let is_quiet = board.captured(&mv).is_none() && !mv.is_promotion();
             let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
+
+            // Check extension - if we're in check, this is likely a tactical position so search deeper.
+            if is_in_check && extension == 0 {
+                extension = 1;
+            }
 
             let is_bad_tactical = picker.current_stage() == move_picker::Stage::BadTacticals;
 
@@ -580,6 +588,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     1
                 };
 
+                let new_depth = depth - 1 + extension;
+
                 // -----------------------------------------------------------------------
                 // Principal Variation Search (PVS)
                 // We make the assumption that the first move will be best.
@@ -589,9 +599,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if moves_seen > 0 {
                     // Figure out the search depth, factoring in the LMR reduction.
                     let search_depth = if reduction > 1 {
-                        depth.saturating_sub(reduction)
+                        new_depth.saturating_sub(reduction)
                     } else {
-                        depth - 1
+                        new_depth
                     };
                     score = -self.negamax::<NonPvNode>(
                         board,
@@ -606,7 +616,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     if score > alpha && reduction > 1 {
                         score = -self.negamax::<NonPvNode>(
                             board,
-                            depth - 1,
+                            new_depth,
                             ply + 1,
                             -alpha - 1,
                             -alpha,
@@ -618,7 +628,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 else if !Node::PV {
                     score = -self.negamax::<NonPvNode>(
                         board,
-                        depth - 1,
+                        new_depth,
                         ply + 1,
                         -alpha - 1,
                         -alpha,
@@ -631,7 +641,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if Node::PV && (moves_seen == 0 || (score > alpha && score < beta)) {
                     score = -self.negamax::<Node::Next>(
                         board,
-                        depth - 1,
+                        new_depth,
                         ply + 1,
                         -beta,
                         -alpha,
