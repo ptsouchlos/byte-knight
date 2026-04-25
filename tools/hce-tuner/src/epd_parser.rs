@@ -6,41 +6,121 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use chess::{board::Board, side::Side};
 use engine::{evaluation::Evaluation, traits::Eval};
 
 use crate::{tracing_values::TracingValues, tuning_position::TuningPosition};
 
-pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
+/// How WDL (win/draw/loss) game results should be interpreted.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum WdlModel {
+    /// Result is always from white's perspective.
+    WhiteRelative,
+    /// Result is from the side-to-move's perspective.
+    SideToMove,
+    /// Auto-detect: 0.0/0.5/1.0 treated as white-relative, anything else as side-to-move.
+    Auto,
+}
+
+/// Convert a raw game result to white-relative given a [`WdlModel`].
+///
+/// # Arguments
+/// - `board`: The current [`Board`] position.
+/// - `game_result`: The result of the game.
+/// - `wdl_model`: The WDL model of the result.
+///
+/// # Returns
+/// Normalized game result to be white-relative.
+pub(crate) fn to_white_relative(board: &Board, game_result: f64, wdl_model: WdlModel) -> f64 {
+    match wdl_model {
+        WdlModel::WhiteRelative => game_result,
+        WdlModel::SideToMove => match board.side_to_move() {
+            Side::White => game_result,
+            Side::Black => 1.0 - game_result,
+        },
+        WdlModel::Auto => {
+            let is_white_relative = matches!(game_result, 0.0 | 0.5 | 1.0);
+            if is_white_relative {
+                game_result
+            } else {
+                match board.side_to_move() {
+                    Side::White => game_result,
+                    Side::Black => 1.0 - game_result,
+                }
+            }
+        }
+    }
+}
+
+/// Parse the given EPD file at the given path with the given WDL model.
+///
+/// # Arguments
+///
+/// - `file_path`: Full path to the EPD file to parse.
+/// - `wdl_model`: WDL model for the file.
+///
+/// # Returns
+/// Vector of tuning positions read from the file.
+pub(crate) fn parse_epd_file(file_path: &str, wdl_model: WdlModel) -> Vec<TuningPosition> {
     let mut positions = Vec::new();
     let file =
         File::open(file_path).unwrap_or_else(|_| panic!("Failed to open file: {}", file_path));
     let reader = BufReader::new(file);
     for line in reader.lines() {
         let line = line.expect("Failed to read line");
-        let pos = parse_epd_line(line.as_str());
+        let pos = parse_epd_line(line.as_str(), wdl_model);
         if let Ok(pos) = pos {
             positions.push(pos);
+        } else {
+            println!("Error processing {line}, {}", pos.err().unwrap());
         }
     }
     positions
 }
 
+/// Process a single line from an EPD file.
+///
+/// # Arguments
+///
+/// - `line`: The line to process.
+///
+/// # Returns
+///
+/// - A pair of (`Board`, `f64`).
 pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     // find the split point between the FEN and the result
-    let split_point = if let Some(idx) = line.rfind("ce") {
+    if line.is_empty() {
+        bail!("Empty line")
+    }
+
+    let line_trimmed = line.trim_matches(';');
+
+    let mut replace_pattern = String::default();
+    let split_point = if let Some(idx) = line_trimmed.rfind("ce") {
+        replace_pattern = "ce".to_string();
         idx
-    } else if let Some(idx) = line.rfind("c9") {
+    } else if let Some(idx) = line_trimmed.rfind("c9") {
+        replace_pattern = line_trimmed.get(idx..idx + 2).unwrap().to_owned();
+        idx
+    } else if let Some(idx) = line_trimmed.rfind(";") {
+        replace_pattern = ";".to_string();
         idx
     } else {
-        line.rfind(' ').unwrap()
+        line_trimmed.rfind(' ').unwrap()
     };
 
-    let fen = &line[..split_point].trim();
-    let result = &line[split_point..]
-        .replace("ce", "")
-        .replace("c9", "")
+    let fen_split_point = if let Some(idx) = line_trimmed.rfind("ce") {
+        idx
+    } else if let Some(idx) = line_trimmed.rfind(";") {
+        idx
+    } else {
+        split_point
+    };
+
+    let fen = &line_trimmed[..fen_split_point].trim();
+    let result = &line_trimmed[split_point..]
+        .replace(replace_pattern.as_str(), "")
         .trim()
         .to_string();
 
@@ -53,30 +133,25 @@ pub(crate) fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     Ok((board, game_result))
 }
 
-pub(crate) fn parse_epd_line(line: &str) -> Result<TuningPosition> {
-    let (board, game_result) = process_epd_line(line)?;
+/// Parse a single EPD file line.
+pub(crate) fn parse_epd_line(line: &str, wdl_model: WdlModel) -> Result<TuningPosition> {
+    if let Ok((board, game_result)) = process_epd_line(line) {
+        let tracing = TracingValues::new();
+        let eval = Evaluation::new(tracing);
+        let _ = eval.eval(&board);
+        let (white_indexes, black_indexes, scaled_phase) = eval.into_values().into_trace();
 
-    let tracing = TracingValues::new();
-    let eval = Evaluation::new(tracing);
-    let _ = eval.eval(&board);
-    let (white_indexes, black_indexes, scaled_phase) = eval.into_values().into_trace();
+        let result = to_white_relative(&board, game_result, wdl_model);
 
-    let is_white_relative = matches!(game_result, 0.0 | 0.5 | 1.0);
-    let result = if is_white_relative {
-        game_result
-    } else {
-        match board.side_to_move() {
-            Side::White => game_result,
-            Side::Black => 1.0 - game_result,
-        }
-    };
+        return Ok(TuningPosition::new(
+            white_indexes,
+            black_indexes,
+            scaled_phase,
+            result,
+        ));
+    }
 
-    Ok(TuningPosition::new(
-        white_indexes,
-        black_indexes,
-        scaled_phase,
-        result,
-    ))
+    bail!("Could not process {line}")
 }
 
 /// Parse the game result from part of the EPD line.
@@ -97,8 +172,9 @@ pub(crate) fn parse_epd_line(line: &str) -> Result<TuningPosition> {
 /// - 0-1;
 /// - [draw]
 /// - draw;
+/// - w
 ///
-/// The function will return the game result as a f64.
+/// The function will return the game result as a f64 from White's perspective.
 ///
 /// # Arguments
 /// - `part` - A part of the EPD line that contains the game result.
@@ -117,6 +193,12 @@ fn get_game_result(part: &str) -> Result<f64> {
         Ok(1.0)
     } else if part.starts_with("0-1") {
         Ok(0.0)
+    } else if part.starts_with("w") {
+        Ok(1.0)
+    } else if part.starts_with("b") {
+        Ok(0.0)
+    } else if part.starts_with("d") {
+        Ok(0.5)
     } else {
         // try to parse as f64 directly
         part.parse::<f64>()
@@ -156,7 +238,8 @@ mod tests {
     fn test_epd_lines(lines: &[&str]) -> Vec<(TuningPosition, Board, f64)> {
         let mut results = Vec::new();
         for line in lines.iter() {
-            let position: Result<TuningPosition, anyhow::Error> = super::parse_epd_line(line);
+            let position: Result<TuningPosition, anyhow::Error> =
+                super::parse_epd_line(line, super::WdlModel::Auto);
             assert!(position.is_ok());
             let pos = position.unwrap();
             let (board, result) = process_epd_line(line).unwrap();
@@ -185,14 +268,17 @@ mod tests {
             "3r1rk1/pR3pbp/2p1pnp1/4q3/2P4P/P3P1P1/2Q2PB1/2B2RK1 b - - 0 4 [0.0]",
             "3b4/5k2/6r1/3pP3/p1pP1p1p/P1P2P1P/1PR3P1/6K1 b - - 0 1 [0.0]",
             "r2q1rk1/ppp1npbp/4b1p1/1P3nN1/2Pp4/3P4/PB1NBPPP/R2QR1K1 b - - 0 1 [0.0]",
+            "2kr1b1r/pp3ppp/5n2/2pP1q2/2PQp3/8/PP2BPPP/R1B2RK1 w - c6 0 1 [0.0]",
         ];
 
-        let mut expected_game_phases: [f64; 10] = [7., 18., 12., 10., 10., 8., 17., 20., 5., 24.];
+        let mut expected_game_phases: [f64; 11] =
+            [7., 18., 12., 10., 10., 8., 17., 20., 5., 24., 20.];
         for phase in &mut expected_game_phases {
             *phase /= GAME_PHASE_MAX as f64;
         }
 
-        const EXPECTED_GAME_RESULTS: [f64; 10] = [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        const EXPECTED_GAME_RESULTS: [f64; 11] =
+            [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let eval = ByteKnightEvaluation::default();
         let params = Parameters::create_from_engine_values();
 
@@ -296,6 +382,46 @@ mod tests {
             let val = match board.side_to_move() {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
+            };
+
+            println!("pos: {}\n{}", board.to_fen(), board);
+            println!("{expected_value} // {val}");
+            assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
+        }
+    }
+
+    #[test]
+    fn clockwork_data() {
+        let lines = [
+            "5rk1/3b2pp/1b1P1P2/8/pp1n4/3NB1P1/PP3K1P/2R4R w - - 1 32;w",
+            "r2kqb1r/ppp4p/2np1p1p/3N4/2P1Pp2/3P3P/PP2B2P/R2QK2R w KQ - 0 13;b",
+            "8/3K3p/1p4rk/8/7r/5B2/7p/4R3 b - - 3 64;b",
+            "8/7p/5K1k/8/8/1p5r/1R6/7r b - - 1 73;b",
+            "B7/4K2p/6rk/8/8/1p5r/1R5p/8 b - - 3 68;b",
+            "8/4R2p/1pB1K2k/6r1/Pr6/7p/8/8 b - - 4 60;b",
+            "8/p4pkp/1p2rNp1/6P1/3rN2P/bP1P4/P3K3/5R2 b - - 6 36;b",
+            "8/8/7p/3K3k/8/7r/8/1q6 b - - 1 60;b",
+            "8/8/1K6/8/2N2k2/8/6Q1/8 b - - 8 73;w",
+            "5rk1/1r2b1pp/2ppbn2/4p1B1/N1n4P/P4PN1/1P4P1/2KR1B1R w - - 2 24;w",
+            "4r1r1/pp6/2kp1p2/2p5/2Pp4/P3nNP1/1P1N3P/4R1KR b - c3 0 27;b",
+            "4r1r1/pp6/2kp1p2/2p5/2Pp4/P3nNP1/1P1N3P/4R1KR b - c3 0 27;d",
+        ];
+
+        const EXPECTED_PARSED_GAME_RESULTS: [f64; 12] =
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.5];
+
+        let eval = ByteKnightEvaluation::default();
+        let params = Parameters::create_from_engine_values();
+
+        let parsed_results = test_epd_lines(&lines);
+        for (i, (pos, board, result)) in parsed_results.iter().enumerate() {
+            assert_eq!(pos.game_result, EXPECTED_PARSED_GAME_RESULTS[i]);
+            assert_eq!(*result, EXPECTED_PARSED_GAME_RESULTS[i]);
+            let expected_value = eval.eval(board);
+            // tuning position evaluation is always from white's perspective
+            let val = match board.side_to_move() {
+                Side::White => pos.evaluate(&params),
+                Side::Black => -pos.evaluate(&params),
             };
 
             println!("pos: {}\n{}", board.to_fen(), board);

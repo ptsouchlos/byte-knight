@@ -59,7 +59,10 @@ mod tests {
     use chess::side::Side;
     use engine::{evaluation::ByteKnightEvaluation, traits::Eval};
 
-    use crate::{epd_parser, parameters::Parameters};
+    use crate::{
+        epd_parser::{self, WdlModel},
+        parameters::Parameters,
+    };
 
     #[test]
     fn tuning_position_eval_matches_engine() {
@@ -67,7 +70,7 @@ mod tests {
         let eval = ByteKnightEvaluation::default();
         let line = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 [0.5]";
         // Starting position (opening, high phase)
-        let pos_start = epd_parser::parse_epd_line(line).unwrap();
+        let pos_start = epd_parser::parse_epd_line(line, WdlModel::Auto).unwrap();
         let eval_start = pos_start.evaluate(&params);
         let (board, _) = epd_parser::process_epd_line(line).unwrap();
 
@@ -83,7 +86,7 @@ mod tests {
 
         // Middlegame position
         let line_mid = "r2q1rk1/3n1p2/2pp3p/1pb1p1p1/p3P3/P1NP1N1P/RPP2PP1/5QK1 b - - 0 2 [0.0]";
-        let pos_mid = epd_parser::parse_epd_line(line_mid).unwrap();
+        let pos_mid = epd_parser::parse_epd_line(line_mid, WdlModel::Auto).unwrap();
         let (board_mid, _) = epd_parser::process_epd_line(line_mid).unwrap();
 
         let eval_mid = pos_mid.evaluate(&params);
@@ -99,7 +102,7 @@ mod tests {
 
         // Endgame position (low phase)
         let line_end = "8/8/7p/1P2k2P/4p1P1/1p1r4/1R2K3/8 b - - ce 0.7306";
-        let pos_end = epd_parser::parse_epd_line(line_end).unwrap();
+        let pos_end = epd_parser::parse_epd_line(line_end, WdlModel::Auto).unwrap();
         let (board_end, _) = epd_parser::process_epd_line(line_end).unwrap();
         let eval_end = pos_end.evaluate(&params);
         let engine_eval_end = match board_end.side_to_move() {

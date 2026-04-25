@@ -22,6 +22,6 @@ jobs:
           rustup default stable 
           rustup component add clippy
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
       - name: clippy
         run: just lint

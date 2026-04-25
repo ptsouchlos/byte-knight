@@ -62,7 +62,7 @@ pub fn split_perft(
     }
 
     // sort results alphabetically
-    results.sort_by(|a, b| a.mv.to_long_algebraic().cmp(&b.mv.to_long_algebraic()));
+    results.sort_by_key(|a| a.mv.to_long_algebraic());
 
     Ok(results)
 }

@@ -29,7 +29,7 @@ struct Options {
 enum Command {
     #[command(about = "Run fixed depth search")]
     Bench {
-        #[arg(short, long, default_value = "8")]
+        #[arg(short, long, default_value = "10")]
         depth: u8,
 
         #[arg(short, long)]
