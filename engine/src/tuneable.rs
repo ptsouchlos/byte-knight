@@ -90,6 +90,9 @@ tunable_params!(
     qs_delta_margin         = 200, 50, 300, 1,       false;
     see_tacticals_max_depth = 6, 4, 10, 1,           false;
     see_tacticals_margin    = 50, 0, 100, 1,         false;
+    fp_base                 = 100, 50, 150, 1,       false;
+    fp_scale                = 80, 40, 120, 1,        false;
+    fp_max_depth            = 3, 1, 8, 1,            false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
