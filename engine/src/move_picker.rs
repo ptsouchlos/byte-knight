@@ -11,7 +11,6 @@ use chess::{
         self, legal::generate_moves_with_metadata, metadata::CheckPinMetadata,
         move_filter::MoveFilter,
     },
-    move_list::MoveList,
     moves::Move,
     pieces::Piece,
 };
@@ -22,6 +21,9 @@ use crate::{
     history_table::HistoryTable,
     killers_table::{KillerEntry, KillerMovesTable},
     score::{LargeScoreType, Score},
+    scored_move::ScoredMove,
+    scored_move_list::ScoredMoveList,
+    see,
 };
 
 /// Bonus applied to killer moves in the quiet scoring stage so they sort
@@ -43,20 +45,22 @@ fn mvv_lva(victim: Piece, attacker: Piece) -> LargeScoreType {
             - Evaluation::<ByteKnightValues>::piece_value(attacker))
 }
 
+/// Stages for the move picker.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Stage {
+pub(crate) enum Stage {
     TtMove,
     GenerateTacticals,
     Tacticals,
     GenerateQuiets,
     Quiets,
+    BadTacticals,
     Done,
 }
 
 /// A staged move picker that yields moves in best-first order.
 ///
 /// Main search stages:
-///   `TtMove → GenerateTacticals → ScoreTacticals → YieldTacticals → GenerateQuiets → ScoreQuiets → YieldQuiets → Done`
+///   `TtMove → GenerateTacticals → Tacticals → GenerateQuiets → Quiets → BadTacticals → Done`
 ///
 /// For quiescence search (`new_qsearch`), the quiet stages are skipped when not
 /// in check (`skip_quiets = true`).
@@ -67,9 +71,8 @@ enum Stage {
 /// never generated.
 pub(crate) struct MovePicker {
     stage: Stage,
-    moves: MoveList,
-    /// Scores parallel to `moves`. Populated per stage.
-    scores: [LargeScoreType; MAX_MOVE_LIST_SIZE],
+    moves: ScoredMoveList,
+    bad_tacticals: ScoredMoveList,
     tt_move: Option<Move>,
     /// True after the TT move has been yielded, so yield stages can skip it.
     tt_move_yielded: bool,
@@ -83,8 +86,14 @@ pub(crate) struct MovePicker {
     /// Quiet (non-promotion, non-capture) moves yielded so far, with their moving piece.
     /// Used by the caller for history penalty on a beta cutoff.
     searched_quiets: ArrayVec<(Move, Piece), MAX_MOVE_LIST_SIZE>,
-    /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to Done.
-    skip_quiets: bool,
+    /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to BadTacticals.
+    pub(crate) skip_quiets: bool,
+    /// When true, apply SEE filtering to captures. False in in-check qsearch so all captures
+    /// count as good evasions.
+    split_tacticals: bool,
+    /// When true (all qsearch), the BadTacticals stage is skipped entirely — underpromotions
+    /// and SEE-losing captures are never yielded.
+    skip_bad_tacticals: bool,
 }
 
 impl MovePicker {
@@ -104,8 +113,8 @@ impl MovePicker {
             } else {
                 Stage::GenerateTacticals
             },
-            moves: MoveList::new(),
-            scores: [0; MAX_MOVE_LIST_SIZE],
+            moves: ScoredMoveList::new(),
+            bad_tacticals: ScoredMoveList::new(),
             tt_move,
             tt_move_yielded: false,
             killers,
@@ -114,6 +123,8 @@ impl MovePicker {
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
             skip_quiets: false,
+            split_tacticals: true,
+            skip_bad_tacticals: false,
         }
     }
 
@@ -128,8 +139,8 @@ impl MovePicker {
             } else {
                 Stage::GenerateTacticals
             },
-            moves: MoveList::new(),
-            scores: [0; MAX_MOVE_LIST_SIZE],
+            moves: ScoredMoveList::new(),
+            bad_tacticals: ScoredMoveList::new(),
             tt_move,
             tt_move_yielded: false,
             killers: [None; 2],
@@ -138,6 +149,10 @@ impl MovePicker {
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
             skip_quiets: !in_check,
+            // When in check, all captures are potential evasions so SEE pruning is skipped.
+            // When not in check, SEE pruning applies (only winning captures are good).
+            split_tacticals: !in_check,
+            skip_bad_tacticals: true,
         }
     }
 
@@ -161,6 +176,101 @@ impl MovePicker {
         self.searched_quiets.as_slice()
     }
 
+    pub(crate) fn current_stage(&self) -> Stage {
+        self.stage
+    }
+
+    #[allow(clippy::expect_used)]
+    fn score_move(&self, board: &Board, mv: &Move, history_table: &HistoryTable) -> LargeScoreType {
+        let maybe_victim = board.captured(mv);
+        if let Some(victim) = maybe_victim {
+            let piece = board
+                .piece_on_square(mv.from())
+                .map(|(pc, _)| pc)
+                .expect("Move from-square must have a piece");
+
+            let base = if mv.is_promote_to_queen() {
+                QUEEN_CAPTURE_PROMO_BONUS
+            } else {
+                0
+            };
+
+            base + mvv_lva(victim, piece)
+        } else if mv.is_promotion() {
+            if mv.is_promote_to_queen() {
+                QUEEN_PUSH_PROMO_BONUS
+            } else {
+                Evaluation::<ByteKnightValues>::piece_value(mv.promotion_piece().unwrap())
+            }
+        } else {
+            let piece = board
+                .piece_on_square(mv.from())
+                .map(|(pc, _)| pc)
+                .expect("Move from-square must have a piece");
+            let is_killer = self
+                .killers
+                .iter()
+                .any(|k| k.is_some_and(|k| k.matches(*mv, piece)));
+            if is_killer {
+                KILLER_BONUS
+            } else {
+                history_table.get(board.side_to_move(), piece, mv.to())
+            }
+        }
+    }
+
+    fn is_good_tactical(&self, board: &Board, entry: &ScoredMove) -> bool {
+        let mv = entry.mv;
+        if mv.is_promotion() {
+            // Underpromotions are always bad tacticals (never worth searching early).
+            mv.is_promote_to_queen()
+        } else if self.split_tacticals {
+            // Apply SEE pruning: skip captures that lose material.
+            see::see(board, mv, 0)
+        } else {
+            // In-check qsearch: all captures are potential evasions, skip SEE pruning.
+            true
+        }
+    }
+
+    /// Helper to generate tactical moves in the move picker.
+    fn generate_tactical_moves(&mut self, board: &Board, history_table: &HistoryTable) {
+        // Reuse metadata computed in TtMove stage if available.
+        let meta = self
+            .metadata
+            .get_or_insert_with(|| move_generation::metadata::compute(board))
+            .clone();
+
+        let moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
+        for mv in moves.iter() {
+            // Score move, then push it to the correct list depending on SEE
+            let scored_mv = ScoredMove {
+                mv: *mv,
+                score: self.score_move(board, mv, history_table),
+            };
+            // Defer move classification to yield stage.
+            self.moves.push(scored_mv);
+        }
+    }
+
+    /// Helper to generate quiet moves.
+    #[allow(clippy::expect_used)]
+    fn generate_quiet_moves(&mut self, board: &Board, history_table: &HistoryTable) {
+        // Reuse cached metadata to avoid recomputing.
+        let meta = self
+            .metadata
+            .as_ref()
+            .expect("metadata must be set after GenerateTacticals");
+        let moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
+
+        for mv in moves.iter() {
+            self.moves.push(ScoredMove {
+                mv: *mv,
+                score: self.score_move(board, mv, history_table),
+            });
+        }
+    }
+
     /// Returns the next best move in staged order, or `None` when exhausted.
     #[allow(clippy::expect_used, clippy::panic)]
     pub(crate) fn next(&mut self, board: &Board, history_table: &HistoryTable) -> Option<Move> {
@@ -173,6 +283,7 @@ impl MovePicker {
                     && chess::legal::is_legal_with_metadata(board, &tt_mv, &meta)
             });
             self.metadata = Some(meta);
+
             if let Some(tt_mv) = self.tt_move.filter(|_| tt_legal) {
                 // Track as a searched quiet if this is a quiet move.
                 if board.captured(&tt_mv).is_none() && !tt_mv.is_promotion() {
@@ -191,110 +302,90 @@ impl MovePicker {
 
         if self.stage == Stage::GenerateTacticals {
             self.pick_index = 0;
-            // Reuse metadata computed in TtMove stage if available.
-            let meta = self
-                .metadata
-                .get_or_insert_with(|| move_generation::metadata::compute(board))
-                .clone();
-            self.moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
-            for (i, mv) in self.moves.iter().enumerate() {
-                let maybe_victim = board.captured(mv);
-                if let Some(victim) = maybe_victim {
-                    let piece = board
-                        .piece_on_square(mv.from())
-                        .map(|(pc, _)| pc)
-                        .expect("Move from-square must have a piece");
-
-                    let base = if mv.is_promote_to_queen() {
-                        QUEEN_CAPTURE_PROMO_BONUS
-                    } else {
-                        0
-                    };
-
-                    self.scores[i] = base + mvv_lva(victim, piece);
-                } else if mv.is_promotion() {
-                    if mv.is_promote_to_queen() {
-                        self.scores[i] = QUEEN_PUSH_PROMO_BONUS;
-                    } else {
-                        self.scores[i] = Evaluation::<ByteKnightValues>::piece_value(
-                            mv.promotion_piece().unwrap(),
-                        );
-                    }
-                }
-            }
+            self.moves.clear();
+            self.bad_tacticals.clear();
+            self.generate_tactical_moves(board, history_table);
             self.stage = Stage::Tacticals;
         }
 
         if self.stage == Stage::Tacticals {
             while self.pick_index < self.moves.len() {
-                let mv = self.selection_sort_pick();
+                let scored_mv = self.selection_sort_pick();
                 // Skip the TT move if it was already yielded.
-                if self.tt_move_yielded && self.tt_move == Some(mv) {
+                if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
                     continue;
                 }
-                self.moves_yielded += 1;
-                return Some(mv);
+
+                // Is this a good tactical?
+                if self.is_good_tactical(board, &scored_mv) {
+                    self.moves_yielded += 1;
+                    return Some(scored_mv.mv);
+                } else {
+                    // Push to "bad" list and continue to next move
+                    self.bad_tacticals.push(scored_mv);
+                    continue;
+                }
             }
             self.stage = Stage::GenerateQuiets;
         }
 
         if self.stage == Stage::GenerateQuiets {
             self.pick_index = 0;
+            self.moves.clear();
             if self.skip_quiets {
-                self.stage = Stage::Done;
+                self.stage = Stage::BadTacticals;
             } else {
-                // Reuse cached metadata to avoid recomputing.
-                let meta = self
-                    .metadata
-                    .as_ref()
-                    .expect("metadata must be set after GenerateTacticals");
-                self.moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
-
-                let stm = board.side_to_move();
-                for (i, mv) in self.moves.iter().enumerate() {
-                    let piece = board
-                        .piece_on_square(mv.from())
-                        .map(|(pc, _)| pc)
-                        .expect("Move from-square must have a piece");
-                    let is_killer = self
-                        .killers
-                        .iter()
-                        .any(|k| k.is_some_and(|k| k.matches(*mv, piece)));
-                    self.scores[i] = if is_killer {
-                        KILLER_BONUS
-                    } else {
-                        history_table.get(stm, piece, mv.to())
-                    };
-                }
-
+                self.generate_quiet_moves(board, history_table);
                 self.stage = Stage::Quiets;
             }
         }
 
         if self.stage == Stage::Quiets {
-            while self.pick_index < self.moves.len() {
-                let mv = self.selection_sort_pick();
-                // Skip the TT move if it was already yielded.
-                if self.tt_move_yielded && self.tt_move == Some(mv) {
-                    continue;
+            if !self.skip_quiets {
+                while self.pick_index < self.moves.len() {
+                    let scored_mv = self.selection_sort_pick();
+                    let mv = scored_mv.mv;
+                    // Skip the TT move if it was already yielded.
+                    if self.tt_move_yielded && self.tt_move == Some(mv) {
+                        continue;
+                    }
+                    let piece = board
+                        .piece_on_square(mv.from())
+                        .map(|(pc, _)| pc)
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "Move from-square must have a piece: {} {}",
+                                board.to_fen(),
+                                mv.to_long_algebraic()
+                            )
+                        });
+                    // Only track truly quiet moves (not underpromotions) for history penalty.
+                    if !mv.is_promotion() {
+                        let _ = self.searched_quiets.try_push((mv, piece));
+                    }
+                    self.moves_yielded += 1;
+                    return Some(mv);
                 }
-                let piece = board
-                    .piece_on_square(mv.from())
-                    .map(|(pc, _)| pc)
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "Move from-square must have a piece: {} {}",
-                            board.to_fen(),
-                            mv.to_long_algebraic()
-                        )
-                    });
-                // Only track truly quiet moves (not underpromotions) for history penalty.
-                if !mv.is_promotion() {
-                    let _ = self.searched_quiets.try_push((mv, piece));
-                }
-                self.moves_yielded += 1;
-                return Some(mv);
             }
+
+            self.stage = Stage::BadTacticals;
+            // Reset the pick index before going to the next phase
+            self.pick_index = 0;
+        }
+
+        if self.stage == Stage::BadTacticals {
+            if !self.skip_bad_tacticals {
+                while self.pick_index < self.bad_tacticals.len() {
+                    let scored_mv = self.bad_tacticals.as_slice()[self.pick_index];
+                    self.pick_index += 1;
+                    if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
+                        continue;
+                    }
+                    self.moves_yielded += 1;
+                    return Some(scored_mv.mv);
+                }
+            }
+
             self.stage = Stage::Done;
         }
 
@@ -303,22 +394,27 @@ impl MovePicker {
 
     /// Selection sort: find the highest-scored move in `moves[pick_index..range_end]`,
     /// swap it to `pick_index`, advance `pick_index`, and return the move.
-    fn selection_sort_pick(&mut self) -> Move {
+    fn selection_sort_pick(&mut self) -> ScoredMove {
+        let mv_list = if self.stage == Stage::BadTacticals {
+            &mut self.bad_tacticals
+        } else {
+            &mut self.moves
+        };
+
         let mut best_idx = self.pick_index;
-        for i in (self.pick_index + 1)..self.moves.len() {
-            if self.scores[i] > self.scores[best_idx] {
+        for i in (self.pick_index + 1)..mv_list.len() {
+            if mv_list.as_slice()[i].score > mv_list.as_slice()[best_idx].score {
                 best_idx = i;
             }
         }
 
         if best_idx != self.pick_index {
-            self.scores.swap(self.pick_index, best_idx);
-            self.moves.as_mut_slice().swap(self.pick_index, best_idx);
+            mv_list.as_mut_slice().swap(self.pick_index, best_idx);
         }
 
-        let mv = self.moves.as_slice()[self.pick_index];
+        let scored_mv = mv_list.as_slice()[self.pick_index];
         self.pick_index += 1;
-        mv
+        scored_mv
     }
 }
 
@@ -330,8 +426,9 @@ mod tests {
     use crate::{
         history_table::HistoryTable,
         killers_table::KillerMovesTable,
-        move_picker::MovePicker,
+        move_picker::{MovePicker, Stage},
         score::Score,
+        see,
         ttable::{EntryFlag, TranspositionTable},
     };
 
@@ -354,8 +451,6 @@ mod tests {
         out
     }
 
-    // ---- helpers ----
-
     /// FEN with multiple captures available:
     ///   White queen on d5 can capture black rook on d8 (QxR).
     ///   White pawn on e5 can capture black pawn on d6 (PxP).
@@ -370,8 +465,6 @@ mod tests {
     ///   Pawn can capture queen (PxQ) and pawn (PxP); rook can capture queen (RxQ).
     ///   Multiple captures with different MVV-LVA values.
     const MULTI_CAPTURE_FEN: &str = "8/8/3p4/3q4/3PP3/8/8/R3K1k1 w - - 0 1";
-
-    // ---- tests ----
 
     #[test]
     fn tt_move_comes_first() {
@@ -409,11 +502,13 @@ mod tests {
         let mut seen_quiet = false;
         while let Some(mv) = picker.next(&board, &history) {
             let is_capture = board.captured(&mv).is_some();
-            let is_queen_promo = mv.flag() == chess::moves::MoveFlag::PromotionQueen;
-            let is_tactical = is_capture || is_queen_promo;
+            let is_tactical = is_capture || mv.is_promotion();
+            let is_good_tactical = mv.is_promote_to_queen()
+                || mv.is_promote_to_knight()
+                || (is_capture && see::see(&board, mv, 0));
             if seen_quiet {
                 assert!(
-                    !is_tactical,
+                    !is_good_tactical, // Bad tacticals are yielded after quiets
                     "tactical move {:?} yielded after a quiet move",
                     mv.to_long_algebraic()
                 );
@@ -701,5 +796,18 @@ mod tests {
         let mut picker2 = MovePicker::new(None, &killers, 0);
         let _ = picker2.next(&board_safe, &history);
         assert!(!picker2.in_check(), "in_check() should return false");
+    }
+
+    #[test]
+    fn no_bad_tacticals_in_qsearch() {
+        let board = Board::from_fen("8/P3k3/8/8/8/8/8/4K3 w - - 0 1").unwrap();
+        let history = HistoryTable::new();
+        // Not actually in check, but we want to ensure that bad tacticals (underpromotions) are not yielded in this
+        // scenario.
+        let mut picker = MovePicker::new_qsearch(None, true);
+        assert_eq!(picker.current_stage(), Stage::GenerateTacticals);
+
+        let moves = collect_all(&mut picker, &board, &history);
+        assert_eq!(moves.len(), 6);
     }
 }
