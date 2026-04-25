@@ -473,6 +473,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut moves_seen = 0;
         let static_eval = self.eval.eval(board);
 
+        let fp_margin = fp_base() + depth as i32 * fp_scale();
+
         // Loop through all moves in best-first order.
         while let Some(mv) = picker.next(board, self.history_table) {
             let loop_counter = picker.moves_yielded() - 1;
@@ -513,12 +515,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // Futility pruning: https://www.chessprogramming.org/Futility_Pruning
             // If we are at a shallow depth and have already found a good score, we start skipping moves
             // ------------------------------------------------------------------------------------------
-            let fp_margin = fp_base() + depth as i32 * fp_scale();
             if !is_root
                 && !is_pv
                 && !is_in_check
                 && !is_mated
                 && is_quiet
+                && moves_seen > 0
+                && !alpha.is_mate()
                 && (depth as i32) < fp_max_depth()
                 && static_eval.0 as i32 + fp_margin <= alpha.0 as i32
             {
