@@ -43,9 +43,9 @@ use crate::{
     ttable::{self, TranspositionTableEntry},
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
-        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN,
-        lmp_max_depth, qs_delta_margin, qs_see_threshold, see_tacticals_margin,
-        see_tacticals_max_depth,
+        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN, fp_base,
+        fp_max_depth, fp_scale, lmp_max_depth, qs_delta_margin, qs_see_threshold,
+        see_tacticals_margin, see_tacticals_max_depth,
     },
 };
 use ttable::TranspositionTable;
@@ -471,6 +471,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_score = -Score::INF;
         let mut best_move: Option<Move> = None;
         let mut moves_seen = 0;
+        let static_eval = self.eval.eval(board);
 
         // Loop through all moves in best-first order.
         while let Some(mv) = picker.next(board, self.history_table) {
@@ -507,6 +508,23 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             }
 
             // Move-loop pruning techniques
+
+            // ------------------------------------------------------------------------------------------
+            // Futility pruning: https://www.chessprogramming.org/Futility_Pruning
+            // If we are at a shallow depth and have already found a good score, we start skipping moves
+            // ------------------------------------------------------------------------------------------
+            let fp_margin = fp_base() + depth as i32 * fp_scale();
+            if !is_root
+                && !is_pv
+                && !is_in_check
+                && !is_mated
+                && is_quiet
+                && (depth as i32) < fp_max_depth()
+                && static_eval.0 as i32 + fp_margin <= alpha.0 as i32
+            {
+                picker.skip_quiets = true;
+                continue;
+            }
 
             // ---------------------------------------------------------------------------------
             // LMP - Late Move Pruning
