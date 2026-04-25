@@ -404,6 +404,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // increment node count
         self.thread_data.nodes += 1;
         self.thread_data.seldepth = self.thread_data.seldepth.max(ply);
+        let in_check = move_generation::is_in_check(board);
 
         // Ply guard: prevent unbounded recursion
         if ply >= MAX_PLY {
@@ -475,6 +476,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // How much to extend the depth.
         let mut extension = 0;
+        // Check extension - if we're in check, this is likely a tactical position so search deeper.
+        if in_check && extension == 0 {
+            extension = 1;
+        }
 
         let fp_margin = fp_base() + depth as i32 * fp_scale();
 
@@ -497,11 +502,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let is_pv = Node::PV;
             let is_quiet = board.captured(&mv).is_none() && !mv.is_promotion();
             let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
-
-            // Check extension - if we're in check, this is likely a tactical position so search deeper.
-            if is_in_check && extension == 0 {
-                extension = 1;
-            }
 
             let is_bad_tactical = picker.current_stage() == move_picker::Stage::BadTacticals;
 
