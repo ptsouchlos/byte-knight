@@ -41,7 +41,8 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 - [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
 - [Internal Iterative Reductions](https://www.chessprogramming.org/Internal_Iterative_Reductions)
 - [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
-- [Late Move Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html)
+- [Late Move Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html#futility-pruning-late-move-pruning)
+- [Futility Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html#futility-pruning-late-move-pruning)
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard/soft limits
 - Move ordering via a [move picker](https://www.chessprogramming.org/Move_Generation)
@@ -49,6 +50,7 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
   - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA) with transposition table priority
   - [History heuristic](https://www.chessprogramming.org/History_Heuristic) with history gravity
   - [Killer move heuristic](https://www.chessprogramming.org/Killer_Heuristic)
+  - [Static exchange evaluation](https://www.chessprogramming.org/Static_Exchange_Evaluation) for good/bad tacticals.
 
 ### Evaluation
 
