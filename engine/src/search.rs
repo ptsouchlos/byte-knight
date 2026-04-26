@@ -485,10 +485,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // Loop through all moves in best-first order.
         while let Some(mv) = picker.next(board, self.history_table) {
-            let loop_counter = picker.moves_yielded() - 1;
-
             // Calculate the LMR reduction and depth which will be used later in FP
-            let lmr_table_value = self.lmr_table.at(depth as usize, loop_counter);
+            let lmr_table_value = self.lmr_table.at(depth as usize, moves_seen);
             let base_reduction = if let Some(table_val) = lmr_table_value {
                 *table_val
             } else {
@@ -549,7 +547,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 && !is_mated
                 && is_quiet
                 && depth <= lmp_max_depth() as i16
-                && moves_seen > params::late_move_threshold(depth as i32)
+                && moves_seen as i32 > params::late_move_threshold(depth as i32)
             {
                 picker.skip_quiets = true;
                 continue;
@@ -575,7 +573,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 // Compute LMR reduction
                 let reduction = if is_quiet
                     && depth >= LMR_MIN_DEPTH
-                    && moves_seen as usize >= LMR_MIN_MOVES_SEEN
+                    && moves_seen >= LMR_MIN_MOVES_SEEN
                 {
                     // Apply less LMR reduction for killer moves.
                     if is_killer {
