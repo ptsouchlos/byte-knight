@@ -572,6 +572,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 // Compute LMR reduction
                 let reduction = if is_quiet
+                    && !is_in_check
                     && depth >= LMR_MIN_DEPTH
                     && moves_seen >= LMR_MIN_MOVES_SEEN
                 {
