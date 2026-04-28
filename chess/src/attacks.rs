@@ -575,9 +575,8 @@ pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
     let them = side.opposite();
 
     let enemy = board.pieces(them);
-    let rooks_queens = (board.piece_kind_bitboard(Piece::Rook)
-        | board.piece_kind_bitboard(Piece::Queen))
-        & enemy;
+    let rooks_queens =
+        (board.piece_kind_bitboard(Piece::Rook) | board.piece_kind_bitboard(Piece::Queen)) & enemy;
     let bishops_queens = (board.piece_kind_bitboard(Piece::Bishop)
         | board.piece_kind_bitboard(Piece::Queen))
         & enemy;
