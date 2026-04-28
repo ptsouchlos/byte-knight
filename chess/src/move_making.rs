@@ -198,6 +198,7 @@ impl Board {
                 } else {
                     to + 8u8
                 };
+
                 let pawns = self.piece_bitboard(Piece::Pawn, them);
                 debug_assert!(
                     pawns.is_square_occupied(en_passant_pawn_location),
@@ -264,6 +265,8 @@ impl Board {
                     if no_discovery && pawn_bb_check.number_of_occupied_squares() >= 1 {
                         // If there are more than one pawn that can capture en passant, but all of them are pinned, then we can't set the en passant square as it won't be legal for the opponent to capture it anyway.
                         self.set_en_passant_square(Some(en_passant_square));
+                    } else {
+                        self.set_en_passant_square(None);
                     }
                 } else {
                     // If there are no pawns that can capture en passant, then we can just not set the en passant square as it won't be legal for the opponent to capture it anyway.
