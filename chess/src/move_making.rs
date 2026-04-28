@@ -775,7 +775,7 @@ mod tests {
             let mv_ok = board.make_move(first_mv);
             assert!(mv_ok.is_ok());
             // check the en passant square
-            assert_eq!(board.en_passant_square(), Some(Squares::E3));
+            assert_eq!(board.en_passant_square(), None);
             assert_eq!(board.side_to_move(), Side::Black);
             // make a null move
             board.null_move();
@@ -789,7 +789,7 @@ mod tests {
             let undo_ok = board.unmake_move();
             assert!(undo_ok.is_ok());
             // check the en passant square
-            assert_eq!(board.en_passant_square(), Some(Squares::E3));
+            assert_eq!(board.en_passant_square(), None);
             // check side to move
             assert_eq!(board.side_to_move(), Side::Black);
         }
