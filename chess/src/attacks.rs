@@ -574,13 +574,18 @@ pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
 
     let them = side.opposite();
 
-    let rooks = board.piece_kind_bitboard(Piece::Rook);
-    let bishops = board.piece_kind_bitboard(Piece::Bishop);
-    let queens = board.piece_kind_bitboard(Piece::Queen);
+    let enemy = board.pieces(them);
+    let rooks_queens = (board.piece_kind_bitboard(Piece::Rook)
+        | board.piece_kind_bitboard(Piece::Queen))
+        & enemy;
+    let bishops_queens = (board.piece_kind_bitboard(Piece::Bishop)
+        | board.piece_kind_bitboard(Piece::Queen))
+        & enemy;
 
-    // Snipers attack the king square when other other snipers are removed
-    let snipers = (rook_attacks & (rooks | queens))
-        | (bishop_attacks & (bishops | queens)) & board.pieces(them);
+    // Snipers are enemy sliders that would attack the king square if everything
+    // between them and the king were removed. The previous form had an operator
+    // precedence bug that left the rook/queen branch unfiltered by colour.
+    let snipers = (rook_attacks & rooks_queens) | (bishop_attacks & bishops_queens);
 
     let occ = board.all_pieces() ^ snipers;
 
