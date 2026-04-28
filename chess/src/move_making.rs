@@ -126,8 +126,6 @@ impl Board {
 
         let captured = self.captured(mv);
 
-        let previous_board = self.clone();
-
         let mut current_state = *self.board_state();
         current_state.next_move = *mv;
         // Store move info that'll we'll need for undoing
@@ -178,8 +176,27 @@ impl Board {
                 );
             }
 
+            // If this is a double pawn push, determine the legal EP square *before*
+            // the pawn moves. Computing this on the pre-move position lets us avoid
+            // cloning the current board.
+            let ep_square_to_set = if mv.is_pawn_two_up() {
+                let en_passant_square = if us == Side::White {
+                    to - 8u8
+                } else {
+                    to + 8u8
+                };
+                if ep_capture_is_legal(self, from, en_passant_square, us) {
+                    Some(en_passant_square)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            // Remove the piece from the board
             self.remove_piece(us, piece, from, update_zobrist_hash);
-            // take into account the promotion piece if any
+            // Take into account the promotion piece if any
             let piece_to_add = if mv.is_promotion() {
                 mv.promotion_piece().unwrap()
             } else {
@@ -208,6 +225,7 @@ impl Board {
                     pawns
                 );
 
+                // Remove the EP captured pawn from the board.
                 self.remove_piece(
                     them,
                     Piece::Pawn,
@@ -215,75 +233,18 @@ impl Board {
                     update_zobrist_hash,
                 );
             }
-            // check if this is a double pawn push
-            // if so, set the en passant square
-            if mv.is_pawn_two_up() {
-                // get the en passant square from the new move
-                // if white, the en passant square is one rank below the destination square
-                // if black, the en passant square is one rank above the destination square
-                let en_passant_square = if us == Side::White {
-                    to - 8u8
-                } else {
-                    to + 8u8
-                };
 
-                // -----------------------------------------------------------------------------------------------
-                // Check to see if the en passant square is a legal move for the opponent
-                // These checks are based on this commit from Stockfish.
-                // https://github.com/official-stockfish/Stockfish/commit/2321cf2f77b241d685ee68c9896f6574a6f12d0d
-                // -----------------------------------------------------------------------------------------------
-
-                // Check if there are any enemy pawns attacking the EP square. We only consider pawns of the opponent
-                // who intersect our pawn attacks _from_ the EP square.
-                let pawns =
-                    attacks::pawn(en_passant_square, us) & self.piece_bitboard(Piece::Pawn, them);
-
-                // Are there any pawns attacking attacking the EP square? If not, then EP capture is not possible.
-                if pawns.number_of_occupied_squares() >= 1 {
-                    // Now that we know there's at least one pawn that can capture en passant, we need to check
-                    // if the pawn(s) are pinned or not or if they give discovered check.
-
-                    let king_sq = self.king_square(them);
-                    let (king_file, _) = square::from_square(king_sq);
-                    let (from_file, _) = square::from_square(from);
-
-                    // Get the blockers from the opponent king's perspective. This is because we're now checking for check of the opponent king.
-                    // We (side to move) are making a pawn double push, so we're now checking the potential of an EP capture on the part of the opponent.
-                    let king_blockers = attacks::blockers_for_king(&previous_board, them);
-                    let not_blockers = !king_blockers;
-
-                    // Determine if there's no discovery check or if the pawn is on the same file as the king. If either is true, the EP capture does
-                    // not result in a discovered check.
-                    let no_discovery = !(Bitboard::from_square(from) & not_blockers).empty()
-                        || king_file == from_file;
-
-                    // Now check if any of the pawns overlap with any non-blockers from the king's perspective and if they don't overlap
-                    // the line intersecting the king and the EP square (if any). If they do overlap, then the EP capture would result
-                    // in a check and is thus illegal.
-                    let pawn_bb_check =
-                        pawns & (not_blockers | rays::line(en_passant_square, king_sq));
-                    if no_discovery && pawn_bb_check.number_of_occupied_squares() >= 1 {
-                        // If there are more than one pawn that can capture en passant, but all of them are pinned, then we can't set the en passant square as it won't be legal for the opponent to capture it anyway.
-                        self.set_en_passant_square(Some(en_passant_square));
-                    } else {
-                        self.set_en_passant_square(None);
-                    }
-                } else {
-                    // If there are no pawns that can capture en passant, then we can just not set the en passant square as it won't be legal for the opponent to capture it anyway.
-                    self.set_en_passant_square(None);
-                }
-            } else {
-                // Move is not a double pawn push, so ensure the EP square is cleared.
-                self.set_en_passant_square(None);
-            }
+            // Apply the EP square computed before the pawn moved.
+            self.set_en_passant_square(ep_square_to_set);
         } else {
             // reset the en passant square if it exists
             if self.en_passant_square().is_some() {
                 self.set_en_passant_square(None);
             }
-            // just move the piece
+            // Move the piece
             self.move_piece(us, piece, from, to, update_zobrist_hash);
             if captured.is_none() {
+                // No capture, so increment half move clock
                 self.set_half_move_clock(self.half_move_clock() + 1);
             }
         }
@@ -535,6 +496,42 @@ impl Board {
     fn switch_side(&mut self) {
         self.set_side_to_move(self.side_to_move().opposite());
     }
+}
+
+/// Decide whether setting the en-passant square after a double pawn push would
+/// produce a legal EP capture for the opponent. The board must still be in the
+/// pre-move state (the pushing pawn at `from`, `ep_square` empty).
+///
+/// Based on the Stockfish optimization in
+/// https://github.com/official-stockfish/Stockfish/commit/2321cf2f77b241d685ee68c9896f6574a6f12d0d
+fn ep_capture_is_legal(board: &Board, from: u8, ep_square: u8, us: Side) -> bool {
+    let them = us.opposite();
+
+    // Any opposing pawns that could attack the EP square?
+    let pawns = attacks::pawn(ep_square, us) & board.piece_bitboard(Piece::Pawn, them);
+    if pawns.empty() {
+        return false;
+    }
+
+    let king_sq = board.king_square(them);
+    let (king_file, _) = square::from_square(king_sq);
+    let (from_file, _) = square::from_square(from);
+
+    // Blockers for them's king from the pre-move position.
+    let king_blockers = attacks::blockers_for_king(board, them);
+    let not_blockers = !king_blockers;
+
+    // No discovered check if `from` was not a blocker, or if king and `from`
+    // share a file (the discovered ray would still be blocked by the new pawn).
+    let no_discovery =
+        !(Bitboard::from_square(from) & not_blockers).empty() || king_file == from_file;
+    if !no_discovery {
+        return false;
+    }
+
+    // At least one capturing pawn must be unpinned (or pinned along the
+    // king-EP line, which keeps the pin intact after the capture).
+    !(pawns & (not_blockers | rays::line(ep_square, king_sq))).empty()
 }
 
 /// Helper function to get what castling rights to remove based on the square the piece moved from.
