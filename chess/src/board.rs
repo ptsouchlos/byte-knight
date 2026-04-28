@@ -794,6 +794,7 @@ mod tests {
             assert_eq!(fen, board.to_fen());
         }
     }
+
     #[test]
     fn from_invalid_fen() {
         let maybe_board = Board::from_fen("");
@@ -802,6 +803,15 @@ mod tests {
         let message = format!("{err}");
         // check that the message contains something about the FEN being empty
         assert!(message.to_lowercase().contains("empty"));
+    }
+
+    #[test]
+    fn from_fen_illegal_ep() {
+        // This FEN has an en passant square of f6, but this is not legal because the king is in check
+        const FEN: &str = "8/p2r2K1/6p1/1kp1PpP1/2p5/2P5/8/4R3 b - f6 0 43";
+        let maybe_board = Board::from_fen(FEN);
+        assert!(maybe_board.is_ok());
+        assert!(maybe_board.unwrap().en_passant_square().is_none());
     }
 
     #[test]
