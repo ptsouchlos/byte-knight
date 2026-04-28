@@ -4,6 +4,8 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use crate::{
+    attacks,
+    bitboard::Bitboard,
     board::Board,
     board_state::MovePieceInfo,
     definitions::{CastlingAvailability, Squares},
@@ -11,6 +13,7 @@ use crate::{
     moves::{self, Move, MoveFlag},
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
+    rays,
     side::Side,
     square::{self, Square},
 };
@@ -123,6 +126,8 @@ impl Board {
 
         let captured = self.captured(mv);
 
+        let previous_board = self.clone();
+
         let mut current_state = *self.board_state();
         current_state.next_move = *mv;
         // Store move info that'll we'll need for undoing
@@ -220,8 +225,52 @@ impl Board {
                 } else {
                     to + 8u8
                 };
-                self.set_en_passant_square(Some(en_passant_square));
+
+                // -----------------------------------------------------------------------------------------------
+                // Check to see if the en passant square is a legal move for the opponent
+                // These checks are based on this commit from Stockfish.
+                // https://github.com/official-stockfish/Stockfish/commit/2321cf2f77b241d685ee68c9896f6574a6f12d0d
+                // -----------------------------------------------------------------------------------------------
+
+                // Check if there are any enemy pawns attacking the EP square. We only consider pawns of the opponent
+                // who intersect our pawn attacks _from_ the EP square.
+                let pawns =
+                    attacks::pawn(en_passant_square, us) & self.piece_bitboard(Piece::Pawn, them);
+
+                // Are there any pawns attacking attacking the EP square? If not, then EP capture is not possible.
+                if pawns.number_of_occupied_squares() >= 1 {
+                    // Now that we know there's at least one pawn that can capture en passant, we need to check
+                    // if the pawn(s) are pinned or not or if they give discovered check.
+
+                    let king_sq = self.king_square(them);
+                    let (king_file, _) = square::from_square(king_sq);
+                    let (from_file, _) = square::from_square(from);
+
+                    // Get the blockers from the opponent king's perspective. This is because we're now checking for check of the opponent king.
+                    // We (side to move) are making a pawn double push, so we're now checking the potential of an EP capture on the part of the opponent.
+                    let king_blockers = attacks::blockers_for_king(&previous_board, them);
+                    let not_blockers = !king_blockers;
+
+                    // Determine if there's no discovery check or if the pawn is on the same file as the king. If either is true, the EP capture does
+                    // not result in a discovered check.
+                    let no_discovery = !(Bitboard::from_square(from) & not_blockers).empty()
+                        || king_file == from_file;
+
+                    // Now check if any of the pawns overlap with any non-blockers from the king's perspective and if they don't overlap
+                    // the line intersecting the king and the EP square (if any). If they do overlap, then the EP capture would result
+                    // in a check and is thus illegal.
+                    let pawn_bb_check =
+                        pawns & (not_blockers | rays::line(en_passant_square, king_sq));
+                    if no_discovery && pawn_bb_check.number_of_occupied_squares() >= 1 {
+                        // If there are more than one pawn that can capture en passant, but all of them are pinned, then we can't set the en passant square as it won't be legal for the opponent to capture it anyway.
+                        self.set_en_passant_square(Some(en_passant_square));
+                    }
+                } else {
+                    // If there are no pawns that can capture en passant, then we can just not set the en passant square as it won't be legal for the opponent to capture it anyway.
+                    self.set_en_passant_square(None);
+                }
             } else {
+                // Move is not a double pawn push, so ensure the EP square is cleared.
                 self.set_en_passant_square(None);
             }
         } else {
@@ -902,5 +951,58 @@ mod tests {
             MoveFlag::EnPassant,
         );
         assert!(board.make_move_unchecked(&mv).is_ok());
+    }
+
+    #[test]
+    fn no_en_passant_when_not_legal() {
+        const FEN: [&str; 3] = [
+            "r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38",
+            "8/p2r1pK1/6p1/1kp1P1P1/2p5/2P5/8/4R3 b - - 0 43",
+            "4k3/4p3/2b3b1/3P1P2/4K3/8/8/8 b - -",
+        ];
+
+        const TEST_MOVES: [&str; 3] = ["f7f5", "f7f5", "e7e5"];
+
+        for (fen, mv) in std::iter::zip(FEN, TEST_MOVES) {
+            let maybe_board = Board::from_fen(fen);
+            assert!(
+                maybe_board.is_ok(),
+                "Failed to create board from FEN: {fen}"
+            );
+
+            let mut board = maybe_board.unwrap();
+            println!("before move {}:\n{}", board.to_fen(), board);
+
+            let result = board.make_uci_move(mv);
+            assert!(result.is_ok());
+            println!("after move:\n{}", board);
+
+            // en-passant capture is not possible due to being pinned
+            assert!(board.en_passant_square().is_none());
+        }
+    }
+
+    #[test]
+    fn en_passant_when_legal() {
+        let test_fens = ["3rr3/p2b4/1p4Rp/4k3/2B1p1P1/2K1B2P/P4P2/4R3 w - - 4 31"];
+
+        let moves = ["f2f4"];
+        for (fen, mv) in std::iter::zip(test_fens, moves) {
+            let maybe_board = Board::from_fen(fen);
+            assert!(
+                maybe_board.is_ok(),
+                "Failed to create board from FEN: {fen}"
+            );
+
+            let mut board = maybe_board.unwrap();
+            println!("before move:\n{}", board);
+
+            let result = board.make_uci_move(mv);
+            assert!(result.is_ok());
+            println!("after move:\n{}", board);
+
+            // en-passant capture is possible
+            assert!(board.en_passant_square().is_some());
+        }
     }
 }
