@@ -765,7 +765,7 @@ mod tests {
             // start with default board
             let mut board = Board::default_board();
             let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
-            // only move pawns and do 2 up movelet mut move_list = MoveList::new();
+            // only move pawns and do 2 up move
             let first_mv = move_list
                 .iter()
                 .find(|mv| mv.to_long_algebraic() == "e2e4")
