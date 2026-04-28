@@ -17,6 +17,7 @@ use crate::{
     file::File,
     magics::{BISHOP_MAGICS, ROOK_MAGICS},
     pieces::Piece,
+    rays,
     side::Side,
 };
 
@@ -556,13 +557,54 @@ pub fn ep_capture_square(to: u8, side: Side) -> u8 {
     }
 }
 
+/// Get all pieces that are blocking the king from being in check.
+///
+/// # Arguments
+/// - `board` - The current [`Board`].
+/// - `side` - The side to check for blockers.
+///
+/// # Returns
+/// - A [`Bitboard`] representing all the pieces that are blocking the king from being in check.
+pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
+    let king_square = board.king_square(side);
+    let mut blockers = Bitboard::default();
+
+    let rook_attacks = attacks::rook(king_square, Bitboard::default());
+    let bishop_attacks = attacks::bishop(king_square, Bitboard::default());
+
+    let them = side.opposite();
+
+    let enemy = board.pieces(them);
+    let rooks_queens =
+        (board.piece_kind_bitboard(Piece::Rook) | board.piece_kind_bitboard(Piece::Queen)) & enemy;
+    let bishops_queens = (board.piece_kind_bitboard(Piece::Bishop)
+        | board.piece_kind_bitboard(Piece::Queen))
+        & enemy;
+
+    // Snipers are enemy sliders that would attack the king square if everything
+    // between them and the king were removed. The previous form had an operator
+    // precedence bug that left the rook/queen branch unfiltered by colour.
+    let snipers = (rook_attacks & rooks_queens) | (bishop_attacks & bishops_queens);
+
+    let occ = board.all_pieces() ^ snipers;
+
+    for sq in snipers.iter() {
+        let bb = rays::between(king_square, sq) & occ;
+        if bb.number_of_occupied_squares() == 1 {
+            blockers |= bb;
+        }
+    }
+
+    blockers
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         attacks::{self, BISHOP_ATTACKS, ROOK_ATTACKS},
         bitboard::Bitboard,
         board::Board,
-        definitions::NumberOf,
+        definitions::{NumberOf, Squares},
         magics::{BISHOP_MAGICS, ROOK_MAGICS},
         move_generation,
         pieces::Piece,
@@ -1178,5 +1220,22 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_blockers_for_king() {
+        const FEN: &str = "r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38";
+        let mut board = Board::from_fen(FEN).unwrap();
+        board.make_uci_move("f7f5").unwrap();
+        println!("{}\n{}", board.to_fen(), board);
+        let blockers = attacks::blockers_for_king(&board, Side::White);
+        let expected_blockers = Bitboard::from_square(Squares::E5);
+        assert_eq!(blockers, expected_blockers);
+
+        const FEN_2: &str = "8/p2r1pK1/6p1/1kp1P1P1/2p5/2P5/8/4R3 b - - 0 43";
+        let board_2 = Board::from_fen(FEN_2).unwrap();
+        let b2_blockers = attacks::blockers_for_king(&board_2, Side::White);
+        let expected_b2_blockers = Bitboard::from_square(Squares::F7);
+        assert_eq!(b2_blockers, expected_b2_blockers);
     }
 }

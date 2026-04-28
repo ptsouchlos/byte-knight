@@ -4,6 +4,8 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use crate::{
+    attacks,
+    bitboard::Bitboard,
     board::Board,
     board_state::MovePieceInfo,
     definitions::{CastlingAvailability, Squares},
@@ -11,6 +13,7 @@ use crate::{
     moves::{self, Move, MoveFlag},
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
+    rays,
     side::Side,
     square::{self, Square},
 };
@@ -173,8 +176,27 @@ impl Board {
                 );
             }
 
+            // If this is a double pawn push, determine the legal EP square *before*
+            // the pawn moves. Computing this on the pre-move position lets us avoid
+            // cloning the current board.
+            let ep_square_to_set = if mv.is_pawn_two_up() {
+                let en_passant_square = if us == Side::White {
+                    to - 8u8
+                } else {
+                    to + 8u8
+                };
+                if ep_capture_is_legal(self, from, en_passant_square, us) {
+                    Some(en_passant_square)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            // Remove the piece from the board
             self.remove_piece(us, piece, from, update_zobrist_hash);
-            // take into account the promotion piece if any
+            // Take into account the promotion piece if any
             let piece_to_add = if mv.is_promotion() {
                 mv.promotion_piece().unwrap()
             } else {
@@ -193,6 +215,7 @@ impl Board {
                 } else {
                     to + 8u8
                 };
+
                 let pawns = self.piece_bitboard(Piece::Pawn, them);
                 debug_assert!(
                     pawns.is_square_occupied(en_passant_pawn_location),
@@ -202,6 +225,7 @@ impl Board {
                     pawns
                 );
 
+                // Remove the EP captured pawn from the board.
                 self.remove_piece(
                     them,
                     Piece::Pawn,
@@ -209,29 +233,18 @@ impl Board {
                     update_zobrist_hash,
                 );
             }
-            // check if this is a double pawn push
-            // if so, set the en passant square
-            if mv.is_pawn_two_up() {
-                // get the en passant square from the new move
-                // if white, the en passant square is one rank below the destination square
-                // if black, the en passant square is one rank above the destination square
-                let en_passant_square = if us == Side::White {
-                    to - 8u8
-                } else {
-                    to + 8u8
-                };
-                self.set_en_passant_square(Some(en_passant_square));
-            } else {
-                self.set_en_passant_square(None);
-            }
+
+            // Apply the EP square computed before the pawn moved.
+            self.set_en_passant_square(ep_square_to_set);
         } else {
             // reset the en passant square if it exists
             if self.en_passant_square().is_some() {
                 self.set_en_passant_square(None);
             }
-            // just move the piece
+            // Move the piece
             self.move_piece(us, piece, from, to, update_zobrist_hash);
             if captured.is_none() {
+                // No capture, so increment half move clock
                 self.set_half_move_clock(self.half_move_clock() + 1);
             }
         }
@@ -485,6 +498,42 @@ impl Board {
     }
 }
 
+/// Decide whether setting the en-passant square after a double pawn push would
+/// produce a legal EP capture for the opponent. The board must still be in the
+/// pre-move state (the pushing pawn at `from`, `ep_square` empty).
+///
+/// Based on the Stockfish optimization in
+/// https://github.com/official-stockfish/Stockfish/commit/2321cf2f77b241d685ee68c9896f6574a6f12d0d
+fn ep_capture_is_legal(board: &Board, from: u8, ep_square: u8, us: Side) -> bool {
+    let them = us.opposite();
+
+    // Any opposing pawns that could attack the EP square?
+    let pawns = attacks::pawn(ep_square, us) & board.piece_bitboard(Piece::Pawn, them);
+    if pawns.empty() {
+        return false;
+    }
+
+    let king_sq = board.king_square(them);
+    let (king_file, _) = square::from_square(king_sq);
+    let (from_file, _) = square::from_square(from);
+
+    // Blockers for them's king from the pre-move position.
+    let king_blockers = attacks::blockers_for_king(board, them);
+    let not_blockers = !king_blockers;
+
+    // No discovered check if `from` was not a blocker, or if king and `from`
+    // share a file (the discovered ray would still be blocked by the new pawn).
+    let no_discovery =
+        !(Bitboard::from_square(from) & not_blockers).empty() || king_file == from_file;
+    if !no_discovery {
+        return false;
+    }
+
+    // At least one capturing pawn must be unpinned (or pinned along the
+    // king-EP line, which keeps the pin intact after the capture).
+    !(pawns & (not_blockers | rays::line(ep_square, king_sq))).empty()
+}
+
 /// Helper function to get what castling rights to remove based on the square the piece moved from.
 fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
     match us {
@@ -713,7 +762,7 @@ mod tests {
             // start with default board
             let mut board = Board::default_board();
             let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
-            // only move pawns and do 2 up movelet mut move_list = MoveList::new();
+            // only move pawns and do 2 up move
             let first_mv = move_list
                 .iter()
                 .find(|mv| mv.to_long_algebraic() == "e2e4")
@@ -723,7 +772,7 @@ mod tests {
             let mv_ok = board.make_move(first_mv);
             assert!(mv_ok.is_ok());
             // check the en passant square
-            assert_eq!(board.en_passant_square(), Some(Squares::E3));
+            assert_eq!(board.en_passant_square(), None);
             assert_eq!(board.side_to_move(), Side::Black);
             // make a null move
             board.null_move();
@@ -737,7 +786,7 @@ mod tests {
             let undo_ok = board.unmake_move();
             assert!(undo_ok.is_ok());
             // check the en passant square
-            assert_eq!(board.en_passant_square(), Some(Squares::E3));
+            assert_eq!(board.en_passant_square(), None);
             // check side to move
             assert_eq!(board.side_to_move(), Side::Black);
         }
@@ -902,5 +951,58 @@ mod tests {
             MoveFlag::EnPassant,
         );
         assert!(board.make_move_unchecked(&mv).is_ok());
+    }
+
+    #[test]
+    fn no_en_passant_when_not_legal() {
+        const FEN: [&str; 3] = [
+            "r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38",
+            "8/p2r1pK1/6p1/1kp1P1P1/2p5/2P5/8/4R3 b - - 0 43",
+            "4k3/4p3/2b3b1/3P1P2/4K3/8/8/8 b - -",
+        ];
+
+        const TEST_MOVES: [&str; 3] = ["f7f5", "f7f5", "e7e5"];
+
+        for (fen, mv) in std::iter::zip(FEN, TEST_MOVES) {
+            let maybe_board = Board::from_fen(fen);
+            assert!(
+                maybe_board.is_ok(),
+                "Failed to create board from FEN: {fen}"
+            );
+
+            let mut board = maybe_board.unwrap();
+            println!("before move {}:\n{}", board.to_fen(), board);
+
+            let result = board.make_uci_move(mv);
+            assert!(result.is_ok());
+            println!("after move:\n{}", board);
+
+            // en-passant capture is not possible due to being pinned
+            assert!(board.en_passant_square().is_none());
+        }
+    }
+
+    #[test]
+    fn en_passant_when_legal() {
+        let test_fens = ["3rr3/p2b4/1p4Rp/4k3/2B1p1P1/2K1B2P/P4P2/4R3 w - - 4 31"];
+
+        let moves = ["f2f4"];
+        for (fen, mv) in std::iter::zip(test_fens, moves) {
+            let maybe_board = Board::from_fen(fen);
+            assert!(
+                maybe_board.is_ok(),
+                "Failed to create board from FEN: {fen}"
+            );
+
+            let mut board = maybe_board.unwrap();
+            println!("before move:\n{}", board);
+
+            let result = board.make_uci_move(mv);
+            assert!(result.is_ok());
+            println!("after move:\n{}", board);
+
+            // en-passant capture is possible
+            assert!(board.en_passant_square().is_some());
+        }
     }
 }

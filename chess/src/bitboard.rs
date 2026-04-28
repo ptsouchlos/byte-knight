@@ -132,6 +132,14 @@ impl Bitboard {
             }
         })
     }
+
+    /// Check if the bitboard is empty.
+    ///
+    /// # Returns
+    /// - `bool` - True if the bitboard is empty. False otherwise.
+    pub fn empty(&self) -> bool {
+        self.data == 0
+    }
 }
 
 impl PartialOrd<u64> for Bitboard {
