@@ -14,6 +14,7 @@ use crate::{
     board::Board,
     definitions::{CastlingAvailability, DASH, EM_DASH},
     pieces::{PIECE_SHORT_NAMES, Piece, SQUARE_NAME},
+    rank::Rank,
     side::Side,
     square::to_square,
 };
@@ -264,6 +265,29 @@ pub(crate) fn active_color_to_fen(board: &Board) -> String {
     }
 }
 
+fn ep_square_is_valid(board: &Board, ep_square: u8) -> bool {
+    let side_to_move = board.side_to_move();
+    let rank = Rank::of(ep_square);
+
+    // EP square must be on the 3rd or 6th rank depending on the side to move.
+    let is_correct_rank = match side_to_move {
+        Side::White => rank == Rank::R3,
+        Side::Black => rank == Rank::R6,
+    };
+
+    if !is_correct_rank {
+        return false;
+    }
+
+    // EP square must be empty and there must be an opponent's pawn that can capture the EP square.
+    let ep_square_piece = board.piece_on_square(ep_square);
+    if ep_square_piece.is_some() {
+        return false;
+    }
+
+    true
+}
+
 /// Parses the en passant target square (if any) part of a FEN string and updates the board accordingly.
 fn parse_en_passant_target_square(board: &mut Board, part: &str) -> FenResult {
     let part_length = part.len();
@@ -287,7 +311,16 @@ fn parse_en_passant_target_square(board: &mut Board, part: &str) -> FenResult {
             .iter()
             .position(|&r| r == part.trim().to_lowercase())
             .unwrap();
-        board.set_en_passant_square(Some(index as u8));
+
+        let ep_square = index as u8;
+
+        // Validate that the EP is legal for the current position.
+        if ep_square_is_valid(board, ep_square) {
+            board.set_en_passant_square(Some(ep_square));
+        } else {
+            board.set_en_passant_square(None);
+        }
+
         return Ok(());
     }
 
