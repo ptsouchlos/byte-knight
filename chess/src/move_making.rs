@@ -975,7 +975,7 @@ mod tests {
 
             let result = board.make_uci_move(mv);
             assert!(result.is_ok());
-            println!("after move:\n{}", board);
+            println!("after move {}\n{}", board.to_fen(), board);
 
             // en-passant capture is not possible due to being pinned
             assert!(board.en_passant_square().is_none());
