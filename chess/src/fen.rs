@@ -306,6 +306,13 @@ fn ep_square_is_valid(board: &Board, ep_square: u8) -> bool {
         Side::White => ep_square - 8,
         Side::Black => ep_square + 8,
     };
+
+    // The starting square must be empty in a consistent post-push position;
+    // otherwise the FEN is malformed and we can't reconstruct a sane pre-push
+    if board.piece_on_square(pre_push_sq).is_some() {
+        return false;
+    }
+
     let mut board_cpy = board.clone();
     board_cpy.remove_piece_from_square(Piece::Pawn, pushing_side, post_push_sq);
     board_cpy.set_piece_square(Piece::Pawn, pushing_side, pre_push_sq);
