@@ -504,7 +504,7 @@ impl Board {
 ///
 /// Based on the Stockfish optimization in
 /// https://github.com/official-stockfish/Stockfish/commit/2321cf2f77b241d685ee68c9896f6574a6f12d0d
-fn ep_capture_is_legal(board: &Board, from: u8, ep_square: u8, us: Side) -> bool {
+pub(crate) fn ep_capture_is_legal(board: &Board, from: u8, ep_square: u8, us: Side) -> bool {
     let them = us.opposite();
 
     // Any opposing pawns that could attack the EP square?
