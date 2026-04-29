@@ -13,6 +13,7 @@ use thiserror::Error;
 use crate::{
     board::Board,
     definitions::{CastlingAvailability, DASH, EM_DASH},
+    move_making::ep_capture_is_legal,
     pieces::{PIECE_SHORT_NAMES, Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
@@ -267,25 +268,49 @@ pub(crate) fn active_color_to_fen(board: &Board) -> String {
 
 fn ep_square_is_valid(board: &Board, ep_square: u8) -> bool {
     let side_to_move = board.side_to_move();
+    let pushing_side = side_to_move.opposite();
     let rank = Rank::of(ep_square);
 
-    // EP square must be on the 3rd or 6th rank depending on the side to move.
+    // The EP target sits behind the pawn that just pushed two squares:
+    //   white to move => black just pushed (rank 7 -> 5), EP target on rank 6
+    //   black to move => white just pushed (rank 2 -> 4), EP target on rank 3
     let is_correct_rank = match side_to_move {
-        Side::White => rank == Rank::R3,
-        Side::Black => rank == Rank::R6,
+        Side::White => rank == Rank::R6,
+        Side::Black => rank == Rank::R3,
     };
-
     if !is_correct_rank {
         return false;
     }
 
-    // EP square must be empty and there must be an opponent's pawn that can capture the EP square.
-    let ep_square_piece = board.piece_on_square(ep_square);
-    if ep_square_piece.is_some() {
+    // The EP target square itself must be empty.
+    if board.piece_on_square(ep_square).is_some() {
         return false;
     }
 
-    true
+    // The pushed pawn sits one square past the EP target in the pushing
+    // direction (white pushed up: ep+8; black pushed down: ep-8).
+    let post_push_sq = match pushing_side {
+        Side::White => ep_square + 8,
+        Side::Black => ep_square - 8,
+    };
+    if !board
+        .piece_bitboard(Piece::Pawn, pushing_side)
+        .is_square_occupied(post_push_sq)
+    {
+        return false;
+    }
+
+    // ep_capture_is_legal expects the pre-push state: the pushed pawn on its
+    // starting square (rank 2 or 7) with the EP target empty. Walk it back.
+    let pre_push_sq = match pushing_side {
+        Side::White => ep_square - 8,
+        Side::Black => ep_square + 8,
+    };
+    let mut board_cpy = board.clone();
+    board_cpy.remove_piece_from_square(Piece::Pawn, pushing_side, post_push_sq);
+    board_cpy.set_piece_square(Piece::Pawn, pushing_side, pre_push_sq);
+
+    ep_capture_is_legal(&board_cpy, pre_push_sq, ep_square, pushing_side)
 }
 
 /// Parses the en passant target square (if any) part of a FEN string and updates the board accordingly.
