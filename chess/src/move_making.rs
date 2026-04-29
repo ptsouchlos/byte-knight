@@ -956,7 +956,7 @@ mod tests {
     #[test]
     fn no_en_passant_when_not_legal() {
         const FEN: [&str; 3] = [
-            "r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38",
+            "1r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38",
             "8/p2r1pK1/6p1/1kp1P1P1/2p5/2P5/8/4R3 b - - 0 43",
             "4k3/4p3/2b3b1/3P1P2/4K3/8/8/8 b - -",
         ];
