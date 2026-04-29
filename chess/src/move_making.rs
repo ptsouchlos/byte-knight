@@ -504,7 +504,7 @@ impl Board {
 ///
 /// Based on the Stockfish optimization in
 /// https://github.com/official-stockfish/Stockfish/commit/2321cf2f77b241d685ee68c9896f6574a6f12d0d
-fn ep_capture_is_legal(board: &Board, from: u8, ep_square: u8, us: Side) -> bool {
+pub(crate) fn ep_capture_is_legal(board: &Board, from: u8, ep_square: u8, us: Side) -> bool {
     let them = us.opposite();
 
     // Any opposing pawns that could attack the EP square?
@@ -956,7 +956,7 @@ mod tests {
     #[test]
     fn no_en_passant_when_not_legal() {
         const FEN: [&str; 3] = [
-            "r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38",
+            "1r6/2q2p1k/2P1b1pp/bB2P1n1/R2B2PN/p4P1P/P1Q4K/1R6 b - - 2 38",
             "8/p2r1pK1/6p1/1kp1P1P1/2p5/2P5/8/4R3 b - - 0 43",
             "4k3/4p3/2b3b1/3P1P2/4K3/8/8/8 b - -",
         ];
@@ -975,7 +975,7 @@ mod tests {
 
             let result = board.make_uci_move(mv);
             assert!(result.is_ok());
-            println!("after move:\n{}", board);
+            println!("after move {}\n{}", board.to_fen(), board);
 
             // en-passant capture is not possible due to being pinned
             assert!(board.en_passant_square().is_none());

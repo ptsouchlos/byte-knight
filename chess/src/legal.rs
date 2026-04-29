@@ -662,14 +662,15 @@ mod tests {
     #[test]
     fn make_free_ep_discovered_check_rejected() {
         // EP discovered check: removing both pawns exposes king to queen.
-        // `8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1` — black king a4, white d4+e4 pawns,
-        // white queen h4. EP d3 would remove both d4 and e4 pawns exposing king to queen.
-        let board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1").unwrap();
+        // FEN parsing now strips obviously-illegal EP targets, so set the EP
+        // square directly to test the move-generation legality path.
+        let mut board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - - 0 1").unwrap();
+        board.set_en_passant_square(Some(Squares::D3));
         let meta = metadata::compute(&board);
         // e4→d3 EP
         let ep_mv = Move::new(
-            Square::from_square_index(28), // e4
-            Square::from_square_index(19), // d3
+            Square::from_square_index(Squares::E4),
+            Square::from_square_index(Squares::D3),
             MoveFlag::EnPassant,
         );
         assert!(is_pseudo_legal(&board, &ep_mv), "EP should be pseudo-legal");

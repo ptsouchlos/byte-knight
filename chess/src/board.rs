@@ -789,11 +789,18 @@ mod tests {
         );
         let lines = std::fs::read_to_string(path).unwrap();
         println!("Loaded {} FEN strings from Pohl.epd", lines.lines().count());
+        // It seems that the Pohl.epd test data uses strict FEN encoding which means the EP square is set after every double pawn push.
+        // See https://www.chessprogramming.org/Forsyth-Edwards_Notation#En_passant_target_square
+        // Parsing strips EP targets that aren't capturable, so instead of checking for equivalent FENs, we parse,
+        // emit a new FEN and parse again to ensure they match.
         for fen in lines.lines() {
             let board = Board::from_fen(fen).unwrap();
-            assert_eq!(fen, board.to_fen());
+            let emitted = board.to_fen();
+            let reparsed = Board::from_fen(&emitted).unwrap();
+            assert_eq!(emitted, reparsed.to_fen());
         }
     }
+
     #[test]
     fn from_invalid_fen() {
         let maybe_board = Board::from_fen("");
@@ -802,6 +809,47 @@ mod tests {
         let message = format!("{err}");
         // check that the message contains something about the FEN being empty
         assert!(message.to_lowercase().contains("empty"));
+    }
+
+    #[test]
+    fn from_fen_illegal_ep() {
+        // f6 EP would expose the white king on h2 to a discovered check from the
+        // black queen on c7, and exf6 has no opposing pawn from g5, so the EP
+        // target should be stripped on parse.
+        const FENS: [&str; 2] = [
+            "1r6/2q4k/2P1b1pp/bB2Ppn1/R2B2PN/p4P1P/P1Q4K/1R6 w - f6 0 39",
+            "8/p2r2K1/6p1/1kp1PpP1/2p5/2P5/8/4R3 w - f6 0 44",
+        ];
+
+        for fen in FENS {
+            let maybe_board = Board::from_fen(fen);
+            assert!(maybe_board.is_ok(), "failed to parse {fen}");
+            assert!(
+                maybe_board.unwrap().en_passant_square().is_none(),
+                "expected EP to be stripped for {fen}"
+            );
+        }
+    }
+
+    #[test]
+    fn from_fen_legal_ep_kept() {
+        // Standard positions where the EP capture is legal: parsing must keep
+        // the EP target.
+        const FENS: [&str; 2] = [
+            // white e5, black d5 just pushed.
+            "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3",
+            // mirror: white d4 just pushed, black to move with c4 pawn able to capture.
+            "rnbqkbnr/pp1ppppp/8/8/2pP4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 3",
+        ];
+
+        for fen in FENS {
+            let maybe_board = Board::from_fen(fen);
+            assert!(maybe_board.is_ok(), "failed to parse {fen}");
+            assert!(
+                maybe_board.unwrap().en_passant_square().is_some(),
+                "expected EP to be kept for {fen}"
+            );
+        }
     }
 
     #[test]
