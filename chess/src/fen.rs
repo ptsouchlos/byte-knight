@@ -558,8 +558,11 @@ mod tests {
 
     #[test]
     fn test_parse_en_passant_square() {
+        // Use a position where an e3 EP capture is legal: black pawn on d4,
+        // white pawn just pushed e2 -> e4, black to move can play dxe3 ep.
         let sample_ep_square = "e3";
-        let mut board: Board = Default::default();
+        let mut board =
+            Board::from_fen("rnbqkbnr/ppp1pppp/8/8/3pP3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 3").unwrap();
         let result = parse_en_passant_target_square(&mut board, sample_ep_square);
         assert!(result.is_ok());
 
