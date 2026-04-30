@@ -16,9 +16,10 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 
 ## Strength
 
-| Version                                                            | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
-| ------------------------------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------- |
-| [3.0.0](https://github.com/ptsouchlos/byte-knight/releases/v3.0.0) | 2386                                                  | 2311                                                 |
+| Version                                                            | Estimate | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
+| ------------------------------------------------------------------ | -------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| [3.0.0](https://github.com/ptsouchlos/byte-knight/releases/v3.0.0) | -        | 2386                                                  | 2311                                                 |
+| 4.0.0                                                              | 2800     |                                                       |                                                      |
 
 ## Features
 
@@ -43,8 +44,10 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 - [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
 - [Late Move Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html#futility-pruning-late-move-pruning)
 - [Futility Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html#futility-pruning-late-move-pruning)
+- [Check Extensions](https://www.chessprogramming.org/Check_Extensions)
 - [Time control](https://www.chessprogramming.org/Time_Management)
-  - Basic hard/soft limits
+  - Basic hard limit scaling based on remaining time.
+  - Soft limits scaling based on best move stability.
 - Move ordering via a [move picker](https://www.chessprogramming.org/Move_Generation)
   - [TT Moves](https://www.chessprogramming.org/Transposition_Table#Priority_by_Move_Ordering_Position)
   - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA) with transposition table priority
@@ -64,7 +67,7 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 - Tempo bonus
 - Threat evaluation
 
-Project includes a HCE tuner based on [jw1912/hce-tuner](https://github.com/jw1912/hce-tuner) and modified for use in `byte-knight`. HCE values have been trained on the `lichess-big3-resolved` dataset.
+Project includes a HCE tuner based on [jw1912/hce-tuner](https://github.com/jw1912/hce-tuner) and modified for use in `byte-knight`. HCE values have been trained on the `lichess-big3-resolved` dataset interleaved with data from [Clockwork](https://data.cwchess.org/). Dataset for training is available on [Hugging Face](https://huggingface.co/datasets/ptsou/hce-tuning).
 
 ### UCI
 
