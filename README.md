@@ -139,7 +139,7 @@ The project is licensed under the GPL license. See [LICENSE](LICENSE) for more d
 
 Thanks/acknowledgement for those who have inspired and helped with this project:
 
-- Sebastian Lague for his chess YouTube vidoes and for hosting a fun coding challenge.
+- Sebastian Lague for his chess YouTube videos and for hosting a fun coding challenge.
 - The [Chess Programming Wiki](https://www.chessprogramming.org/Main_Page) for all the free information. Thank you to all the various authors.
 - Analog-Hors for some excellent write ups on chess, especially regarding magic numbers.
 - Many members of the Engine Programming discord for helping see how little I really know.
