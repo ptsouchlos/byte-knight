@@ -121,6 +121,14 @@ Clone the repo and run:
 cargo -r run -p byte-knight
 ```
 
+### Building on Apple Silicon (aarch64)
+
+The TT prefetch optimization on Apple Silicon requires the nightly toolchain. To enable it for a local checkout, run the following command in the project root:
+
+```bash
+rustup override set nightly
+```
+
 ### Development Dependencies
 
 To run the full suite of supported tests, benchmarks and other development dependencies, you will need the following tools (in addition to Rust and Cargo):
