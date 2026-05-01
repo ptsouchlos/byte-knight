@@ -21,12 +21,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            toolchain: stable
             target: x86_64-unknown-linux-gnu
             extension: ""
           - os: macos-latest
+            toolchain: nightly
             target: aarch64-apple-darwin
             extension: ""
           - os: windows-latest
+            toolchain: stable
             target: x86_64-pc-windows-msvc
             extension: ".exe"
     permissions:
@@ -34,13 +37,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       VERSION: ${{ inputs.tag || github.ref_name }}
+      RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}
     steps:
       - uses: actions/checkout@v6
 
       - name: Install rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: stable
+          toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
           override: true
 
