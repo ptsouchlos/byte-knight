@@ -85,6 +85,7 @@ Project includes a HCE tuner based on [jw1912/hce-tuner](https://github.com/jw19
   - `nodes <nodes>`
   - `wtime <wtime> btime <btime> winc <winc> binc <binc>`
   - `movetime <movetime>`
+- `setoption name <name> value <value>` - Configure a UCI option (see [UCI Options](#uci-options)).
 - `stop`
 - `quit`
 - `debug <on|off>` - Turn debug mode on or off. In debug mode, more information is printed during search.
