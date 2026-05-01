@@ -21,44 +21,52 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            toolchain: stable
             target: x86_64-unknown-linux-gnu
-            artifact_name: byte-knight-${{ github.ref_name }}
             extension: ""
           - os: macos-latest
+            toolchain: nightly
             target: aarch64-apple-darwin
-            artifact_name: byte-knight-${{ github.ref_name }}
             extension: ""
           - os: windows-latest
+            toolchain: stable
             target: x86_64-pc-windows-msvc
-            artifact_name: byte-knight-${{ github.ref_name }}
             extension: ".exe"
     permissions:
       contents: write
     runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ inputs.tag || github.ref_name }}
+      RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}
     steps:
       - uses: actions/checkout@v6
 
       - name: Install rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: stable
+          toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
           override: true
 
       - name: Build release
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Stage release binary
+        shell: bash
+        run: |
+          mkdir -p ./artifacts
+          cp ./target/${{ matrix.target }}/release/byte-knight${{ matrix.extension }} \
+             ./artifacts/byte-knight-${VERSION}-${{ matrix.target }}${{ matrix.extension }}
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: byte-knight-${{ matrix.target }}${{ matrix.extension }}
-          path: ./target/release/${{ matrix.artifact_name }}${{ matrix.extension }}
+          path: ./artifacts/byte-knight-${{ env.VERSION }}-${{ matrix.target }}${{ matrix.extension }}
           retention-days: 1
 
-      - name: Copy artifact
-        run: cp ./target/release/${{ matrix.artifact_name }}${{ matrix.extension }} ./target/${{ matrix.artifact_name }}-${{matrix.target}}${{ matrix.extension }}
-
       - name: Upload to release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v3
         with:
-          files: ./target/${{ matrix.artifact_name }}-${{ matrix.target }}${{ matrix.extension }}
+          files: ./artifacts/byte-knight-${{ env.VERSION }}-${{ matrix.target }}${{ matrix.extension }}

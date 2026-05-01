@@ -16,9 +16,10 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 
 ## Strength
 
-| Version                                                            | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
-| ------------------------------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------------- |
-| [3.0.0](https://github.com/ptsouchlos/byte-knight/releases/v3.0.0) | 2386                                                  | 2311                                                 |
+| Version                                                            | Estimate | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
+| ------------------------------------------------------------------ | -------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| [3.0.0](https://github.com/ptsouchlos/byte-knight/releases/tag/v3.0.0) | -        | 2386                                                  | 2311                                                 |
+| 4.0.0                                                              | 2800     |                                                       |                                                      |
 
 ## Features
 
@@ -43,14 +44,19 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 - [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
 - [Late Move Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html#futility-pruning-late-move-pruning)
 - [Futility Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html#futility-pruning-late-move-pruning)
+- [Check Extensions](https://www.chessprogramming.org/Check_Extensions)
+- [Razoring](https://www.chessprogramming.org/Razoring)
+- [QS Delta Pruning](https://www.chessprogramming.org/Delta_Pruning)
 - [Time control](https://www.chessprogramming.org/Time_Management)
-  - Basic hard/soft limits
+  - Basic hard limit scaling based on remaining time.
+  - Soft limits scaling based on best move stability.
 - Move ordering via a [move picker](https://www.chessprogramming.org/Move_Generation)
   - [TT Moves](https://www.chessprogramming.org/Transposition_Table#Priority_by_Move_Ordering_Position)
   - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA) with transposition table priority
   - [History heuristic](https://www.chessprogramming.org/History_Heuristic) with history gravity
   - [Killer move heuristic](https://www.chessprogramming.org/Killer_Heuristic)
   - [Static exchange evaluation](https://www.chessprogramming.org/Static_Exchange_Evaluation) for good/bad tacticals.
+  - Staged move generation (TT, good tacticals, quiet moves, bad tacticals)
 
 ### Evaluation
 
@@ -64,7 +70,7 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 - Tempo bonus
 - Threat evaluation
 
-Project includes a HCE tuner based on [jw1912/hce-tuner](https://github.com/jw1912/hce-tuner) and modified for use in `byte-knight`. HCE values have been trained on the `lichess-big3-resolved` dataset.
+Project includes a HCE tuner based on [jw1912/hce-tuner](https://github.com/jw1912/hce-tuner) and modified for use in `byte-knight`. HCE values have been trained on the `lichess-big3-resolved` dataset interleaved with data from [Clockwork](https://data.cwchess.org/).
 
 ### UCI
 
@@ -78,8 +84,13 @@ Project includes a HCE tuner based on [jw1912/hce-tuner](https://github.com/jw19
   - `depth <depth>`
   - `nodes <nodes>`
   - `wtime <wtime> btime <btime> winc <winc> binc <binc>`
+  - `movetime <movetime>`
+- `setoption name <name> value <value>` - Configure a UCI option (see [UCI Options](#uci-options)).
 - `stop`
 - `quit`
+- `debug <on|off>` - Turn debug mode on or off. In debug mode, more information is printed during search.
+- `hash` - See TT stats and usage.
+- `history` - See the contents of the history table.
 
 ### Other Commands
 
@@ -110,6 +121,14 @@ Clone the repo and run:
 cargo -r run -p byte-knight
 ```
 
+### Building on Apple Silicon (aarch64)
+
+The TT prefetch optimization on Apple Silicon requires the nightly toolchain. To enable it for a local checkout, run the following command in the project root:
+
+```bash
+rustup override set nightly
+```
+
 ### Development Dependencies
 
 To run the full suite of supported tests, benchmarks and other development dependencies, you will need the following tools (in addition to Rust and Cargo):
@@ -128,7 +147,7 @@ The project is licensed under the GPL license. See [LICENSE](LICENSE) for more d
 
 Thanks/acknowledgement for those who have inspired and helped with this project:
 
-- Sebastian Lague for his chess YouTube vidoes and for hosting a fun coding challenge.
+- Sebastian Lague for his chess YouTube videos and for hosting a fun coding challenge.
 - The [Chess Programming Wiki](https://www.chessprogramming.org/Main_Page) for all the free information. Thank you to all the various authors.
 - Analog-Hors for some excellent write ups on chess, especially regarding magic numbers.
 - Many members of the Engine Programming discord for helping see how little I really know.
