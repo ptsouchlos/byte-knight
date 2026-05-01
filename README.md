@@ -84,8 +84,12 @@ Project includes a HCE tuner based on [jw1912/hce-tuner](https://github.com/jw19
   - `depth <depth>`
   - `nodes <nodes>`
   - `wtime <wtime> btime <btime> winc <winc> binc <binc>`
+  - `movetime <movetime>`
 - `stop`
 - `quit`
+- `debug <on|off>` - Turn debug mode on or off. In debug mode, more information is printed during search.
+- `hash` - See TT stats and usage.
+- `history` - See the contents of the history table.
 
 ### Other Commands
 
