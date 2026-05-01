@@ -2,6 +2,7 @@
 /data/lichess_db_puzzle.csv
 **/build/*
 *.exe
+/bk-main
 **/.DS_Store
 *.profraw
 *.profdata
