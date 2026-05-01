@@ -45,6 +45,8 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 - [Late Move Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html#futility-pruning-late-move-pruning)
 - [Futility Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html#futility-pruning-late-move-pruning)
 - [Check Extensions](https://www.chessprogramming.org/Check_Extensions)
+- [Razoring](https://www.chessprogramming.org/Razoring)
+- [QS Delta Pruning](https://www.chessprogramming.org/Delta_Pruning)
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard limit scaling based on remaining time.
   - Soft limits scaling based on best move stability.
@@ -54,6 +56,7 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
   - [History heuristic](https://www.chessprogramming.org/History_Heuristic) with history gravity
   - [Killer move heuristic](https://www.chessprogramming.org/Killer_Heuristic)
   - [Static exchange evaluation](https://www.chessprogramming.org/Static_Exchange_Evaluation) for good/bad tacticals.
+  - Staged move generation (TT, good tacticals, quiet moves, bad tacticals)
 
 ### Evaluation
 
