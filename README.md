@@ -70,7 +70,7 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 - Tempo bonus
 - Threat evaluation
 
-Project includes a HCE tuner based on [jw1912/hce-tuner](https://github.com/jw1912/hce-tuner) and modified for use in `byte-knight`. HCE values have been trained on the `lichess-big3-resolved` dataset interleaved with data from [Clockwork](https://data.cwchess.org/). Dataset for training is available on [Hugging Face](https://huggingface.co/datasets/ptsou/hce-tuning).
+Project includes a HCE tuner based on [jw1912/hce-tuner](https://github.com/jw1912/hce-tuner) and modified for use in `byte-knight`. HCE values have been trained on the `lichess-big3-resolved` dataset interleaved with data from [Clockwork](https://data.cwchess.org/).
 
 ### UCI
 
