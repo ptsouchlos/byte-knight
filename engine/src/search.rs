@@ -179,8 +179,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             result.score = self.eval.eval(board);
         }
 
-        // search ended, reset our per-search thread state
-        td.reset();
         result
     }
 

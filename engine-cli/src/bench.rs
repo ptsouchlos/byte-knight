@@ -117,6 +117,9 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     let max_fen_width = benchmark_strings.iter().map(|s| s.len()).max().unwrap();
 
     for (idx, bench) in benchmark_strings.iter().enumerate() {
+        // Reset params tracked for each search.
+        td.reset();
+
         let fen: &str = bench.split(';').next().unwrap();
         let mut board = Board::from_fen(fen).unwrap();
 
