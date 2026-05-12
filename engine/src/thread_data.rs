@@ -6,6 +6,8 @@
 //! This module defines a thread data structure that holds information and data that is used in search.
 //! Credit to the Hobbes author for this original setup which has been adapted for use in byte-knight.
 
+use std::time::{Duration, Instant};
+
 use chess::{board::Board, moves::Move};
 use uci_parser::UciSearchOptions;
 
@@ -20,6 +22,7 @@ pub struct ThreadData {
     pub(crate) killers_table: KillerMovesTable,
     pub(crate) bestmove_stability: u64,
     pub(crate) prev_best_move: Option<Move>,
+    pub(crate) start_time: Instant,
     pub(crate) limits: SearchLimits,
     pub(crate) depth: i32,
     pub(crate) seldepth: ScoreType,
@@ -39,6 +42,7 @@ impl Default for ThreadData {
             killers_table: KillerMovesTable::default(),
             bestmove_stability: 0,
             prev_best_move: None,
+            start_time: Instant::now(),
             limits: SearchLimits::default(),
             depth: 1,
             seldepth: 0,
@@ -66,6 +70,14 @@ impl ThreadData {
         self.seldepth = 0;
         self.bestmove_stability = 0;
         self.prev_best_move = None;
+    }
+
+    pub fn reset_start_time(&mut self) {
+        self.start_time = Instant::now();
+    }
+
+    pub fn time(&self) -> Duration {
+        self.start_time.elapsed()
     }
 
     pub fn clear(&mut self) {
@@ -100,7 +112,7 @@ impl ThreadData {
     fn soft_limit_reached(&self) -> bool {
         let best_move_stability = self.bestmove_stability_for_scaling();
         if let Some(soft_time) = self.limits.scaled_soft_limit(best_move_stability)
-            && self.limits.start_time.elapsed() >= soft_time
+            && self.start_time.elapsed() >= soft_time
         {
             return true;
         }
@@ -117,7 +129,7 @@ impl ThreadData {
     /// Check if the hard limit has been reached.
     /// This includes time and nodes.
     fn hard_limit_reached(&self) -> bool {
-        if self.limits.start_time.elapsed() >= self.limits.hard_timeout {
+        if self.start_time.elapsed() >= self.limits.hard_timeout {
             return true;
         }
 
