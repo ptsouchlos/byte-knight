@@ -79,13 +79,14 @@ impl Engine {
 
     pub fn search(
         &mut self,
-        params: SearchLimits,
+        limits: SearchLimits,
         stop_flag: Arc<AtomicBool>,
         output: &mut dyn Write,
     ) -> SearchResult {
         // Increment the age of the TT
+        self.thread_data.reset();
         self.thread_data.transposition_table.increment_age();
-        self.thread_data.limits = params;
+        self.thread_data.limits = limits;
 
         if self.debug {
             Search::<LogDebug>::new(output).search(
