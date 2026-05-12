@@ -15,14 +15,13 @@ use crate::{
     killers_table::KillerMovesTable,
     log_level::{LogDebug, LogInfo},
     search::{Search, SearchResult, limits::SearchLimits},
+    thread_data::ThreadData,
     ttable::{self, TranspositionTable},
 };
 
 pub struct Engine {
     board: Board,
-    transposition_table: TranspositionTable,
-    history_table: HistoryTable,
-    killers_table: KillerMovesTable,
+    thread_data: ThreadData,
     debug: bool,
 }
 
@@ -30,18 +29,14 @@ impl Engine {
     pub fn new() -> Self {
         Self {
             board: Board::default_board(),
-            transposition_table: TranspositionTable::default(),
-            history_table: HistoryTable::default(),
-            killers_table: KillerMovesTable::default(),
+            thread_data: ThreadData::default(),
             debug: false,
         }
     }
 
     pub fn new_game(&mut self) {
         self.board = Board::default_board();
-        self.transposition_table.clear();
-        self.history_table.clear();
-        self.killers_table.clear();
+        self.thread_data.clear();
     }
 
     pub fn set_position(&mut self, fen: Option<&str>, moves: &[String]) -> anyhow::Result<()> {
@@ -74,7 +69,7 @@ impl Engine {
                 ttable::MAX_TABLE_SIZE_MB
             );
         }
-        self.transposition_table = TranspositionTable::from_size_in_mb(mb);
+        self.thread_data.transposition_table = TranspositionTable::from_size_in_mb(mb);
         Ok(())
     }
 
@@ -89,25 +84,21 @@ impl Engine {
         output: &mut dyn Write,
     ) -> SearchResult {
         // Increment the age of the TT
-        self.transposition_table.increment_age();
+        self.thread_data.transposition_table.increment_age();
+        self.thread_data.limits = params;
+
         if self.debug {
-            Search::<LogDebug>::new(
-                params,
-                &mut self.transposition_table,
-                &mut self.history_table,
-                &mut self.killers_table,
-                output,
+            Search::<LogDebug>::new(output).search(
+                &mut self.board,
+                &mut self.thread_data,
+                Some(stop_flag),
             )
-            .search(&mut self.board, Some(stop_flag))
         } else {
-            Search::<LogInfo>::new(
-                params,
-                &mut self.transposition_table,
-                &mut self.history_table,
-                &mut self.killers_table,
-                output,
+            Search::<LogInfo>::new(output).search(
+                &mut self.board,
+                &mut self.thread_data,
+                Some(stop_flag),
             )
-            .search(&mut self.board, Some(stop_flag))
         }
     }
 
@@ -120,31 +111,31 @@ impl Engine {
     }
 
     pub fn tt_fullness(&self) -> f64 {
-        self.transposition_table.fullness()
+        self.thread_data.transposition_table.fullness()
     }
 
     pub fn tt_hits(&self) -> usize {
-        self.transposition_table.hits
+        self.thread_data.transposition_table.hits
     }
 
     pub fn tt_accesses(&self) -> usize {
-        self.transposition_table.accesses
+        self.thread_data.transposition_table.accesses
     }
 
     pub fn tt_collisions(&self) -> usize {
-        self.transposition_table.collisions
+        self.thread_data.transposition_table.collisions
     }
 
     pub fn tt_size(&self) -> usize {
-        self.transposition_table.size()
+        self.thread_data.transposition_table.size()
     }
 
     pub fn history_table(&self) -> &HistoryTable {
-        &self.history_table
+        &self.thread_data.history_table
     }
 
     pub fn killers_table(&self) -> &KillerMovesTable {
-        &self.killers_table
+        &self.thread_data.killers_table
     }
 }
 
