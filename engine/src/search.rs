@@ -1055,6 +1055,9 @@ mod tests {
         let mut search = Search::<LogDebug>::new(&mut sink);
 
         for (fen, expected_move) in test_pairs {
+            td.reset();
+            td.reset_start_time();
+
             let mut board = Board::from_fen(fen).unwrap();
             let result = search.search(&mut board, &mut td, None);
             assert_eq!(
