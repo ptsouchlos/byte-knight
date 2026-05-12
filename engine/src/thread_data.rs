@@ -9,9 +9,15 @@
 use chess::{board::Board, moves::Move};
 use uci_parser::UciSearchOptions;
 
-use crate::{score::ScoreType, search::limits::SearchLimits};
+use crate::{
+    history_table::HistoryTable, killers_table::KillerMovesTable, score::ScoreType,
+    search::limits::SearchLimits, ttable::TranspositionTable,
+};
 
 pub struct ThreadData {
+    pub(crate) transposition_table: TranspositionTable,
+    pub(crate) history_table: HistoryTable,
+    pub(crate) killers_table: KillerMovesTable,
     pub(crate) bestmove_stability: u64,
     pub(crate) prev_best_move: Option<Move>,
     pub(crate) limits: SearchLimits,
@@ -26,20 +32,28 @@ pub enum LimitType {
 }
 
 impl ThreadData {
+    pub fn default() -> Self {
+        ThreadData {
+            transposition_table: TranspositionTable::default(),
+            history_table: HistoryTable::default(),
+            killers_table: KillerMovesTable::default(),
+            bestmove_stability: 0,
+            prev_best_move: None,
+            limits: SearchLimits::default(),
+            depth: 1,
+            seldepth: 0,
+            nodes: 0,
+        }
+    }
     pub fn new(uci_options: &UciSearchOptions, board: &Board) -> Self {
         Self::from_limits(SearchLimits::new(uci_options, board))
     }
 
     /// Create [`ThreadData`] from pre-built [`SearchLimits`].
     pub fn from_limits(limits: SearchLimits) -> Self {
-        ThreadData {
-            bestmove_stability: 0,
-            prev_best_move: None,
-            limits,
-            depth: 1,
-            seldepth: 0,
-            nodes: 0,
-        }
+        let mut td = Self::default();
+        td.limits = limits;
+        td
     }
 
     pub fn reset(&mut self) {
@@ -48,6 +62,12 @@ impl ThreadData {
         self.seldepth = 0;
         self.bestmove_stability = 0;
         self.prev_best_move = None;
+    }
+
+    pub fn clear(&mut self) {
+        self.transposition_table.clear();
+        self.history_table.clear();
+        self.killers_table.clear();
     }
 
     /// Update best-move stability based on the new root best move. If the new
