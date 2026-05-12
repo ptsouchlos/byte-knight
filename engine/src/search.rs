@@ -367,6 +367,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     /// pruning and a [fail-soft](https://www.chessprogramming.org/Alpha-Beta#Negamax_Framework) framework.
     ///
     /// This is the core of the search algorithm. It recursively searches the game tree to find the best move.
+    #[allow(clippy::too_many_arguments)]
     fn negamax<Node>(
         &mut self,
         board: &mut Board,
@@ -736,6 +737,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     /// # Returns
     ///
     /// The score of the position if it can be pruned, otherwise None.
+    #[allow(clippy::too_many_arguments)]
     fn pruned_score<Node: NodeType>(
         &mut self,
         tt_entry: Option<TranspositionTableEntry>,

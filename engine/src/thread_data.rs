@@ -31,8 +31,8 @@ pub enum LimitType {
     Hard,
 }
 
-impl ThreadData {
-    pub fn default() -> Self {
+impl Default for ThreadData {
+    fn default() -> Self {
         ThreadData {
             transposition_table: TranspositionTable::default(),
             history_table: HistoryTable::default(),
@@ -45,15 +45,19 @@ impl ThreadData {
             nodes: 0,
         }
     }
+}
+
+impl ThreadData {
     pub fn new(uci_options: &UciSearchOptions, board: &Board) -> Self {
         Self::from_limits(SearchLimits::new(uci_options, board))
     }
 
     /// Create [`ThreadData`] from pre-built [`SearchLimits`].
     pub fn from_limits(limits: SearchLimits) -> Self {
-        let mut td = Self::default();
-        td.limits = limits;
-        td
+        ThreadData {
+            limits,
+            ..Default::default()
+        }
     }
 
     pub fn reset(&mut self) {
@@ -111,9 +115,7 @@ impl ThreadData {
     }
 
     /// Check if the hard limit has been reached.
-    /// This includes time and nodes. The max-depth boundary is handled by the
-    /// iterative-deepening loop via the soft limit; checking it here would
-    /// cause in-tree stop checks to abort the final iteration mid-search.
+    /// This includes time and nodes.
     fn hard_limit_reached(&self) -> bool {
         if self.limits.start_time.elapsed() >= self.limits.hard_timeout {
             return true;
