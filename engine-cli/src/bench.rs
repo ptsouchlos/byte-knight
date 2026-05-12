@@ -131,7 +131,7 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
             result.nodes
         );
     }
-    let elapsed_time = config.start_time.elapsed().as_secs_f64();
+    let elapsed_time = td.time().as_secs_f64();
     let nps = (nodes as f64 / elapsed_time).trunc();
     println!("{nodes} nodes / {elapsed_time}s => {nps} nps");
 }

@@ -319,7 +319,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if Log::INFO {
                 // send UCI info
                 let nodes = td.nodes;
-                let elapsed = td.limits.start_time.elapsed();
+                let elapsed = td.time();
                 self.send_info(
                     best_result.depth,
                     td.seldepth,
@@ -346,7 +346,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // Send one last info line with the final result
             // send UCI info
             let nodes = td.nodes;
-            let elapsed = td.limits.start_time.elapsed();
+            let elapsed = td.time();
             self.send_info(
                 best_result.depth,
                 td.seldepth,
@@ -1172,7 +1172,7 @@ mod tests {
         let res = search.search(&mut board, &mut td, None);
 
         assert!(res.best_move.is_some());
-        assert!(config.start_time.elapsed() <= config.hard_timeout);
+        assert!(td.time() <= config.hard_timeout);
     }
 
     #[test]
