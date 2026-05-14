@@ -92,8 +92,7 @@ mod tests {
     /// Regression test for the 2026-05-12 SPRT crashes: prior to widening
     /// the table from `MAX_DEPTH` (128) to `MAX_PLY` (256), the asserts in
     /// `get`/`update`/`get_mut` panicked at `ply >= 128`. The negamax ply
-    /// guard only bounds at `MAX_PLY`, so deep mate-chase recursion could
-    /// reach these plies and abort the engine process.
+    /// guard only bounds at `MAX_PLY`, so deep recursion could cause issues/crashes.
     #[test]
     fn high_ply_access_does_not_panic() {
         let mut kt = KillerMovesTable::new();
