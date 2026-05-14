@@ -5,3 +5,5 @@ This folder contains PGN files of games where there was a crash or disconnect du
 | Failure File                                  | SPRT Test                                                             |
 | --------------------------------------------- | --------------------------------------------------------------------- |
 | [202604427_rnd142.pgn](./20260427_rnd142.pgn) | [chore/lmr-adjustments](https://openbench.nocturn9x.space/test/6703/) |
+| [20260512_rnd49.pgn](./20260512_rnd49.pgn)    | [chore/restructure-td](https://openbench.nocturn9x.space/test/6830/)  |
+| [20260512_rnd204.pgn](./20260512_rnd204.pgn)  | [chore/restructure-td](https://openbench.nocturn9x.space/test/6830/)  |
