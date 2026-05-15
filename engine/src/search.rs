@@ -1378,7 +1378,7 @@ mod tests {
             score::Score,
             search::{Search, limits::SearchLimits},
             thread_data::ThreadData,
-            ttable::{EntryFlag, TranspositionTable},
+            ttable::EntryFlag,
         };
 
         /// Inject a poisoned move into the TT and run a search.
@@ -1387,10 +1387,14 @@ mod tests {
             let mut board = Board::from_fen(fen).unwrap();
             let zobrist = board.zobrist_hash();
 
-            let mut ttable = TranspositionTable::default();
+            let config = SearchLimits {
+                max_depth: depth,
+                ..Default::default()
+            };
+            let mut td = ThreadData::from_limits(config);
             // Store the bad move at the position's zobrist hash so the search
             // will find it on the first TT probe.
-            ttable.store_entry(
+            td.transposition_table.store_entry(
                 zobrist,
                 depth + 2, // high depth so the TT entry is trusted
                 Score::new(50),
@@ -1398,11 +1402,6 @@ mod tests {
                 bad_move,
             );
 
-            let config = SearchLimits {
-                max_depth: depth,
-                ..Default::default()
-            };
-            let mut td = ThreadData::from_limits(config);
             let mut sink = io::sink();
             let mut search = Search::<LogDebug>::new(&mut sink);
             let res = search.search(&mut board, &mut td, None);
