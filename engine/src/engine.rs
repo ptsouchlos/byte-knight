@@ -85,6 +85,8 @@ impl Engine {
     ) -> SearchResult {
         // Reset params we track during search
         self.thread_data.reset();
+        // Killers are ply-keyed and only meaningful within a single search tree.
+        self.thread_data.killers_table.clear();
         // Increment the age of the TT
         self.thread_data.transposition_table.increment_age();
         // Update the search limits
