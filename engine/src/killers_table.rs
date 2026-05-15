@@ -1,6 +1,6 @@
 use chess::{moves::Move, pieces::Piece};
 
-use crate::defs::{MAX_DEPTH, MAX_KILLERS_PER_PLY};
+use crate::defs::{MAX_KILLERS_PER_PLY, MAX_PLY};
 
 /// A killer move entry stores both the move and the piece that was moving.
 /// The piece is needed because with 16-bit moves, the piece type is no longer
@@ -23,32 +23,27 @@ impl KillerEntry {
     }
 }
 
+/// Indexed by recursion ply; sized to `MAX_PLY` to match the negamax ply guard.
 pub struct KillerMovesTable {
-    table: [[Option<KillerEntry>; MAX_KILLERS_PER_PLY]; MAX_DEPTH as usize],
+    table: [[Option<KillerEntry>; MAX_KILLERS_PER_PLY]; MAX_PLY as usize],
 }
 
 impl KillerMovesTable {
     pub(crate) fn new() -> Self {
-        let table = [[None; MAX_KILLERS_PER_PLY]; MAX_DEPTH as usize];
+        let table = [[None; MAX_KILLERS_PER_PLY]; MAX_PLY as usize];
 
         Self { table }
     }
 
-    pub(crate) fn get(&self, ply: u8) -> &[Option<KillerEntry>] {
-        assert!(ply < MAX_DEPTH, "Depth is out of bounds");
-
-        &self.table[ply as usize][..]
+    pub(crate) fn get(&self, ply: usize) -> &[Option<KillerEntry>] {
+        &self.table[ply][..]
     }
 
-    fn get_mut(&mut self, ply: u8) -> &mut [Option<KillerEntry>] {
-        assert!(ply < MAX_DEPTH, "Depth is out of bounds");
-
-        &mut self.table[ply as usize][..]
+    fn get_mut(&mut self, ply: usize) -> &mut [Option<KillerEntry>] {
+        &mut self.table[ply][..]
     }
 
-    pub(crate) fn update(&mut self, ply: u8, mv: Move, piece: Piece) {
-        assert!(ply < MAX_DEPTH, "Depth is out of bounds");
-
+    pub(crate) fn update(&mut self, ply: usize, mv: Move, piece: Piece) {
         let entry = KillerEntry::new(mv, piece);
         let current_killers = self.get_mut(ply);
         if !current_killers[0].is_some_and(|k| k == entry) {
@@ -73,7 +68,7 @@ impl Default for KillerMovesTable {
 #[cfg(test)]
 mod tests {
     use super::KillerMovesTable;
-    use crate::defs::{MAX_DEPTH, MAX_KILLERS_PER_PLY};
+    use crate::defs::{MAX_KILLERS_PER_PLY, MAX_PLY};
     use chess::{board::Board, move_generation, pieces::Piece};
 
     #[allow(clippy::expect_used)]
@@ -87,10 +82,29 @@ mod tests {
     #[test]
     fn initialize_killers_table() {
         let killers_table: KillerMovesTable = Default::default();
-        for i in 0..MAX_DEPTH {
-            let killers = killers_table.get(i);
+        for ply in 0..(MAX_PLY as usize) {
+            let killers = killers_table.get(ply);
             assert_eq!(killers, &[None, None]);
             assert_eq!(killers.len(), MAX_KILLERS_PER_PLY);
+        }
+    }
+
+    /// Regression test for the 2026-05-12 SPRT crashes: prior to widening
+    /// the table from `MAX_DEPTH` (128) to `MAX_PLY` (256), the asserts in
+    /// `get`/`update`/`get_mut` panicked at `ply >= 128`. The negamax ply
+    /// guard only bounds at `MAX_PLY`, so deep recursion could cause issues/crashes.
+    #[test]
+    fn high_ply_access_does_not_panic() {
+        let mut kt = KillerMovesTable::new();
+        let board = Board::default_board();
+        let move_list = move_generation::legal::generate_all_moves(&board);
+        let mv = *move_list.at(0).unwrap();
+        let piece = piece_for_move(&board, &mv);
+
+        for ply in [128usize, 200, (MAX_PLY as usize) - 1] {
+            let _ = kt.get(ply);
+            kt.update(ply, mv, piece);
+            assert!(kt.get(ply)[0].is_some_and(|k| k.matches(mv, piece)));
         }
     }
 

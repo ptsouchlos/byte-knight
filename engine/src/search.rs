@@ -466,7 +466,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         // Build move picker. Move generation is lazy (deferred to stage machine).
-        let mut picker = move_picker::MovePicker::new(tt_move, self.killers_table, ply as u8);
+        let mut picker = move_picker::MovePicker::new(tt_move, self.killers_table, ply as usize);
 
         // Really "bad" initial score
         let mut best_score = -Score::INF;
@@ -568,7 +568,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             if !board.is_draw() {
                 let is_killer = self
                     .killers_table
-                    .get(ply as u8)
+                    .get(ply as usize)
                     .iter()
                     .any(|entry| entry.is_some_and(|k| k.matches(mv, piece)));
 
@@ -670,7 +670,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     // update history table for quiets
                     if is_quiet {
                         // Update the killers table
-                        self.killers_table.update(ply as u8, mv, piece);
+                        self.killers_table.update(ply as usize, mv, piece);
 
                         // calculate history bonus
                         let bonus = history_table::calculate_bonus_for_depth(depth);

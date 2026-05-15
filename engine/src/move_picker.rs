@@ -100,7 +100,7 @@ impl MovePicker {
     /// Creates a `MovePicker` for the main negamax search.
     ///
     /// No moves are generated upfront; generation is deferred to the stage machine.
-    pub(crate) fn new(tt_move: Option<Move>, killers_table: &KillerMovesTable, ply: u8) -> Self {
+    pub(crate) fn new(tt_move: Option<Move>, killers_table: &KillerMovesTable, ply: usize) -> Self {
         let killer_slice = killers_table.get(ply);
         let killers = [
             killer_slice.first().copied().unwrap_or(None),
