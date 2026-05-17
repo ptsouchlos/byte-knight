@@ -83,6 +83,8 @@ impl Engine {
         stop_flag: Arc<AtomicBool>,
         output: &mut dyn Write,
     ) -> SearchResult {
+        // Reset the search start time (used for soft/hard timeout check)
+        self.thread_data.reset_start_time();
         // Reset params we track during search
         self.thread_data.reset();
         // Killers are ply-keyed and only meaningful within a single search tree.
@@ -91,8 +93,6 @@ impl Engine {
         self.thread_data.transposition_table.increment_age();
         // Update the search limits
         self.thread_data.limits = limits;
-        // Reset the search start time (used for soft/hard timeout check)
-        self.thread_data.reset_start_time();
 
         if self.debug {
             Search::<LogDebug>::new(output).search(
