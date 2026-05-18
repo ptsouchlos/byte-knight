@@ -6,14 +6,23 @@
 //! This module defines a thread data structure that holds information and data that is used in search.
 //! Credit to the Hobbes author for this original setup which has been adapted for use in byte-knight.
 
+use std::time::{Duration, Instant};
+
 use chess::{board::Board, moves::Move};
 use uci_parser::UciSearchOptions;
 
-use crate::{score::ScoreType, search::limits::SearchLimits};
+use crate::{
+    history_table::HistoryTable, killers_table::KillerMovesTable, score::ScoreType,
+    search::limits::SearchLimits, ttable::TranspositionTable,
+};
 
 pub struct ThreadData {
+    pub(crate) transposition_table: TranspositionTable,
+    pub(crate) history_table: HistoryTable,
+    pub(crate) killers_table: KillerMovesTable,
     pub(crate) bestmove_stability: u64,
     pub(crate) prev_best_move: Option<Move>,
+    pub(crate) start_time: Instant,
     pub(crate) limits: SearchLimits,
     pub(crate) depth: i32,
     pub(crate) seldepth: ScoreType,
@@ -25,6 +34,23 @@ pub enum LimitType {
     Hard,
 }
 
+impl Default for ThreadData {
+    fn default() -> Self {
+        ThreadData {
+            transposition_table: TranspositionTable::default(),
+            history_table: HistoryTable::default(),
+            killers_table: KillerMovesTable::default(),
+            bestmove_stability: 0,
+            prev_best_move: None,
+            start_time: Instant::now(),
+            limits: SearchLimits::default(),
+            depth: 1,
+            seldepth: 0,
+            nodes: 0,
+        }
+    }
+}
+
 impl ThreadData {
     pub fn new(uci_options: &UciSearchOptions, board: &Board) -> Self {
         Self::from_limits(SearchLimits::new(uci_options, board))
@@ -33,12 +59,8 @@ impl ThreadData {
     /// Create [`ThreadData`] from pre-built [`SearchLimits`].
     pub fn from_limits(limits: SearchLimits) -> Self {
         ThreadData {
-            bestmove_stability: 0,
-            prev_best_move: None,
             limits,
-            depth: 1,
-            seldepth: 0,
-            nodes: 0,
+            ..Default::default()
         }
     }
 
@@ -48,6 +70,20 @@ impl ThreadData {
         self.seldepth = 0;
         self.bestmove_stability = 0;
         self.prev_best_move = None;
+    }
+
+    pub fn reset_start_time(&mut self) {
+        self.start_time = Instant::now();
+    }
+
+    pub fn time(&self) -> Duration {
+        self.start_time.elapsed()
+    }
+
+    pub fn clear(&mut self) {
+        self.transposition_table.clear();
+        self.history_table.clear();
+        self.killers_table.clear();
     }
 
     /// Update best-move stability based on the new root best move. If the new
@@ -76,7 +112,7 @@ impl ThreadData {
     fn soft_limit_reached(&self) -> bool {
         let best_move_stability = self.bestmove_stability_for_scaling();
         if let Some(soft_time) = self.limits.scaled_soft_limit(best_move_stability)
-            && self.limits.start_time.elapsed() >= soft_time
+            && self.start_time.elapsed() >= soft_time
         {
             return true;
         }
@@ -91,11 +127,9 @@ impl ThreadData {
     }
 
     /// Check if the hard limit has been reached.
-    /// This includes time and nodes. The max-depth boundary is handled by the
-    /// iterative-deepening loop via the soft limit; checking it here would
-    /// cause in-tree stop checks to abort the final iteration mid-search.
+    /// This includes time and nodes.
     fn hard_limit_reached(&self) -> bool {
-        if self.limits.start_time.elapsed() >= self.limits.hard_timeout {
+        if self.start_time.elapsed() >= self.limits.hard_timeout {
             return true;
         }
 

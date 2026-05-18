@@ -1,7 +1,4 @@
-use std::{
-    fmt::Display,
-    time::{Duration, Instant},
-};
+use std::{fmt::Display, time::Duration};
 
 use chess::board::Board;
 use uci_parser::UciSearchOptions;
@@ -17,7 +14,6 @@ const BEST_MOVE_TIME_MIN_SCALE: f32 = 0.5;
 #[derive(Clone, Debug, Copy)]
 pub struct SearchLimits {
     pub max_depth: u8,
-    pub start_time: Instant,
     pub soft_timeout: Duration,
     pub hard_timeout: Duration,
     pub max_nodes: u64,
@@ -27,7 +23,6 @@ impl Default for SearchLimits {
     fn default() -> Self {
         SearchLimits {
             max_depth: MAX_DEPTH,
-            start_time: Instant::now(),
             soft_timeout: Duration::MAX,
             hard_timeout: Duration::MAX,
             max_nodes: u64::MAX,
@@ -105,8 +100,8 @@ impl Display for SearchLimits {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "max depth {} start_time {:?} soft_timeout {:?} hard_timeout {:?}",
-            self.max_depth, self.start_time, self.soft_timeout, self.hard_timeout
+            "max depth {} soft_timeout {:?} hard_timeout {:?}",
+            self.max_depth, self.soft_timeout, self.hard_timeout
         )
     }
 }

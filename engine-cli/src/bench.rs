@@ -9,6 +9,7 @@ use chess::board::Board;
 use engine::{
     log_level::LogNone,
     search::{Search, limits::SearchLimits},
+    thread_data::ThreadData,
 };
 
 const BENCHMARKS: [&str; 56] = [
@@ -109,19 +110,20 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     };
 
     let mut nodes = 0u64;
-    let mut tt = Default::default();
-    let mut hist = Default::default();
-    let mut killers = Default::default();
+    let mut td = ThreadData::from_limits(config);
     let mut sink = io::sink();
-    let mut search = Search::<LogNone>::new(config, &mut tt, &mut hist, &mut killers, &mut sink);
+    let mut search = Search::<LogNone>::new(&mut sink);
 
     let max_fen_width = benchmark_strings.iter().map(|s| s.len()).max().unwrap();
 
     for (idx, bench) in benchmark_strings.iter().enumerate() {
+        // Reset params tracked for each search.
+        td.reset();
+
         let fen: &str = bench.split(';').next().unwrap();
         let mut board = Board::from_fen(fen).unwrap();
 
-        let result = search.search(&mut board, None);
+        let result = search.search(&mut board, &mut td, None);
         nodes += result.nodes;
 
         println!(
@@ -132,7 +134,7 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
             result.nodes
         );
     }
-    let elapsed_time = config.start_time.elapsed().as_secs_f64();
+    let elapsed_time = td.time().as_secs_f64();
     let nps = (nodes as f64 / elapsed_time).trunc();
     println!("{nodes} nodes / {elapsed_time}s => {nps} nps");
 }
