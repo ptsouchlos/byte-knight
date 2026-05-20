@@ -3,7 +3,7 @@ use crate::tuneable::{
 };
 #[inline]
 pub(crate) fn late_move_threshold(depth: i32, improvement: i32) -> i32 {
-    let scaled_improvement = improvement / lmp_improvement_divisor();
-    let adjustment = scaled_improvement.clamp(lmp_improvement_min(), lmp_improvement_max());
+    let clamped_improvement = improvement.clamp(lmp_improvement_min(), lmp_improvement_max());
+    let adjustment = clamped_improvement / lmp_improvement_divisor();
     lmp_base() + depth * depth + adjustment
 }
