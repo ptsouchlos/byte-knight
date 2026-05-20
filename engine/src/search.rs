@@ -560,7 +560,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 && !is_mated
                 && is_quiet
                 && depth <= lmp_max_depth() as i16
-                && moves_seen > params::late_move_threshold(depth as i32)
+                && moves_seen > params::late_move_threshold(depth as i32, improvement)
             {
                 picker.skip_quiets = true;
                 continue;
