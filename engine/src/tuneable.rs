@@ -81,6 +81,9 @@ macro_rules! tunable_params {
 tunable_params!(
     lmp_max_depth           = 6, 6, 10, 1,           false;
     lmp_base                = 6, 1, 10, 1,           false;
+    lmp_improvement_min     = -100, -300, 0, 25,     false;
+    lmp_improvement_max     = 200, 0, 500, 25,       false;
+    lmp_improvement_divisor = 16, 8, 128, 4,         false;
     see_value_pawn          = 100, 50, 150, 1,       false;
     see_value_knight        = 200, 180, 300, 1,      false;
     see_value_bishop        = 300, 250, 250, 1,      false;
@@ -95,7 +98,7 @@ tunable_params!(
     fp_max_depth            = 3, 1, 8, 1,            false;
     rfp_max_depth           = 4, 1, 10, 1,           false;
     rfp_margin              = 82, 40, 120, 1,        false;
-    rfp_improving_margin    = 30, 10, 70, 1,          false;
+    rfp_improving_margin    = 30, 10, 70, 1,         false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
