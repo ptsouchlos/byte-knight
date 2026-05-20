@@ -99,6 +99,9 @@ tunable_params!(
     rfp_max_depth           = 4, 1, 10, 1,           false;
     rfp_margin              = 82, 40, 120, 1,        false;
     rfp_improving_margin    = 30, 10, 70, 1,         false;
+    lmr_min_depth           = 3, 1, 12, 1,           false;
+    lmr_min_moves_seen      = 3, 1, 12, 1,           false;
+    lmr_not_improving_bonus = 1, 0, 3, 1,            false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
@@ -112,8 +115,6 @@ pub(crate) const NMP_DEPTH_REDUCTION: ScoreType = 2;
 
 pub(crate) const LMR_OFFSET: f64 = 0.2;
 pub(crate) const LMR_SCALING_FACTOR: f64 = 2.0;
-pub(crate) const LMR_MIN_DEPTH: i16 = 3;
-pub(crate) const LMR_MIN_MOVES_SEEN: usize = 3;
 
 pub(crate) const RAZORING_SCALING: ScoreType = 400;
 pub(crate) const RAZORING_OFFSET: ScoreType = 500;
