@@ -93,13 +93,13 @@ tunable_params!(
     fp_base                 = 100, 50, 150, 1,       false;
     fp_scale                = 80, 40, 120, 1,        false;
     fp_max_depth            = 3, 1, 8, 1,            false;
+    rfp_max_depth           = 4, 1, 10, 1,           false;
+    rfp_margin              = 82, 40, 120, 1,        false;
+    rfp_improving_margin    = 30, 10, 70, 1,          false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
 pub(crate) const ASPIRATION_WINDOW: ScoreType = 50;
-
-pub(crate) const MAX_RFP_DEPTH: ScoreType = 4;
-pub(crate) const RFP_MARGIN: ScoreType = 82;
 
 pub(crate) const IIR_MIN_DEPTH: ScoreType = 4;
 pub(crate) const IIR_DEPTH_REDUCTION: ScoreType = 1;

@@ -14,6 +14,20 @@ use crate::defs::MAX_PLY;
 
 pub type ScoreType = i16;
 pub(crate) type LargeScoreType = i32;
+
+/// Helper to check if a given score is valid. Validity is
+/// determined by a score being within the bounds of [-MATE, MATE]
+/// inclusive.
+///
+/// # Arguments
+/// - `score`: The score to check
+///
+/// # Returns
+/// True if the score is within the bounds [-MATE, MATE] (inclusive), false otherwise.
+pub fn is_valid(score: i32) -> bool {
+    score >= -Score::MATE.0 as i32 && score <= Score::MATE.0 as i32
+}
+
 /// Represents a score in centipawns.
 ///
 /// This type has saturating add/sub operations to prevent overflow.
@@ -137,6 +151,10 @@ impl Score {
         } else {
             *self
         }
+    }
+
+    pub fn as_i32(self) -> i32 {
+        self.0 as i32
     }
 }
 

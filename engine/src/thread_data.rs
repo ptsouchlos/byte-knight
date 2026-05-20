@@ -12,8 +12,8 @@ use chess::{board::Board, moves::Move};
 use uci_parser::UciSearchOptions;
 
 use crate::{
-    history_table::HistoryTable, killers_table::KillerMovesTable, score::ScoreType,
-    search::limits::SearchLimits, ttable::TranspositionTable,
+    history_table::HistoryTable, killers_table::KillerMovesTable, node::NodeStack,
+    score::ScoreType, search::limits::SearchLimits, ttable::TranspositionTable,
 };
 
 pub struct ThreadData {
@@ -27,6 +27,7 @@ pub struct ThreadData {
     pub(crate) depth: i32,
     pub(crate) seldepth: ScoreType,
     pub(crate) nodes: u64,
+    pub(crate) stack: NodeStack,
 }
 
 pub enum LimitType {
@@ -47,6 +48,7 @@ impl Default for ThreadData {
             depth: 1,
             seldepth: 0,
             nodes: 0,
+            stack: NodeStack::default(),
         }
     }
 }
@@ -70,6 +72,7 @@ impl ThreadData {
         self.seldepth = 0;
         self.bestmove_stability = 0;
         self.prev_best_move = None;
+        self.stack = NodeStack::default();
     }
 
     pub fn reset_start_time(&mut self) {
