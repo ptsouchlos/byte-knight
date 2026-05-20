@@ -99,6 +99,7 @@ tunable_params!(
     rfp_max_depth           = 4, 1, 10, 1,           false;
     rfp_margin              = 82, 40, 120, 1,        false;
     rfp_improving_margin    = 30, 10, 70, 1,         false;
+    lmr_worsening_threshold = 20, 0, 100, 1,         false;
     lmr_min_depth           = 3, 1, 12, 1,           false;
     lmr_min_moves_seen      = 3, 1, 12, 1,           false;
     lmr_not_improving_bonus = 1, 0, 3, 1,            false;

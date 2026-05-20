@@ -42,8 +42,8 @@ use crate::{
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET,
         RAZORING_SCALING, fp_base, fp_max_depth, fp_scale, lmp_max_depth, lmr_min_depth,
-        lmr_min_moves_seen, lmr_not_improving_bonus, qs_delta_margin, qs_see_threshold,
-        rfp_improving_margin, rfp_margin, rfp_max_depth, see_tacticals_margin,
+        lmr_min_moves_seen, lmr_not_improving_bonus, lmr_worsening_threshold, qs_delta_margin,
+        qs_see_threshold, rfp_improving_margin, rfp_margin, rfp_max_depth, see_tacticals_margin,
         see_tacticals_max_depth,
     },
 };
@@ -592,7 +592,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     // Apply less LMR reduction for killer moves.
                     if is_killer {
                         (lmr_reduction - 1).max(1)
-                    } else if !improving && !in_check {
+                    } else if improvement <= -lmr_worsening_threshold() && !in_check {
                         // Increase reduction if not improving
                         lmr_reduction + lmr_not_improving_bonus() as i16
                     } else {
