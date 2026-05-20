@@ -95,7 +95,7 @@ tunable_params!(
     fp_max_depth            = 3, 1, 8, 1,            false;
     rfp_max_depth           = 4, 1, 10, 1,           false;
     rfp_margin              = 82, 40, 120, 1,        false;
-    rfp_improving_margin    = 20, 10, 40, 1,          false;
+    rfp_improving_margin    = 30, 10, 70, 1,          false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
