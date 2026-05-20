@@ -33,8 +33,8 @@ use crate::{
     move_picker,
     node_types::{NodeType, NonPvNode, RootNode},
     principle_variation::PrincipleVariation,
-    score::{LargeScoreType, Score, ScoreType},
-    see,
+    score::{self, LargeScoreType, Score, ScoreType},
+    search, see,
     table::Table,
     thread_data::{LimitType, ThreadData},
     traits::Eval,
@@ -84,6 +84,16 @@ impl Display for SearchResult {
                 .map(|m| m.to_long_algebraic())
                 .unwrap_or_else(|| "none".to_string())
         )
+    }
+}
+
+/// Helper to calculate the improvement of the static evaluation from our previous move.
+fn calculate_improvement(td: &ThreadData, ply: i16, static_eval: Score, in_check: bool) -> i32 {
+    let ply_idx = ply as usize;
+    if ply >= 2 && score::is_valid(td.stack[ply_idx].static_eval) && !in_check {
+        (static_eval.0 as i32) - td.stack[ply_idx - 2].static_eval
+    } else {
+        0
     }
 }
 
@@ -452,6 +462,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_move: Option<Move> = None;
         let mut moves_seen = 0;
         let static_eval = self.eval.eval(board);
+        td.stack[ply as usize].static_eval = static_eval.0 as i32;
+
+        // Check if we are "improving". Improvement affects multiple heuristics.
+        // This is just a simple check to see if the static evaluation is trending up
+        // since our last turn.
+        let improvement = search::calculate_improvement(td, ply, static_eval, in_check);
+        let _improving = improvement > 0;
 
         // How much to extend the depth.
         let mut extension = 0;
