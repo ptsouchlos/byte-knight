@@ -40,10 +40,10 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, MAX_RFP_DEPTH,
-        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, RFP_MARGIN, fp_base,
-        fp_max_depth, fp_scale, lmp_max_depth, qs_delta_margin, qs_see_threshold,
-        see_tacticals_margin, see_tacticals_max_depth,
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, NMP_DEPTH_REDUCTION,
+        NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, fp_base, fp_max_depth, fp_scale,
+        lmp_max_depth, qs_delta_margin, qs_see_threshold, rfp_improving_margin, rfp_margin,
+        rfp_max_depth, see_tacticals_margin, see_tacticals_max_depth,
     },
 };
 
@@ -90,7 +90,7 @@ impl Display for SearchResult {
 /// Helper to calculate the improvement of the static evaluation from our previous move.
 fn calculate_improvement(td: &ThreadData, ply: i16, static_eval: Score, in_check: bool) -> i32 {
     let ply_idx = ply as usize;
-    if ply >= 2 && score::is_valid(td.stack[ply_idx].static_eval) && !in_check {
+    if ply >= 2 && score::is_valid(td.stack[ply_idx - 2].static_eval) && !in_check {
         (static_eval.0 as i32) - td.stack[ply_idx - 2].static_eval
     } else {
         0
@@ -448,27 +448,42 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         let tt_move = tt_entry.map(|entry| entry.board_move);
 
-        // can we prune the current node with something other than TT?
-        if let Some(score) = self.pruned_score::<Node>(tt_entry, board, td, depth, ply, beta, alpha)
-        {
-            return score;
-        }
-
-        // Build move picker. Move generation is lazy (deferred to stage machine).
-        let mut picker = move_picker::MovePicker::new(tt_move, &td.killers_table, ply as usize);
-
         // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move: Option<Move> = None;
         let mut moves_seen = 0;
-        let static_eval = self.eval.eval(board);
+        let static_eval = if !in_check {
+            self.eval.eval(board)
+        } else {
+            -Score::INF
+        };
+
         td.stack[ply as usize].static_eval = static_eval.0 as i32;
 
         // Check if we are "improving". Improvement affects multiple heuristics.
         // This is just a simple check to see if the static evaluation is trending up
         // since our last turn.
         let improvement = search::calculate_improvement(td, ply, static_eval, in_check);
-        let _improving = improvement > 0;
+        let improving = improvement > 0;
+
+        // can we prune the current node with something other than TT?
+        if let Some(score) = self.pruned_score::<Node>(
+            tt_entry,
+            board,
+            td,
+            depth,
+            ply,
+            beta,
+            alpha,
+            static_eval,
+            improving,
+            in_check,
+        ) {
+            return score;
+        }
+
+        // Build move picker. Move generation is lazy (deferred to stage machine).
+        let mut picker = move_picker::MovePicker::new(tt_move, &td.killers_table, ply as usize);
 
         // How much to extend the depth.
         let mut extension = 0;
@@ -762,13 +777,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         ply: ScoreType,
         beta: Score,
         alpha: Score,
+        static_eval: Score,
+        improving: bool,
+        in_check: bool,
     ) -> Option<Score> {
         // no pruning if we are in check or if we are in a PV node
-        if move_generation::is_in_check(board) || Node::PV {
+        if in_check || Node::PV {
             return None;
         }
-
-        let static_eval = self.eval.eval(board);
 
         // Razoring: https://www.chessprogramming.org/Razoring
         // Check if the static eval + margin is less than alpha. For byte-knight, we prune based on qsearch evaluation.
@@ -796,7 +812,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // https://www.chessprogramming.org/Reverse_Futility_Pruning
         // If the static evaluation is very high and beats beta by a depth-dependent margin, we can prune the move.
         // --------------------------------------------------------------------------------------------------------
-        if depth <= MAX_RFP_DEPTH && static_eval - RFP_MARGIN * depth > beta {
+        let futility_margin =
+            rfp_margin() * depth as i32 - rfp_improving_margin() * improving as i32;
+        if depth as i32 <= rfp_max_depth() && static_eval.as_i32() - futility_margin > beta.as_i32()
+        {
             return Some(static_eval);
         }
 
