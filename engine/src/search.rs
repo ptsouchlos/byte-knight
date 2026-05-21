@@ -593,7 +593,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     if is_killer {
                         (lmr_reduction - 1).max(1)
                     } else if improvement <= -lmr_worsening_threshold() && !in_check {
-                        // Increase reduction if not improving
+                        // Increase reduction if worsening
                         lmr_reduction + lmr_not_improving_bonus() as i16
                     } else {
                         lmr_reduction
