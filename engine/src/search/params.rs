@@ -1,13 +1,15 @@
 use crate::tuneable::{
     lmp_base, lmp_improvement_divisor, lmp_improvement_max, lmp_improvement_min, nmp_depth_divisor,
-    nmp_depth_reduction, nmp_improving_bonus,
+    nmp_depth_reduction, nmp_eval_margin_div, nmp_eval_margin_max, nmp_improving_bonus,
 };
 
 #[inline]
-pub(crate) fn nmp_reduction(depth: i32, improving: bool) -> i32 {
-    nmp_depth_reduction()
-        + depth / nmp_depth_divisor()
-        + if improving { nmp_improving_bonus() } else { 0 }
+pub(crate) fn nmp_reduction(depth: i32, eval_margin: i32, improving: bool) -> i32 {
+    let base = nmp_depth_reduction();
+    let improving_bonus = if improving { nmp_improving_bonus() } else { 0 };
+    let depth_bonus = depth / nmp_depth_divisor();
+    let eval_bonus = (eval_margin / nmp_eval_margin_div()).min(nmp_eval_margin_max());
+    base + improving_bonus + depth_bonus + eval_bonus
 }
 
 #[inline]
