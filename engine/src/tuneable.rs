@@ -99,6 +99,9 @@ tunable_params!(
     rfp_max_depth           = 4, 1, 10, 1,           false;
     rfp_margin              = 82, 40, 120, 1,        false;
     rfp_improving_margin    = 30, 10, 70, 1,         false;
+    nmp_min_depth           = 3, 1, 8, 1,            false;
+    nmp_depth_reduction     = 2, 0, 6, 1,            false;
+    nmp_improving_bonus     = 1, 0, 4, 1,            false;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
@@ -106,9 +109,6 @@ pub(crate) const ASPIRATION_WINDOW: ScoreType = 50;
 
 pub(crate) const IIR_MIN_DEPTH: ScoreType = 4;
 pub(crate) const IIR_DEPTH_REDUCTION: ScoreType = 1;
-
-pub(crate) const NMP_MIN_DEPTH: ScoreType = 3;
-pub(crate) const NMP_DEPTH_REDUCTION: ScoreType = 2;
 
 pub(crate) const LMR_OFFSET: f64 = 0.2;
 pub(crate) const LMR_SCALING_FACTOR: f64 = 2.0;

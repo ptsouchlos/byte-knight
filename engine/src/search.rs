@@ -40,10 +40,10 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, NMP_DEPTH_REDUCTION,
-        NMP_MIN_DEPTH, RAZORING_OFFSET, RAZORING_SCALING, fp_base, fp_max_depth, fp_scale,
-        lmp_max_depth, qs_delta_margin, qs_see_threshold, rfp_improving_margin, rfp_margin,
-        rfp_max_depth, see_tacticals_margin, see_tacticals_max_depth,
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, RAZORING_OFFSET,
+        RAZORING_SCALING, fp_base, fp_max_depth, fp_scale, lmp_max_depth, nmp_min_depth,
+        qs_delta_margin, qs_see_threshold, rfp_improving_margin, rfp_margin, rfp_max_depth,
+        see_tacticals_margin, see_tacticals_max_depth,
     },
 };
 
@@ -836,12 +836,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let last_move_was_null = board.last_move().is_some_and(|mv| mv.is_null_move());
 
         if !last_move_was_null
-            && depth >= NMP_MIN_DEPTH
+            && depth as i32 >= nmp_min_depth()
             && static_eval >= beta
             && sufficient_material
             && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
-            let null_move_depth = depth - NMP_DEPTH_REDUCTION - 1;
+            let null_move_depth = depth - params::nmp_reduction(improving) as i16 - 1;
             let mut null_board = board.clone();
             null_board.null_move();
             td.transposition_table.prefetch(null_board.zobrist_hash());
