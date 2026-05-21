@@ -837,7 +837,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         if !last_move_was_null
             && depth as i32 >= nmp_min_depth()
-            && static_eval >= beta
+            && static_eval >= beta + params::nmp_margin(improving) as i16
             && sufficient_material
             && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
