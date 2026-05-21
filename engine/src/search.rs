@@ -610,7 +610,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if moves_seen > 0 {
                     // Figure out the search depth, factoring in the LMR reduction.
                     let search_depth = if reduction > 1 {
-                        new_depth.saturating_sub(reduction)
+                        new_depth.saturating_sub(reduction).max(1)
                     } else {
                         new_depth
                     };
