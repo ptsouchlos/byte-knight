@@ -841,7 +841,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             && sufficient_material
             && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
-            let null_move_depth = depth - params::nmp_reduction(improving) as i16 - 1;
+            let null_move_depth = depth - params::nmp_reduction(depth as i32, improving) as i16 - 1;
             let mut null_board = board.clone();
             null_board.null_move();
             td.transposition_table.prefetch(null_board.zobrist_hash());

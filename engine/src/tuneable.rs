@@ -102,6 +102,7 @@ tunable_params!(
     nmp_min_depth           = 3, 1, 8, 1,            false;
     nmp_depth_reduction     = 2, 0, 6, 1,            false;
     nmp_improving_bonus     = 1, 0, 4, 1,            false;
+    nmp_depth_divisor       = 4, 2, 8, 1,            true;
 );
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
