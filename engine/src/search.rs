@@ -841,10 +841,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             && sufficient_material
             && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
-            let eval_margin = static_eval - beta;
+            let eval_margin = (static_eval.as_i32() - beta.as_i32()).max(0);
             let null_move_depth = depth
-                - params::nmp_reduction(depth as i32, eval_margin.as_i32(), improving) as i16
-                - 1;
+                - (params::nmp_reduction(depth as i32, eval_margin, improving) as i16)
+                    .min(depth - 2);
             let mut null_board = board.clone();
             null_board.null_move();
             td.transposition_table.prefetch(null_board.zobrist_hash());
