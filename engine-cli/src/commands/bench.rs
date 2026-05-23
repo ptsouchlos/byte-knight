@@ -90,7 +90,27 @@ const BENCHMARKS: [&str; 56] = [
     "4r1k1/8/2p5/2p1Rpq1/6P1/1PP4Q/P5K1/RN1r4 b - - 0 1",
 ];
 
-pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
+#[derive(clap::Args, Debug)]
+pub(crate) struct BenchArgs {
+    #[arg(short, long, default_value = "10")]
+    depth: u8,
+
+    #[arg(short, long)]
+    epd_file: Option<String>,
+}
+
+/// Execute the bench command with the bench arguments.
+pub(crate) fn execute(args: BenchArgs) {
+    // Spawn bench on a thread with 8 MiB stack to match the UCI handler.
+    let handle = std::thread::Builder::new()
+        .name("bench".to_string())
+        .stack_size(8 * 1024 * 1024)
+        .spawn(move || run_bench(args.depth, &args.epd_file))
+        .unwrap();
+    handle.join().unwrap();
+}
+
+fn run_bench(depth: u8, epd_file: &Option<String>) {
     let benchmark_strings: Vec<String> = match epd_file {
         Some(file) => {
             let str = std::fs::read_to_string(file).unwrap();
