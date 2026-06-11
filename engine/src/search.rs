@@ -844,7 +844,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let eval_margin = (static_eval.as_i32() - beta.as_i32()).max(0);
             let null_move_depth = depth
                 - (params::nmp_reduction(depth as i32, eval_margin, improving) as i16)
-                    .min(depth - 2);
+                    .min(depth - 2)
+                - 1;
             let mut null_board = board.clone();
             null_board.null_move();
             td.transposition_table.prefetch(null_board.zobrist_hash());
