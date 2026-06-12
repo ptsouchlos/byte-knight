@@ -28,6 +28,7 @@ pub struct ThreadData {
     pub(crate) seldepth: ScoreType,
     pub(crate) nodes: u64,
     pub(crate) stack: NodeStack,
+    pub(crate) nmp_min_ply: i32,
 }
 
 pub enum LimitType {
@@ -49,6 +50,7 @@ impl Default for ThreadData {
             seldepth: 0,
             nodes: 0,
             stack: NodeStack::default(),
+            nmp_min_ply: 0,
         }
     }
 }

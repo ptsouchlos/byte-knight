@@ -42,8 +42,8 @@ use crate::{
     tuneable::{
         IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, RAZORING_OFFSET,
         RAZORING_SCALING, fp_base, fp_max_depth, fp_scale, lmp_max_depth, nmp_min_depth,
-        qs_delta_margin, qs_see_threshold, rfp_improving_margin, rfp_margin, rfp_max_depth,
-        see_tacticals_margin, see_tacticals_max_depth,
+        nmp_verify_min_depth, qs_delta_margin, qs_see_threshold, rfp_improving_margin, rfp_margin,
+        rfp_max_depth, see_tacticals_margin, see_tacticals_max_depth,
     },
 };
 
@@ -837,11 +837,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         if !last_move_was_null
             && depth as i32 >= nmp_min_depth()
+            && ply as i32 >= td.nmp_min_ply
             && static_eval >= beta
             && sufficient_material
             && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
-            let null_move_depth = depth - params::nmp_reduction(depth as i32, improving) as i16 - 1;
+            let r = params::nmp_reduction(depth as i32, improving) as i16 + 1;
             let mut null_board = board.clone();
             null_board.null_move();
             td.transposition_table.prefetch(null_board.zobrist_hash());
@@ -849,7 +850,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let null_score = -self.negamax::<NonPvNode>(
                 &mut null_board,
                 td,
-                null_move_depth,
+                depth - r,
                 ply + 1,
                 -beta,
                 -beta + 1,
@@ -857,11 +858,32 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             );
 
             if null_score >= beta {
-                return if null_score.is_mate() {
-                    Some(beta)
-                } else {
-                    Some(null_score)
-                };
+                // At shallow depths, we can directly return the result of null move search
+                if (depth as i32) < nmp_verify_min_depth() || td.nmp_min_ply != 0 {
+                    return if null_score.is_mate() {
+                        Some(beta)
+                    } else {
+                        Some(null_score)
+                    };
+                }
+
+                // At higher depths, we verify the result with a full search
+                td.nmp_min_ply = ply as i32 + 3 * (depth as i32 - r as i32) / 4;
+                let mut verify_pv = PrincipleVariation::new();
+                let mut verify_board = board.clone();
+                let verify_score = self.negamax::<NonPvNode>(
+                    &mut verify_board,
+                    td,
+                    depth - r,
+                    ply,
+                    beta - 1,
+                    beta,
+                    &mut verify_pv,
+                );
+                td.nmp_min_ply = 0;
+                if verify_score >= beta {
+                    return Some(null_score);
+                }
             }
         }
 
