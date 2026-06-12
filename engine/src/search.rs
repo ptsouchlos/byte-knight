@@ -855,6 +855,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 -beta + 1,
                 &mut nmp_pv,
             );
+
             if null_score >= beta {
                 return if null_score.is_mate() {
                     Some(beta)
