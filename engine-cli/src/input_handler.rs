@@ -20,6 +20,8 @@ pub(crate) enum EngineCommand {
     HashInfo,
     History,
     Perft(u16),
+    #[cfg(feature = "tuning")]
+    Params,
 }
 
 fn split_args(s: &str) -> Vec<String> {
@@ -46,6 +48,8 @@ impl FromStr for EngineCommand {
             "hash" => Ok(EngineCommand::HashInfo),
             "history" => Ok(EngineCommand::History),
             "perft" => Ok(EngineCommand::Perft(depth)),
+            #[cfg(feature = "tuning")]
+            "params" => Ok(EngineCommand::Params),
             _ => Err(anyhow::anyhow!("Invalid engine command")),
         }
     }
