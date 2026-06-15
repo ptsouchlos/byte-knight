@@ -19,7 +19,7 @@ New features are tested on an [OpenBench](https://github.com/AndyGrant/OpenBench
 | Version                                                            | Estimate | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
 | ------------------------------------------------------------------ | -------- | ----------------------------------------------------- | ---------------------------------------------------- |
 | [3.0.0](https://github.com/ptsouchlos/byte-knight/releases/tag/v3.0.0) | -        | 2386                                                  | 2311                                                 |
-| 4.0.0                                                              | 2800     |                                                       |                                                      |
+| 4.0.0                                                              | 2800     |          2879                                             |  2858                                                    |
 
 ## Features
 
