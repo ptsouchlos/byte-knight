@@ -5,7 +5,7 @@
 
 use crate::{
     score::{Score, ScoreType},
-    tuneable::{ASPIRATION_WINDOW, MIN_ASPIRATION_DEPTH},
+    tuneable::{aspiration_window, min_aspiration_depth},
 };
 
 pub(crate) struct AspirationWindow {
@@ -43,7 +43,7 @@ impl AspirationWindow {
 
     /// Create a new [`AspirationWindow`] centered around the given score.
     pub(crate) fn around(score: Score, depth: ScoreType) -> Self {
-        if depth <= MIN_ASPIRATION_DEPTH || score.is_mate() {
+        if depth as i32 <= min_aspiration_depth() || score.is_mate() {
             // If the score is mate, we can't use the window as we would expect search results to fluctuate.
             // Set it to a full window and search again.
             // We also want to do a full search on the first iteration (i.e. depth == 1);
@@ -61,16 +61,19 @@ impl AspirationWindow {
 
     pub(crate) fn widen_down(&mut self, score: Score, depth: ScoreType) {
         // Note that we do not alter beta here, as we are widening the window downwards.
-        let margin = Self::window_size(depth) + self.alpha_fails as ScoreType * ASPIRATION_WINDOW;
-        self.alpha = (score - margin).max(-Score::INF);
+        let margin =
+            Self::window_size(depth).as_i32() + self.alpha_fails as i32 * aspiration_window();
+        let new_alpha = (score.as_i32() - margin).max(-Score::INF.as_i32());
+        self.alpha = Score::new(new_alpha as ScoreType);
         // save that this was a fail low
         self.alpha_fails += 1;
     }
 
     pub(crate) fn widen_up(&mut self, score: Score, depth: ScoreType) {
         // Note that we do not alter alpha here, as we are widening the window upwards.
-        let margin = Self::window_size(depth) + self.beta_fails as ScoreType * ASPIRATION_WINDOW;
-        let new_beta = (score.0 as i32 + margin.0 as i32).min(Score::INF.0 as i32);
+        let margin =
+            Self::window_size(depth).as_i32() + self.beta_fails as i32 * aspiration_window();
+        let new_beta = (score.as_i32() + margin).min(Score::INF.0 as i32);
         self.beta = Score::new(new_beta as ScoreType);
         // save that this was a fail high
         self.beta_fails += 1;
@@ -78,6 +81,6 @@ impl AspirationWindow {
 
     fn window_size(_depth: ScoreType) -> Score {
         // TODO(PT): Scale the window to depth
-        Score::new(ASPIRATION_WINDOW)
+        Score::new(aspiration_window() as i16)
     }
 }

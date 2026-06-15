@@ -40,9 +40,9 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_MIN_DEPTH, LMR_MIN_MOVES_SEEN, RAZORING_OFFSET,
-        RAZORING_SCALING, fp_base, fp_max_depth, fp_scale, lmp_max_depth, nmp_min_depth,
-        qs_delta_margin, qs_see_threshold, rfp_improving_margin, rfp_margin, rfp_max_depth,
+        fp_base, fp_max_depth, fp_scale, iir_depth_reduction, iir_min_depth, lmp_max_depth,
+        lmr_min_depth, lmr_min_moves_seen, nmp_min_depth, qs_delta_margin, qs_see_threshold,
+        razoring_offset, razoring_scaling, rfp_improving_margin, rfp_margin, rfp_max_depth,
         see_tacticals_margin, see_tacticals_max_depth,
     },
 };
@@ -442,8 +442,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Internal Iterative Reductions: https://www.chessprogramming.org/Internal_Iterative_Reductions
         // If no tt entry was found, searching it will be very costly, so we reduce the depth. This is
         // working under the assumption that the position is likely not important.
-        if tt_entry.is_none() && depth >= IIR_MIN_DEPTH {
-            depth -= IIR_DEPTH_REDUCTION;
+        if tt_entry.is_none() && depth as i32 >= iir_min_depth() {
+            depth -= iir_depth_reduction() as i16;
         }
 
         let tt_move = tt_entry.map(|entry| entry.board_move);
@@ -585,8 +585,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                 // Compute LMR reduction
                 let reduction = if is_quiet
-                    && depth >= LMR_MIN_DEPTH
-                    && moves_seen as usize >= LMR_MIN_MOVES_SEEN
+                    && depth as i32 >= lmr_min_depth()
+                    && moves_seen >= lmr_min_moves_seen()
                 {
                     // Apply less LMR reduction for killer moves.
                     if is_killer {
@@ -786,11 +786,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return None;
         }
 
+        // ------------------------------------------------------------------------------------------------------------
         // Razoring: https://www.chessprogramming.org/Razoring
         // Check if the static eval + margin is less than alpha. For byte-knight, we prune based on qsearch evaluation.
         // If we can't beat alpha with the qsearch score, then we fail-low.
-        let razoring_margin = RAZORING_OFFSET + RAZORING_SCALING * depth;
-        if static_eval + razoring_margin < alpha {
+        // ------------------------------------------------------------------------------------------------------------
+        let razoring_margin = razoring_offset() + razoring_scaling() * depth as i32;
+        if static_eval.as_i32() + razoring_margin < alpha.as_i32() {
             let mut brd_cpy = board.clone();
             let mut razor_pv = PrincipleVariation::new();
             let score = self.quiescence::<NonPvNode>(

@@ -3,79 +3,7 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use crate::score::ScoreType;
-
-// Credit to Akimbo author for the implementation
-#[macro_export]
-macro_rules! tunable_params {
-    ($($name:ident = $val:expr, $min:expr, $max:expr, $step:expr, $spsa:expr;)*) => {
-        #[cfg(feature = "tuning")]
-        use std::sync::atomic::Ordering;
-
-        #[cfg(feature = "tuning")]
-        pub fn list_params() {
-            $(
-                println!(
-                    "option name {} type spin default {} min {} max {}",
-                    stringify!($name),
-                    $name(),
-                    $min,
-                    $max,
-                );
-            )*
-        }
-
-        #[cfg(feature = "tuning")]
-        pub fn set_param(name: &str, val: i32) {
-            match name {
-                $(
-                    stringify!($name) => vals::$name.store(val, Ordering::Relaxed),
-                )*
-                _ => println!("info error unknown option"),
-            }
-        }
-
-        #[cfg(feature = "tuning")]
-        pub fn print_params_ob() {
-            $(
-                if $spsa {
-                    let step = ($max - $min) / 20;
-                    println!(
-                        "{}, int, {}.0, {}.0, {}.0, {}, 0.002",
-                        stringify!($name),
-                        $name(),
-                        $min,
-                        $max,
-                        step,
-                    );
-                }
-            )*
-        }
-
-        #[cfg(feature = "tuning")]
-        mod vals {
-            use std::sync::atomic::AtomicI32;
-            $(
-            #[allow(non_upper_case_globals)]
-            pub static $name: AtomicI32 = AtomicI32::new($val);
-            )*
-        }
-
-        $(
-        #[cfg(feature = "tuning")]
-        #[inline]
-        pub fn $name() -> i32 {
-            vals::$name.load(Ordering::Relaxed)
-        }
-
-        #[cfg(not(feature = "tuning"))]
-        #[inline]
-        pub fn $name() -> i32 {
-            $val
-        }
-        )*
-    };
-}
+use crate::tunable_params;
 
 #[rustfmt::skip]
 tunable_params!(
@@ -103,18 +31,15 @@ tunable_params!(
     nmp_depth_reduction     = 2, 0, 6, 1,            false;
     nmp_improving_bonus     = 1, 0, 4, 1,            false;
     nmp_depth_divisor       = 4, 2, 8, 1,            true;
+    min_aspiration_depth    = 1, 1, 12, 1,           true;
+    aspiration_window       = 50, 25, 100, 1,        true;
+    iir_min_depth           = 4, 1, 10, 1,           true;
+    iir_depth_reduction     = 1, 1, 6, 1,            true;
+    razoring_scaling        = 400, 100, 800, 10,     true;
+    razoring_offset         = 500, 250, 1000, 10,    true;
+    lmr_min_depth           = 3, 1, 6, 1,            true;
+    lmr_min_moves_seen      = 3, 1, 6, 1,            true;
 );
-
-pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
-pub(crate) const ASPIRATION_WINDOW: ScoreType = 50;
-
-pub(crate) const IIR_MIN_DEPTH: ScoreType = 4;
-pub(crate) const IIR_DEPTH_REDUCTION: ScoreType = 1;
 
 pub(crate) const LMR_OFFSET: f64 = 0.2;
 pub(crate) const LMR_SCALING_FACTOR: f64 = 2.0;
-pub(crate) const LMR_MIN_DEPTH: i16 = 3;
-pub(crate) const LMR_MIN_MOVES_SEEN: usize = 3;
-
-pub(crate) const RAZORING_SCALING: ScoreType = 400;
-pub(crate) const RAZORING_OFFSET: ScoreType = 500;
