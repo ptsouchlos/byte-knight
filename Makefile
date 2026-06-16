@@ -40,7 +40,7 @@ endif
 # Compile an executable for use with OpenBench
 openbench:
 	@echo Compiling $(EXE) for OpenBench
-	cargo rustc --release -p byte-knight --jobs $(JOBS) -- -C target-cpu=native --emit link=$(EXE)
+	cargo rustc --release -p byte-knight --jobs $(JOBS) --features "tuning","engine/tuning" -- -C target-cpu=native --emit link=$(EXE)
 
 # Remove the EXE created
 clean:
