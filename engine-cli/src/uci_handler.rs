@@ -15,7 +15,7 @@ use std::{
 
 use chess::{moves::Move, pieces::SQUARE_NAME};
 #[cfg(feature = "tuning")]
-use engine::tuneable::print_params_ob;
+use engine::tuneable::{list_params, print_params_ob};
 use engine::{defs::About, engine::Engine, search::limits::SearchLimits};
 use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
@@ -104,6 +104,8 @@ impl<W: Write> UciHandler<W> {
                         for option in options {
                             writeln!(self.output, "{}", UciResponse::Option(option))?;
                         }
+                        #[cfg(feature = "tuning")]
+                        list_params();
                         writeln!(self.output, "{}", UciResponse::<String>::UciOk)?;
                     }
                     UciCommand::UciNewGame => {
