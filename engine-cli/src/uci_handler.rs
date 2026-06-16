@@ -14,6 +14,8 @@ use std::{
 };
 
 use chess::{moves::Move, pieces::SQUARE_NAME};
+#[cfg(feature = "tuning")]
+use engine::tuneable::print_params_ob;
 use engine::{defs::About, engine::Engine, search::limits::SearchLimits};
 use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
@@ -135,13 +137,18 @@ impl<W: Write> UciHandler<W> {
                         };
                         writeln!(self.output, "{move_output}")?;
                     }
-                    UciCommand::SetOption { name, value } => {
+                    UciCommand::SetOption {
+                        name,
+                        value: Some(val),
+                    } => {
                         if name.to_lowercase() == "hash"
-                            && let Some(val) = value
                             && let Ok(hash_size) = val.parse::<usize>()
                             && let Err(e) = self.engine.set_hash_size(hash_size)
                         {
                             eprintln!("{e}");
+                        } else {
+                            #[cfg(feature = "tuning")]
+                            self.engine.set_tunable(name.as_str(), val.as_str());
                         }
                     }
                     UciCommand::Stop => {
@@ -172,6 +179,10 @@ impl<W: Write> UciHandler<W> {
                     EngineCommand::Perft(depth) => {
                         let nodes = self.engine.perft(depth);
                         writeln!(self.output, "info nodes {}", nodes)?;
+                    }
+                    #[cfg(feature = "tuning")]
+                    EngineCommand::Params => {
+                        print_params_ob();
                     }
                 },
             }

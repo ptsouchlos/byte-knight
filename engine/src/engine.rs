@@ -8,8 +8,8 @@ use std::{
     sync::{Arc, atomic::AtomicBool},
 };
 
-use chess::board::Board;
-
+#[cfg(feature = "tuning")]
+use crate::tuneable::set_param;
 use crate::{
     history_table::HistoryTable,
     killers_table::KillerMovesTable,
@@ -18,6 +18,7 @@ use crate::{
     thread_data::ThreadData,
     ttable::{self, TranspositionTable},
 };
+use chess::board::Board;
 
 pub struct Engine {
     board: Board,
@@ -143,6 +144,18 @@ impl Engine {
 
     pub fn killers_table(&self) -> &KillerMovesTable {
         &self.thread_data.killers_table
+    }
+
+    #[cfg(feature = "tuning")]
+    pub fn set_tunable(&self, name: &str, value_str: &str) {
+        let value: i32 = match value_str.parse() {
+            Ok(v) => v,
+            Err(_) => {
+                println!("info error: invalid value '{}'", value_str);
+                return;
+            }
+        };
+        set_param(name, value);
     }
 }
 
