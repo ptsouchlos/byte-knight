@@ -137,17 +137,18 @@ impl<W: Write> UciHandler<W> {
                         };
                         writeln!(self.output, "{move_output}")?;
                     }
-                    UciCommand::SetOption { name, value } => {
-                        if let Some(val) = value {
-                            if name.to_lowercase() == "hash"
-                                && let Ok(hash_size) = val.parse::<usize>()
-                                && let Err(e) = self.engine.set_hash_size(hash_size)
-                            {
-                                eprintln!("{e}");
-                            } else {
-                                #[cfg(feature = "tuning")]
-                                self.engine.set_tunable(name.as_str(), val.as_str());
-                            }
+                    UciCommand::SetOption {
+                        name,
+                        value: Some(val),
+                    } => {
+                        if name.to_lowercase() == "hash"
+                            && let Ok(hash_size) = val.parse::<usize>()
+                            && let Err(e) = self.engine.set_hash_size(hash_size)
+                        {
+                            eprintln!("{e}");
+                        } else {
+                            #[cfg(feature = "tuning")]
+                            self.engine.set_tunable(name.as_str(), val.as_str());
                         }
                     }
                     UciCommand::Stop => {
