@@ -95,7 +95,7 @@ impl Board {
         }
     }
 
-    pub(crate) fn initialize(&mut self) {
+    fn initialize(&mut self) {
         self.state.zobrist_hash = self.initialize_zobrist_hash();
     }
 
