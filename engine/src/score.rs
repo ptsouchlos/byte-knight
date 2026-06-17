@@ -145,9 +145,9 @@ impl Score {
     /// Otherwise, it just returns a clone of the same score.
     pub fn remove_ply_bias(&self, ply: ScoreType) -> Score {
         if self.0 >= Score::MINIMUM_MATE.0 {
-            Score::new(self.0 + ply)
+            Score::new(self.0.saturating_add(ply))
         } else if self.0 <= -Score::MINIMUM_MATE.0 {
-            Score::new(self.0 - ply)
+            Score::new(self.0.saturating_sub(ply))
         } else {
             *self
         }
