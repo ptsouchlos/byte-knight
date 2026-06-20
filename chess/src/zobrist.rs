@@ -29,6 +29,10 @@ impl Hashes {
         self.board ^= hash;
     }
 
+    pub fn update_pawn_hash(&mut self, hash: u64) {
+        self.pawn ^= hash;
+    }
+
     pub fn board_hash(&self) -> u64 {
         self.board
     }
