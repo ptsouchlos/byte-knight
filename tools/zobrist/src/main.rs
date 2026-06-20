@@ -5,11 +5,14 @@
 use clap::Parser;
 
 use std::process::exit;
+
+mod generate;
 mod verify;
 
 #[derive(Debug, clap::Subcommand)]
 enum Command {
     Verify(verify::VerifyArgs),
+    Generate(generate::GenerateArgs),
 }
 
 #[derive(Parser)]
@@ -27,6 +30,14 @@ fn main() {
                 exit(-1);
             } else {
                 println!("Verification successful!");
+            }
+        }
+        Command::Generate(args) => {
+            if let Err(e) = generate::execute(args) {
+                println!("Error executing command: {e}");
+                exit(-1);
+            } else {
+                println!("Generation successful!");
             }
         }
     }

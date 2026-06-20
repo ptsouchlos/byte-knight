@@ -1892,9 +1892,9 @@ dependencies = [
  "anyhow",
  "chess",
  "clap",
- "console",
  "csv",
  "indicatif",
+ "rand",
  "rayon",
  "serde",
 ]
