@@ -12,8 +12,11 @@ pub(crate) fn castling_hash(rights: u8) -> u64 {
     values::CASTLING_VALUES[rights as usize]
 }
 
-pub(crate) fn ep_hash(ep_sq: u8) -> u64 {
-    values::EN_PASSANT_VALUES[ep_sq as usize]
+pub(crate) fn ep_hash(ep_sq: Option<u8>) -> u64 {
+    match ep_sq {
+        None => values::EN_PASSANT_VALUES[NumberOf::SQUARES],
+        Some(sq) => values::EN_PASSANT_VALUES[sq as usize],
+    }
 }
 
 pub(crate) fn get_hash(board: &Board) -> u64 {
@@ -43,9 +46,7 @@ pub(crate) fn get_hash(board: &Board) -> u64 {
     zobrist_hash ^= castling_hash(board.castling_rights());
 
     // XOR the zobrist value for the en passant square, if any
-    if let Some(ep_sq) = board.en_passant_square() {
-        zobrist_hash ^= ep_hash(ep_sq);
-    }
+    zobrist_hash ^= ep_hash(board.en_passant_square());
 
     zobrist_hash
 }
