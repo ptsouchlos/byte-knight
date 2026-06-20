@@ -183,7 +183,6 @@ dependencies = [
  "anyhow",
  "arrayvec",
  "criterion",
- "rand",
  "serde",
  "thiserror 2.0.18",
 ]
