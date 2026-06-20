@@ -5,10 +5,14 @@
 
 use std::ops::AddAssign;
 
-use chess::{attacks, board::Board, file::File, pieces::Piece, rank::Rank, side::Side, square};
+use chess::{
+    attacks, board::Board, definitions::NumberOf, file::File, pieces::Piece, rank::Rank,
+    side::Side, square,
+};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_INC, GAME_PHASE_MAX},
+    pawn_cache::PawnCache,
     pawn_structure::PawnEvaluator,
     phased_score::{PhaseType, PhasedScore},
     score::{LargeScoreType, Score, ScoreType},
@@ -23,6 +27,7 @@ where
 {
     values: Values,
     pawn_evaluator: PawnEvaluator,
+    pawn_cache: PawnCache,
 }
 
 impl<Values: EvalValues> Evaluation<Values> {
@@ -30,6 +35,7 @@ impl<Values: EvalValues> Evaluation<Values> {
         Evaluation {
             values,
             pawn_evaluator: PawnEvaluator::new(),
+            pawn_cache: PawnCache::new(),
         }
     }
 
@@ -211,6 +217,41 @@ impl<Values: EvalValues> Evaluation<Values> {
         }
         score
     }
+
+    fn evaluate_pawn_structure(&self, board: &Board) -> [PhasedScore; NumberOf::SIDES]
+    where
+        PhasedScore: AddAssign<Values::ReturnScore>,
+    {
+        let white_pawns = board.piece_bitboard(Piece::Pawn, Side::White);
+        let black_pawns = board.piece_bitboard(Piece::Pawn, Side::Black);
+
+        if let Some(cached_score) =
+            self.pawn_cache
+                .probe(board.pawn_hash(), white_pawns, black_pawns)
+        {
+            return cached_score;
+        }
+
+        let structure = self.pawn_evaluator.detect_pawn_structure(board);
+        let mut score = [PhasedScore::default(); NumberOf::SIDES];
+
+        for side in Side::iter() {
+            let idx = side as usize;
+            for sq in structure.passed_pawns[idx].iter() {
+                score[idx] += self.values().passed_pawn_bonus(sq, side);
+            }
+            for sq in structure.doubled_pawns[idx].iter() {
+                score[idx] += self.values().doubled_pawn_value(sq, side);
+            }
+            for sq in structure.isolated_pawns[idx].iter() {
+                score[idx] += self.values().isolated_pawn_value(sq, side);
+            }
+        }
+        self.pawn_cache
+            .store(board.pawn_hash(), white_pawns, black_pawns, score);
+
+        score
+    }
 }
 
 impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<Values> {
@@ -224,33 +265,22 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let mut mg: [i32; 2] = [0; 2];
         let mut eg: [i32; 2] = [0; 2];
         let mut game_phase = 0_i32;
+        let stm_idx = side_to_move as usize;
+        let opposite = side_to_move.opposite();
+        let opp_idx = opposite as usize;
 
-        let pawn_structure = self.pawn_evaluator.detect_pawn_structure(board);
+        let pawn_scores = self.evaluate_pawn_structure(board);
+        mg[stm_idx] += pawn_scores[stm_idx].mg() as i32;
+        mg[opp_idx] += pawn_scores[opp_idx].mg() as i32;
+
+        eg[stm_idx] += pawn_scores[stm_idx].eg() as i32;
+        eg[opp_idx] += pawn_scores[opp_idx].eg() as i32;
 
         let occupancy = board.all_pieces();
         // loop through occupied squares
         for sq in occupancy.iter() {
             let maybe_piece = board.piece_on_square(sq);
             if let Some((piece, side)) = maybe_piece {
-                if piece == Piece::Pawn {
-                    if pawn_structure.passed_pawns[side as usize].is_square_occupied(sq) {
-                        let passed_pawn_bonus = self.values.passed_pawn_bonus(sq, side);
-                        mg[side as usize] += passed_pawn_bonus.mg() as i32;
-                        eg[side as usize] += passed_pawn_bonus.eg() as i32;
-                    }
-
-                    if pawn_structure.doubled_pawns[side as usize].is_square_occupied(sq) {
-                        let doubled_pawn_value = self.values.doubled_pawn_value(sq, side);
-                        mg[side as usize] += doubled_pawn_value.mg() as i32;
-                        eg[side as usize] += doubled_pawn_value.eg() as i32;
-                    }
-
-                    if pawn_structure.isolated_pawns[side as usize].is_square_occupied(sq) {
-                        let isolated_pawn_value = self.values.isolated_pawn_value(sq, side);
-                        mg[side as usize] += isolated_pawn_value.mg() as i32;
-                        eg[side as usize] += isolated_pawn_value.eg() as i32;
-                    }
-                }
                 let phased_score: PhasedScore = self.values.psqt(sq, piece, side);
                 mg[side as usize] += phased_score.mg() as i32;
                 eg[side as usize] += phased_score.eg() as i32;
@@ -258,10 +288,6 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                 game_phase += GAME_PHASE_INC[piece as usize] as i32;
             }
         }
-
-        let stm_idx = side_to_move as usize;
-        let opposite = side_to_move.opposite();
-        let opp_idx = opposite as usize;
 
         // Evaluate bishop pair bonus
         if board
