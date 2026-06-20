@@ -23,6 +23,7 @@ pub mod log_level;
 mod move_picker;
 pub(crate) mod node;
 pub(crate) mod node_types;
+pub(crate) mod pawn_cache;
 pub mod pawn_structure;
 pub mod phased_score;
 pub(crate) mod principle_variation;
