@@ -4,7 +4,11 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use crate::{
-    definitions::CastlingAvailability, moves::Move, pieces::Piece, side::Side, zobrist::ZobristHash,
+    definitions::CastlingAvailability,
+    moves::Move,
+    pieces::Piece,
+    side::Side,
+    zobrist::{self, Hashes},
 };
 use std::fmt::Display;
 
@@ -54,13 +58,13 @@ impl MovePieceInfo {
 ///
 /// This is used to restore the state in [`Board`] when un-making a move.
 #[derive(Debug, Clone, Copy)]
-pub struct BoardState {
+pub(crate) struct BoardState {
     pub half_move_clock: u32,
     pub full_move_number: u32,
     pub side_to_move: Side,
     pub en_passant_square: Option<u8>,
     pub castling_rights: u8,
-    pub zobrist_hash: ZobristHash,
+    pub hashes: zobrist::Hashes,
     pub next_move_info: MovePieceInfo,
     pub next_move: Move,
 }
@@ -79,7 +83,7 @@ impl BoardState {
             side_to_move: Side::White,
             en_passant_square: None,
             castling_rights: CastlingAvailability::NONE,
-            zobrist_hash: 0,
+            hashes: Hashes::default(),
             next_move_info: Default::default(),
             next_move: Default::default(),
         }
@@ -96,7 +100,7 @@ impl Display for BoardState {
             self.side_to_move,
             self.en_passant_square,
             self.castling_rights,
-            self.zobrist_hash,
+            self.hashes.board_hash(),
             self.next_move.to_long_algebraic()
         )
     }
@@ -115,7 +119,8 @@ mod tests {
         assert_eq!(board_state.side_to_move, Side::White);
         assert_eq!(board_state.en_passant_square, None);
         assert_eq!(board_state.castling_rights, CastlingAvailability::NONE);
-        assert_eq!(board_state.zobrist_hash, 0);
+        assert_eq!(board_state.hashes.board_hash(), 0);
+        assert_eq!(board_state.hashes.pawn_hash(), 0);
         assert_eq!(board_state.next_move, Move::default());
     }
 
