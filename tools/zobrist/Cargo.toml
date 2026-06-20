@@ -13,6 +13,7 @@ serde = { workspace = true, features = ["derive"] }
 anyhow = { workspace = true }
 csv = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+rand = { workspace = true }
 
 [[bin]]
 name = "zobrist"
