@@ -3,6 +3,13 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
+/// Given "word", produce an integer in the range [0, p) without division.
+/// Alternative to modulo operation.
+/// See <https://github.com/ozgrakkurt/fastrange-rs/blob/master/src/lib.rs>
+pub(crate) const fn fast_range_64(word: u64, p: u64) -> u64 {
+    ((word as u128 * p as u128) >> 64) as u64
+}
+
 // Credit to Akimbo author for the implementation
 #[macro_export]
 macro_rules! tunable_params {

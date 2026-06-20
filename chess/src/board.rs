@@ -191,6 +191,11 @@ impl Board {
         self.state
             .hashes
             .update_hash(keys::sq_hash(piece, side, square));
+        if piece == Piece::Pawn {
+            self.state
+                .hashes
+                .update_pawn_hash(keys::sq_hash(piece, side, square));
+        }
     }
 
     pub(crate) fn board_state(&self) -> &BoardState {
@@ -364,6 +369,11 @@ impl Board {
     /// Returns the Zobrist hash of this [`Board`].
     pub fn zobrist_hash(&self) -> u64 {
         self.state.hashes.board_hash()
+    }
+
+    /// Returns the Zobrist hash of the pawn structure of this [`Board`].
+    pub fn pawn_hash(&self) -> u64 {
+        self.state.hashes.pawn_hash()
     }
 
     /// Checks if a given square is empty.

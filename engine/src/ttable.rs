@@ -8,6 +8,7 @@ use chess::moves::Move;
 use crate::{
     node_types::NodeType,
     score::{Score, ScoreType},
+    utils,
 };
 
 const BYTES_PER_MB: usize = 1024 * 1024;
@@ -129,13 +130,6 @@ impl Default for TranspositionTable {
     }
 }
 
-/// Given "word", produce an integer in the range [0, p) without division.
-/// Alternative to modulo operation.
-/// See <https://github.com/ozgrakkurt/fastrange-rs/blob/master/src/lib.rs>
-const fn fast_range_64(word: u64, p: u64) -> u64 {
-    ((word as u128 * p as u128) >> 64) as u64
-}
-
 #[derive(Debug, Clone)]
 pub(crate) enum ProbeResult {
     CutOff(TranspositionTableEntry),
@@ -160,7 +154,7 @@ impl TranspositionTable {
     }
 
     fn get_index(&self, zobrist: u64) -> usize {
-        fast_range_64(zobrist, self.table.len() as u64) as usize
+        utils::fast_range_64(zobrist, self.table.len() as u64) as usize
     }
 
     pub(crate) fn get_entry(&self, zobrist: u64) -> Option<TranspositionTableEntry> {
