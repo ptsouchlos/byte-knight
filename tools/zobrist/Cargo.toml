@@ -1,5 +1,5 @@
 [package]
-name = "verify-zobrist"
+name = "zobrist"
 edition = { workspace = true }
 authors = { workspace = true }
 license = { workspace = true }
@@ -13,8 +13,9 @@ rayon = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 anyhow = { workspace = true }
 csv = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
 
 [[bin]]
-name = "verify-zobrist"
+name = "zobrist"
 path = "src/main.rs"
 test = false

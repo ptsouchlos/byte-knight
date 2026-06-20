@@ -1,23 +1,19 @@
-// Part of the byte-knight project.
-// Author: Paul Tsouchlos (ptsouchlos) (developer.paul.123@gmail.com)
-// GNU General Public License v3.0 or later
-// https://www.gnu.org/licenses/gpl-3.0-standalone.html
-
 use std::{
     collections::{HashMap, hash_map},
     path::{Path, PathBuf},
-    process::exit,
 };
 
+use anyhow::bail;
 use chess::{board::Board, fen};
-use console::Emoji;
 use indicatif::ParallelProgressIterator;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-static CHECK_BOX: Emoji = Emoji("✅", "");
-static CROSS_MARK: Emoji = Emoji("❌", "");
-
-use std::error::Error;
+#[derive(clap::Args, Debug)]
+pub(crate) struct VerifyArgs {
+    /// The path to the file to verify.
+    #[arg(short, long)]
+    file: String,
+}
 
 #[derive(Debug, serde::Deserialize)]
 pub struct LichessPuzzleRecord {
@@ -25,7 +21,9 @@ pub struct LichessPuzzleRecord {
     pub(crate) fen: String,
 }
 
-pub fn read_lichess_puzzles(path_buf: PathBuf) -> Result<Vec<LichessPuzzleRecord>, Box<dyn Error>> {
+/// Helper to read the Lichess puzzle data from a CSV file.
+/// The CSV file is expected to have a header row with a "FEN" column.
+fn read_lichess_puzzles(path_buf: PathBuf) -> anyhow::Result<Vec<LichessPuzzleRecord>> {
     let reader = csv::Reader::from_path(path_buf);
     let records = reader?
         .deserialize()
@@ -34,6 +32,8 @@ pub fn read_lichess_puzzles(path_buf: PathBuf) -> Result<Vec<LichessPuzzleRecord
     Ok(records)
 }
 
+/// Helper to decompress a zstd compressed file using the `zstd` command line tool.
+/// The output file will be created at `output_data_path`.
 fn decompress_data(output_data_path: &Path, compressed_data_path: &Path) -> anyhow::Result<()> {
     let mut decompress_command = std::process::Command::new("zstd");
     decompress_command
@@ -55,26 +55,35 @@ fn decompress_data(output_data_path: &Path, compressed_data_path: &Path) -> anyh
     Ok(())
 }
 
-fn main() {
-    // load data
-    let mut data_path = PathBuf::from(env!("CARGO_WORKSPACE_DIR"));
-    data_path.push("data/lichess_db_puzzle.csv");
+pub(crate) fn execute(args: VerifyArgs) -> anyhow::Result<()> {
+    // Load the data if it exists.
+    let mut data_path = PathBuf::from(args.file);
     if !data_path.exists() {
-        println!("Data file not found, decompressing from .zst file...");
-        let mut zst_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        zst_path.push("data/lichess_db_puzzle.csv.zst");
-        let decompress_result = decompress_data(&data_path, &zst_path);
-        if decompress_result.is_err() {
-            println!(
-                "Failed to decompress data file: {:?}",
-                decompress_result.err()
-            );
-            exit(-1);
-        }
+        bail!("Data file not found: {:?}", data_path);
     }
 
+    // Is it compressed? If so, decompress it first.
+    if let Some(ext) = data_path.extension()
+        && ext == "zst"
+    {
+        println!("Data file compressed, decompressing...");
+        let zst_path = data_path.clone();
+        let output_path = data_path.with_extension("csv");
+        let decompress_result = decompress_data(&output_path, &zst_path);
+        if decompress_result.is_err() {
+            bail!(
+                "Failed to decompress data file: {:?}",
+                decompress_result.err()
+            )
+        }
+
+        data_path = output_path;
+    }
+
+    // Check that the data file exists after decompression.
     assert!(data_path.exists());
     println!("Reading test data...");
+    // Read the records from the data file.
     let records_result = read_lichess_puzzles(data_path);
 
     // Compare two FEN strings for equality only using the first four parts
@@ -158,14 +167,13 @@ fn main() {
             }
 
             if duplicates == 0 {
-                println!("{CHECK_BOX} No hash collisions detected!");
+                Ok(())
             } else {
-                println!("{CROSS_MARK} {duplicates} hash collisions detected");
+                bail!("{duplicates} hash collisions detected");
             }
         }
         Err(e) => {
-            println!("Failed to read records: {e:?}");
-            exit(-1);
+            bail!("Failed to read records: {e:?}")
         }
     }
 }
