@@ -6,7 +6,6 @@
 use std::fmt::Display;
 use std::iter::zip;
 
-use crate::bitboard_helpers;
 use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, MAX_REPETITION_COUNT, SPACE};
 use crate::fen::FenError;
@@ -15,7 +14,8 @@ use crate::move_history::BoardHistory;
 use crate::moves::Move;
 use crate::rank::Rank;
 use crate::square::Square;
-use crate::zobrist::{ZobristHash, ZobristRandomValues};
+use crate::zobrist::{Hashes, keys};
+use crate::{bitboard_helpers, zobrist};
 
 use super::definitions::NumberOf;
 use super::fen;
@@ -29,7 +29,6 @@ pub struct Board {
     pieces: [Option<Piece>; NumberOf::SQUARES],
     pub(crate) history: BoardHistory,
     state: BoardState,
-    zobrist_values: ZobristRandomValues,
 }
 
 impl Default for Board {
@@ -91,62 +90,16 @@ impl Board {
             pieces: [None; NumberOf::SQUARES],
             history: BoardHistory::new(),
             state: BoardState::new(),
-            zobrist_values: ZobristRandomValues::new(),
         }
     }
 
-    pub(crate) fn initialize(&mut self) {
-        self.state.zobrist_hash = self.initialize_zobrist_hash();
+    fn initialize(&mut self) {
+        self.state.hashes = self.initialize_zobrist_hash();
     }
 
-    fn initialize_zobrist_hash(&self) -> ZobristHash {
-        // create the initial zobrist hash based on the starting position
-        // for each piece on the board, get the corresponding zobrist value and xor it with the hash
-        // for each side to move, xor the hash with the zobrist value for the side
-        // for each castling right, xor the hash with the zobrist value for the castling right
-        // for the en passant square, xor the hash with the zobrist value for the en passant square
-        // Initialize the zobrist hash to 0
-        let mut zobrist_hash = ZobristHash::default();
-
-        // XOR the zobrist values for each piece on the board
-
-        for piece in 0..NumberOf::PIECE_TYPES {
-            let bitboard = self.bitboards[piece];
-            let white_bb = self.pieces(Side::White);
-            let black_bb = self.pieces(Side::Black);
-
-            let white_pieces = bitboard & white_bb;
-            let black_pieces = bitboard & black_bb;
-
-            for sq in white_pieces.iter() {
-                zobrist_hash ^=
-                    self.zobrist_values
-                        .get_piece_value(piece, Side::White as usize, sq as usize);
-            }
-
-            for sq in black_pieces.iter() {
-                zobrist_hash ^=
-                    self.zobrist_values
-                        .get_piece_value(piece, Side::Black as usize, sq as usize);
-            }
-        }
-
-        // XOR the zobrist value for the side to move
-        zobrist_hash ^= self
-            .zobrist_values
-            .get_side_value(self.side_to_move() as usize);
-
-        // XOR the zobrist values for castling rights
-        zobrist_hash ^= self
-            .zobrist_values
-            .get_castling_value(self.castling_rights() as usize);
-
-        // XOR the zobrist value for the en passant square, if any
-        zobrist_hash ^= self
-            .zobrist_values
-            .get_en_passant_value(self.state.en_passant_square);
-
-        zobrist_hash
+    fn initialize_zobrist_hash(&self) -> zobrist::Hashes {
+        // TODO
+        zobrist::Hashes::new(self)
     }
 
     /// Initialize bitboards for a given side
@@ -194,26 +147,26 @@ impl Board {
     /// Sets the side to move and updates the zobrist hash.
     pub(crate) fn set_side_to_move(&mut self, side: Side) {
         // undo the current side to move in the hash
-        self.state.zobrist_hash ^= self
-            .zobrist_values
-            .get_side_value(self.state.side_to_move as usize);
+        self.state
+            .hashes
+            .update_hash(keys::side_hash(self.state.side_to_move));
         // set the new side to move
         self.state.side_to_move = side;
         // update zobrist hash with the new side to move
-        self.state.zobrist_hash ^= self
-            .zobrist_values
-            .get_side_value(self.state.side_to_move as usize);
+        self.state
+            .hashes
+            .update_hash(keys::side_hash(self.state.side_to_move));
     }
 
     /// Set the en passant square and update the zobrist hash.
     pub(crate) fn set_en_passant_square(&mut self, square: Option<u8>) {
-        self.state.zobrist_hash ^= self
-            .zobrist_values
-            .get_en_passant_value(self.state.en_passant_square);
+        self.state
+            .hashes
+            .update_hash(keys::ep_hash(self.state.en_passant_square));
         self.state.en_passant_square = square;
-        self.state.zobrist_hash ^= self
-            .zobrist_values
-            .get_en_passant_value(self.state.en_passant_square);
+        self.state
+            .hashes
+            .update_hash(keys::ep_hash(self.state.en_passant_square));
     }
 
     pub(crate) fn set_half_move_clock(&mut self, half_move_clock: u32) {
@@ -225,23 +178,19 @@ impl Board {
     }
 
     pub(crate) fn set_castling_rights(&mut self, castling_rights: u8) {
-        self.state.zobrist_hash ^= self
-            .zobrist_values
-            .get_castling_value(self.state.castling_rights as usize);
+        self.state
+            .hashes
+            .update_hash(keys::castling_hash(self.state.castling_rights));
         self.state.castling_rights = castling_rights;
-        self.state.zobrist_hash ^= self
-            .zobrist_values
-            .get_castling_value(self.state.castling_rights as usize);
+        self.state
+            .hashes
+            .update_hash(keys::castling_hash(self.state.castling_rights));
     }
 
     pub(crate) fn update_zobrist_hash_for_piece(&mut self, square: u8, piece: Piece, side: Side) {
-        self.state.zobrist_hash ^=
-            self.zobrist_values
-                .get_piece_value(piece as usize, side as usize, square as usize);
-    }
-
-    fn set_zobrist_hash(&mut self, hash: u64) {
-        self.state.zobrist_hash = hash;
+        self.state
+            .hashes
+            .update_hash(keys::sq_hash(piece, side, square));
     }
 
     pub(crate) fn board_state(&self) -> &BoardState {
@@ -265,7 +214,7 @@ impl Board {
         board.set_full_move_number(1);
         board.set_side_to_move(Side::White);
         board.set_castling_rights(CastlingAvailability::ALL);
-        board.set_zobrist_hash(board.initialize_zobrist_hash());
+        board.state.hashes = Hashes::new(&board);
         board
     }
 
@@ -414,7 +363,7 @@ impl Board {
 
     /// Returns the Zobrist hash of this [`Board`].
     pub fn zobrist_hash(&self) -> u64 {
-        self.state.zobrist_hash
+        self.state.hashes.board_hash()
     }
 
     /// Checks if a given square is empty.
@@ -543,7 +492,7 @@ impl Board {
         // go through the history and check if the current position has been repeated
         for previous_state in self.history.iter().rev().skip(1) {
             // we found a match, increment the repetition count
-            if previous_state.zobrist_hash == self.zobrist_hash() {
+            if previous_state.hashes.board_hash() == self.zobrist_hash() {
                 repetition_count += 1;
                 if repetition_count >= MAX_REPETITION_COUNT {
                     // break out early
@@ -621,7 +570,7 @@ impl Board {
 
         flipped.state.en_passant_square = self.state.en_passant_square.map(crate::square::flip);
 
-        flipped.state.zobrist_hash = flipped.initialize_zobrist_hash();
+        flipped.state.hashes = flipped.initialize_zobrist_hash();
         flipped
     }
 
