@@ -1450,19 +1450,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
-name = "verify-zobrist"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "chess",
- "console",
- "csv",
- "indicatif",
- "rayon",
- "serde",
-]
-
-[[package]]
 name = "walkdir"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1896,4 +1883,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "zobrist"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "chess",
+ "clap",
+ "console",
+ "csv",
+ "indicatif",
+ "rayon",
+ "serde",
 ]
