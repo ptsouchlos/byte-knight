@@ -7,7 +7,6 @@ repository = { workspace = true }
 
 [dependencies]
 chess = { workspace = true }
-console = { workspace = true }
 indicatif = { workspace = true , features = ["rayon"] }
 rayon = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
