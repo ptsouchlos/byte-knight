@@ -17,7 +17,7 @@ jobs:
         run: |
           rustup default nightly
           rustup component add llvm-tools-preview
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           lfs: true
       - name: Install just
