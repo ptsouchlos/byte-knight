@@ -19,5 +19,5 @@ pub(crate) fn late_move_threshold(depth: i32, improvement: i32) -> i32 {
 
 #[inline]
 pub(crate) fn fp_pruning_margin(depth: i32, improving: bool) -> i32 {
-    fp_base() + fp_scale() * depth - improving as i32 * fp_improving_margin()
+    (fp_base() + fp_scale() * depth) - improving as i32 * fp_improving_margin()
 }
