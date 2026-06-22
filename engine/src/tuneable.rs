@@ -31,6 +31,7 @@ tunable_params!(
     nmp_depth_reduction     = 2, 0, 6, 1,            false;
     nmp_improving_bonus     = 1, 0, 4, 1,            false;
     nmp_depth_divisor       = 4, 2, 8, 1,            false;
+    nmp_not_improving_margin     = 20, 1, 200, 1,    true;
     min_aspiration_depth    = 1, 1, 12, 1,           false;
     aspiration_window       = 27, 25, 150, 1,        true;
     iir_min_depth           = 4, 1, 10, 1,           false;
