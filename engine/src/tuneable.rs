@@ -24,6 +24,7 @@ tunable_params!(
     fp_base                 = 94, 50, 150, 1,        true;
     fp_scale                = 74, 40, 120, 1,        true;
     fp_max_depth            = 3, 1, 8, 1,            false;
+    fp_improving_margin     = 50, 1, 12, 1,           false;
     rfp_max_depth           = 4, 1, 10, 1,           false;
     rfp_margin              = 75, 40, 120, 1,        true;
     rfp_improving_margin    = 26, 10, 70, 1,         true;
