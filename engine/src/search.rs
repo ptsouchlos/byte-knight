@@ -40,10 +40,10 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        fp_base, fp_max_depth, fp_scale, iir_depth_reduction, iir_min_depth, lmp_max_depth,
-        lmr_min_depth, lmr_min_moves_seen, nmp_min_depth, qs_delta_margin, qs_see_threshold,
-        razoring_offset, razoring_scaling, rfp_improving_margin, rfp_margin, rfp_max_depth,
-        see_tacticals_margin, see_tacticals_max_depth,
+        fp_max_depth, iir_depth_reduction, iir_min_depth, lmp_max_depth, lmr_min_depth,
+        lmr_min_moves_seen, nmp_min_depth, qs_delta_margin, qs_see_threshold, razoring_offset,
+        razoring_scaling, rfp_improving_margin, rfp_margin, rfp_max_depth, see_tacticals_margin,
+        see_tacticals_max_depth,
     },
 };
 
@@ -492,7 +492,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             extension = 1;
         }
 
-        let fp_margin = fp_base() + depth as i32 * fp_scale();
+        let fp_margin = params::fp_pruning_margin(depth as i32, improving);
 
         // Loop through all moves in best-first order.
         while let Some(mv) = picker.next(board, &td.history_table) {
