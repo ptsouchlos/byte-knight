@@ -8,6 +8,9 @@ mod input_handler;
 mod perft;
 mod uci_handler;
 
+use std::backtrace::Backtrace;
+use std::io::Write;
+
 use crate::{
     commands::{bench::BenchArgs, perft::PerftArgs, split_perft::SplitPerftArgs},
     uci_handler::UciHandler,
@@ -54,7 +57,42 @@ fn run_uci() {
     handle.join().unwrap();
 }
 
+fn install_crash_logger() {
+    let default_hook = std::panic::take_hook();
+
+    std::panic::set_hook(Box::new(move |info| {
+        let backtrace = Backtrace::force_capture();
+        let thread = std::thread::current();
+        let thread_name = thread.name().unwrap_or("unnamed");
+
+        // Save a file with the panic message and backtrace, but we cannot panic here, so we ignore any errors.
+        // Also save a unique file for each process so the files don't overlap if multiple instances are running and crash.
+
+        let path =
+            std::env::temp_dir().join(format!("byte-knight-crash-{}.log", std::process::id()));
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+        {
+            // Ignore all write errors, no panics
+            let _ = writeln!(file, "version: {}", build::CLAP_LONG_VERSION);
+            let _ = writeln!(file, "thread: {thread_name}");
+            let _ = writeln!(file, "{info}");
+            let _ = writeln!(file, "backtrace:\n{backtrace}");
+            // Ensure file is flushed to disk
+            let _ = file.flush();
+        }
+
+        // Still emit panic message to stderr
+        default_hook(info);
+    }));
+}
+
 fn main() {
+    // Install a panic hook to log crashes to a file in the temp directory.
+    install_crash_logger();
+
     let args = Options::parse();
     match args.command {
         Some(command) => match command {
