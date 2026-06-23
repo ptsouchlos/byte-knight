@@ -28,6 +28,7 @@ toml = "1.1"
 thiserror = "2.0.18"
 uci-parser = "1.1.0"
 ctrlc = "3.5.2"
+rapidhash = "4.4.1"
 
 [profile.dev]
 opt-level = 1
