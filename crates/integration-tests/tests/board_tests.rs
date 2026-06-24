@@ -6,11 +6,8 @@
 use chess::{
     board::Board,
     definitions::{CastlingAvailability, DEFAULT_FEN},
-    file::File,
     pieces::Piece,
-    rank::Rank,
     side::Side,
-    square::to_square,
 };
 
 #[test]
@@ -75,19 +72,19 @@ fn construct_board_from_fen_string_2() {
     let all_pieces = board.all_pieces();
     let white_pieces = board.white_pieces();
     let black_pieces = board.black_pieces();
-    let black_pieces_bb = *black_pawn_bb
-        | *black_knight_bb
-        | *black_bishop_bb
-        | *black_rook_bb
-        | *black_queen_bb
-        | *black_king_bb;
+    let black_pieces_bb = black_pawn_bb
+        | black_knight_bb
+        | black_bishop_bb
+        | black_rook_bb
+        | black_queen_bb
+        | black_king_bb;
 
-    let white_pieces_bb = *white_pawn_bb
-        | *white_knight_bb
-        | *white_bishop_bb
-        | *white_rook_bb
-        | *white_queen_bb
-        | *white_king_bb;
+    let white_pieces_bb = white_pawn_bb
+        | white_knight_bb
+        | white_bishop_bb
+        | white_rook_bb
+        | white_queen_bb
+        | white_king_bb;
 
     assert_eq!(white_pieces, white_pieces_bb);
     assert_eq!(black_pieces, black_pieces_bb);
@@ -98,11 +95,10 @@ fn construct_board_from_fen_string_2() {
     println!("{all_pieces}");
 
     assert_eq!(board.all_pieces(), all_pieces_bb);
-    assert!(board.en_passant_square().is_some());
-    assert_eq!(
-        board.en_passant_square().unwrap(),
-        to_square(File::E as u8, Rank::R3 as u8)
-    );
+    // The FEN declares e3 as the en passant target, but no black pawn sits on
+    // d4/f4 to capture it. The parser strips EP targets that aren't actually
+    // capturable (see `ep_square_is_valid` in chess::fen), so this is None.
+    assert!(board.en_passant_square().is_none());
     assert_eq!(board.half_move_clock(), 0);
     assert_eq!(board.full_move_number(), 1);
     assert_eq!(board.side_to_move(), Side::Black);

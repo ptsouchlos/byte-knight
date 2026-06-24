@@ -3,7 +3,9 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use chess::{board::Board, move_generation, move_generation::legal::MoveFilter, move_list::MoveList};
+use chess::{
+    board::Board, move_generation, move_generation::move_filter::MoveFilter, move_list::MoveList,
+};
 
 #[test]
 fn make_promotion_move() {
