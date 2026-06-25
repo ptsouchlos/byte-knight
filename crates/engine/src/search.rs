@@ -692,7 +692,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         td.history_table.update(
                             board.side_to_move(),
                             piece,
-                            mv.to(),
+                            mv,
                             bonus as LargeScoreType,
                         );
 
@@ -706,7 +706,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             td.history_table.update(
                                 board.side_to_move(),
                                 prev_piece,
-                                prev_mv.to(),
+                                prev_mv,
                                 -bonus as LargeScoreType,
                             );
                         }
@@ -1080,7 +1080,12 @@ fn assert_pv_is_legal(board: &Board, mv: Move, local_pv: &PrincipleVariation) {
 mod tests {
     use std::{io, time::Duration};
 
-    use chess::{board::Board, pieces::ALL_PIECES};
+    use chess::{
+        board::Board,
+        moves::{Move, MoveFlag},
+        pieces::ALL_PIECES,
+        square::Square,
+    };
 
     use crate::{
         evaluation::ByteKnightEvaluation,
@@ -1316,7 +1321,12 @@ mod tests {
             let mut max_history = LargeScoreType::MIN;
             for piece in ALL_PIECES {
                 for square in 0..64 {
-                    let score = td.history_table.get(side, piece, square);
+                    let mv = Move::new(
+                        Square::from_square_index(square),
+                        Square::from_square_index(square),
+                        MoveFlag::Standard,
+                    );
+                    let score = td.history_table.get(side, piece, mv);
                     if score > max_history {
                         max_history = score;
                     }

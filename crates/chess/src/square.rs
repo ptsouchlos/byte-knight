@@ -12,7 +12,7 @@ use crate::{
     rank::Rank,
 };
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 
 /// Represents a square on the chess board.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -194,6 +194,18 @@ impl TryFrom<&str> for Square {
         // rank values are 1-8, so we need to convert to 0-7
         let rank_digit = rank.to_digit(10).unwrap() - 1;
         Square::from_file_rank(file, rank_digit as u8)
+    }
+}
+
+impl TryFrom<u8> for Square {
+    type Error = anyhow::Error;
+
+    fn try_from(sq_index: u8) -> Result<Self, Self::Error> {
+        if sq_index >= 64 {
+            bail!("Invalid square index: {sq_index}");
+        }
+
+        Ok(Self::from_square_index(sq_index))
     }
 }
 
