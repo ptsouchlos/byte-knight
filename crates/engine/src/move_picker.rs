@@ -214,7 +214,7 @@ impl MovePicker {
             if is_killer {
                 KILLER_BONUS
             } else {
-                history_table.get(board.side_to_move(), piece, mv.to())
+                history_table.get(board.side_to_move(), piece, *mv)
             }
         }
     }
@@ -599,7 +599,7 @@ mod tests {
         history.update(
             board.side_to_move(),
             favored_piece,
-            favored_mv.to(),
+            favored_mv,
             Score::MAX_HISTORY,
         );
 

@@ -7,6 +7,7 @@ use std::io::{self, Write};
 
 use chess::{
     definitions::NumberOf,
+    moves::Move,
     pieces::{PIECE_NAMES, Piece},
     side::Side,
 };
@@ -40,16 +41,16 @@ impl HistoryTable {
         Self { table }
     }
 
-    pub(crate) fn get(&self, side: Side, piece: Piece, square: u8) -> LargeScoreType {
-        self.table[side as usize][piece as usize][square as usize]
+    pub(crate) fn get(&self, side: Side, piece: Piece, mv: Move) -> LargeScoreType {
+        self.table[side as usize][piece as usize][mv.to() as usize]
     }
 
-    pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: LargeScoreType) {
-        let current_value = self.table[side as usize][piece as usize][square as usize];
+    pub(crate) fn update(&mut self, side: Side, piece: Piece, mv: Move, bonus: LargeScoreType) {
+        let current_value = self.table[side as usize][piece as usize][mv.to() as usize];
         let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
         let new_value = current_value + clamped_bonus
             - current_value * clamped_bonus.abs() / Score::MAX_HISTORY;
-        self.table[side as usize][piece as usize][square as usize] = new_value;
+        self.table[side as usize][piece as usize][mv.to() as usize] = new_value;
     }
 
     pub(crate) fn clear(&mut self) {
@@ -95,7 +96,7 @@ mod tests {
     use crate::defs::MAX_DEPTH;
 
     use super::{HistoryTable, calculate_bonus_for_depth};
-    use chess::{definitions::Squares, pieces::Piece, side::Side};
+    use chess::{definitions::Squares, moves::Move, pieces::Piece, side::Side};
 
     #[test]
     fn initialize_history_table() {
@@ -116,14 +117,18 @@ mod tests {
     #[test]
     fn store_and_read() {
         let mut history_table = HistoryTable::new();
+        let mv = Move::new(
+            Squares::B1.try_into().unwrap(),
+            Squares::A1.try_into().unwrap(),
+            chess::moves::MoveFlag::Standard,
+        );
         let side = Side::Black;
         let piece = Piece::Pawn;
-        let square = Squares::A1;
         let score = 37;
-        history_table.update(side, piece, square, score);
-        assert_eq!(history_table.get(side, piece, square), score);
-        history_table.update(side, piece, square, score);
-        assert_eq!(history_table.get(side, piece, square), score + score);
+        history_table.update(side, piece, mv, score);
+        assert_eq!(history_table.get(side, piece, mv), score);
+        history_table.update(side, piece, mv, score);
+        assert_eq!(history_table.get(side, piece, mv), score + score);
     }
 
     #[test]
