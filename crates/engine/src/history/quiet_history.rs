@@ -14,6 +14,7 @@ use chess::{
 
 use crate::score::{LargeScoreType, Score};
 
+/// History table for all quiet moves. This is currently indexed only by piece -> per side.
 pub struct QuietHistory {
     table: [[[LargeScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
 }
@@ -22,11 +23,9 @@ pub struct QuietHistory {
 /// This uses `wrappinag_mul` and `wrapping_sub` to safely calculate the value.
 ///
 /// # Arguments
-///
-/// - depth: The current depth
+/// - `depth`: The current depth
 ///
 /// # Returns
-///
 /// The calculated history score.
 pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
     depth
