@@ -22,6 +22,81 @@ pub struct Square {
 }
 
 impl Square {
+    pub const A1: Self = Self::new(File::A, Rank::R1);
+    pub const A2: Self = Self::new(File::A, Rank::R2);
+    pub const A3: Self = Self::new(File::A, Rank::R3);
+    pub const A4: Self = Self::new(File::A, Rank::R4);
+    pub const A5: Self = Self::new(File::A, Rank::R5);
+    pub const A6: Self = Self::new(File::A, Rank::R6);
+    pub const A7: Self = Self::new(File::A, Rank::R7);
+    pub const A8: Self = Self::new(File::A, Rank::R8);
+
+    pub const B1: Self = Self::new(File::B, Rank::R1);
+    pub const B2: Self = Self::new(File::B, Rank::R2);
+    pub const B3: Self = Self::new(File::B, Rank::R3);
+    pub const B4: Self = Self::new(File::B, Rank::R4);
+    pub const B5: Self = Self::new(File::B, Rank::R5);
+    pub const B6: Self = Self::new(File::B, Rank::R6);
+    pub const B7: Self = Self::new(File::B, Rank::R7);
+    pub const B8: Self = Self::new(File::B, Rank::R8);
+
+    pub const C1: Self = Self::new(File::C, Rank::R1);
+    pub const C2: Self = Self::new(File::C, Rank::R2);
+    pub const C3: Self = Self::new(File::C, Rank::R3);
+    pub const C4: Self = Self::new(File::C, Rank::R4);
+    pub const C5: Self = Self::new(File::C, Rank::R5);
+    pub const C6: Self = Self::new(File::C, Rank::R6);
+    pub const C7: Self = Self::new(File::C, Rank::R7);
+    pub const C8: Self = Self::new(File::C, Rank::R8);
+
+    pub const D1: Self = Self::new(File::D, Rank::R1);
+    pub const D2: Self = Self::new(File::D, Rank::R2);
+    pub const D3: Self = Self::new(File::D, Rank::R3);
+    pub const D4: Self = Self::new(File::D, Rank::R4);
+    pub const D5: Self = Self::new(File::D, Rank::R5);
+    pub const D6: Self = Self::new(File::D, Rank::R6);
+    pub const D7: Self = Self::new(File::D, Rank::R7);
+    pub const D8: Self = Self::new(File::D, Rank::R8);
+
+    pub const E1: Self = Self::new(File::E, Rank::R1);
+    pub const E2: Self = Self::new(File::E, Rank::R2);
+    pub const E3: Self = Self::new(File::E, Rank::R3);
+    pub const E4: Self = Self::new(File::E, Rank::R4);
+    pub const E5: Self = Self::new(File::E, Rank::R5);
+    pub const E6: Self = Self::new(File::E, Rank::R6);
+    pub const E7: Self = Self::new(File::E, Rank::R7);
+    pub const E8: Self = Self::new(File::E, Rank::R8);
+
+    pub const F1: Self = Self::new(File::F, Rank::R1);
+    pub const F2: Self = Self::new(File::F, Rank::R2);
+    pub const F3: Self = Self::new(File::F, Rank::R3);
+    pub const F4: Self = Self::new(File::F, Rank::R4);
+    pub const F5: Self = Self::new(File::F, Rank::R5);
+    pub const F6: Self = Self::new(File::F, Rank::R6);
+    pub const F7: Self = Self::new(File::F, Rank::R7);
+    pub const F8: Self = Self::new(File::F, Rank::R8);
+
+    pub const G1: Self = Self::new(File::G, Rank::R1);
+    pub const G2: Self = Self::new(File::G, Rank::R2);
+    pub const G3: Self = Self::new(File::G, Rank::R3);
+    pub const G4: Self = Self::new(File::G, Rank::R4);
+    pub const G5: Self = Self::new(File::G, Rank::R5);
+    pub const G6: Self = Self::new(File::G, Rank::R6);
+    pub const G7: Self = Self::new(File::G, Rank::R7);
+    pub const G8: Self = Self::new(File::G, Rank::R8);
+
+    pub const H1: Self = Self::new(File::H, Rank::R1);
+    pub const H2: Self = Self::new(File::H, Rank::R2);
+    pub const H3: Self = Self::new(File::H, Rank::R3);
+    pub const H4: Self = Self::new(File::H, Rank::R4);
+    pub const H5: Self = Self::new(File::H, Rank::R5);
+    pub const H6: Self = Self::new(File::H, Rank::R6);
+    pub const H7: Self = Self::new(File::H, Rank::R7);
+    pub const H8: Self = Self::new(File::H, Rank::R8);
+
+    pub const MIN: u8 = 0;
+    pub const MAX: u8 = 63;
+
     pub const fn new(file: File, rank: Rank) -> Self {
         Self { file, rank }
     }
