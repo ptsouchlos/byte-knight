@@ -19,7 +19,7 @@ use crate::{
     attacks,
     bitboard::Bitboard,
     board::Board,
-    definitions::{RANK_BITBOARDS, Squares},
+    definitions::RANK_BITBOARDS,
     file::File,
     move_generation::{self, NORTH, SOUTH, metadata::CheckPinMetadata, square_state},
     moves::{Move, MoveFlag},
@@ -184,78 +184,66 @@ fn is_pseudo_legal_king(
     match flag {
         MoveFlag::CastleK => {
             let (king_sq, rook_sq, f_sq, g_sq) = match us {
-                Side::White => (Squares::E1, Squares::H1, Squares::F1, Squares::G1),
-                Side::Black => (Squares::E8, Squares::H8, Squares::F8, Squares::G8),
+                Side::White => (Square::E1, Square::H1, Square::F1, Square::G1),
+                Side::Black => (Square::E8, Square::H8, Square::F8, Square::G8),
             };
-            if from != king_sq || to != g_sq {
+            if from != king_sq.inner() || to != g_sq.inner() {
                 return false;
             }
             if !board.can_castle_kingside(us) {
                 return false;
             }
             board
-                .piece_on_square(rook_sq)
+                .piece_on_square(rook_sq.inner())
                 .is_some_and(|(p, s)| p == Piece::Rook && s == us)
-                && !occupancy.is_square_occupied(f_sq)
-                && !occupancy.is_square_occupied(g_sq)
+                && !occupancy.is_square_occupied(f_sq.inner())
+                && !occupancy.is_square_occupied(g_sq.inner())
                 && !square_state::is_square_attacked(
                     board,
-                    Square::from_square_index(king_sq),
+                    Square::from_square_index(king_sq.inner()),
                     us.opposite(),
                 )
                 && !square_state::is_square_attacked(
                     board,
-                    Square::from_square_index(f_sq),
+                    Square::from_square_index(f_sq.inner()),
                     us.opposite(),
                 )
                 && !square_state::is_square_attacked(
                     board,
-                    Square::from_square_index(g_sq),
+                    Square::from_square_index(g_sq.inner()),
                     us.opposite(),
                 )
         }
         MoveFlag::CastleQ => {
             let (king_sq, rook_sq, d_sq, c_sq, b_sq) = match us {
-                Side::White => (
-                    Squares::E1,
-                    Squares::A1,
-                    Squares::D1,
-                    Squares::C1,
-                    Squares::B1,
-                ),
-                Side::Black => (
-                    Squares::E8,
-                    Squares::A8,
-                    Squares::D8,
-                    Squares::C8,
-                    Squares::B8,
-                ),
+                Side::White => (Square::E1, Square::A1, Square::D1, Square::C1, Square::B1),
+                Side::Black => (Square::E8, Square::A8, Square::D8, Square::C8, Square::B8),
             };
-            if from != king_sq || to != c_sq {
+            if from != king_sq.inner() || to != c_sq.inner() {
                 return false;
             }
             if !board.can_castle_queenside(us) {
                 return false;
             }
             board
-                .piece_on_square(rook_sq)
+                .piece_on_square(rook_sq.inner())
                 .is_some_and(|(p, s)| p == Piece::Rook && s == us)
-                && !occupancy.is_square_occupied(d_sq)
-                && !occupancy.is_square_occupied(c_sq)
-                && !occupancy.is_square_occupied(b_sq)
+                && !occupancy.is_square_occupied(d_sq.inner())
+                && !occupancy.is_square_occupied(c_sq.inner())
+                && !occupancy.is_square_occupied(b_sq.inner())
                 && !square_state::is_square_attacked(
                     board,
-                    Square::from_square_index(king_sq),
+                    Square::from_square_index(king_sq.inner()),
                     us.opposite(),
                 )
                 && !square_state::is_square_attacked(
                     board,
-                    Square::from_square_index(d_sq),
+                    Square::from_square_index(d_sq.inner()),
                     us.opposite(),
                 )
                 && !square_state::is_square_attacked(
                     board,
-                    Square::from_square_index(c_sq),
+                    Square::from_square_index(c_sq.inner()),
                     us.opposite(),
                 )
         }
@@ -523,22 +511,14 @@ mod tests {
     fn rejects_pawn_push_to_occupied() {
         let board =
             Board::from_fen("rnbqkbnr/pppppppp/8/8/8/4p3/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
-        let blocked = Move::new(
-            Square::from_square_index(Squares::E2),
-            Square::from_square_index(Squares::E3),
-            MoveFlag::Standard,
-        );
+        let blocked = Move::new(Square::E2, Square::E3, MoveFlag::Standard);
         assert!(!is_pseudo_legal(&board, &blocked));
     }
 
     #[test]
     fn rejects_castle_through_check() {
         let board = Board::from_fen("3rk3/8/8/8/8/8/8/R3K2R w KQ - 0 1").unwrap();
-        let castle_q = Move::new(
-            Square::from_square_index(Squares::E1),
-            Square::from_square_index(Squares::C1),
-            MoveFlag::CastleQ,
-        );
+        let castle_q = Move::new(Square::E1, Square::C1, MoveFlag::CastleQ);
         assert!(!is_pseudo_legal(&board, &castle_q));
     }
 
@@ -665,14 +645,10 @@ mod tests {
         // FEN parsing now strips obviously-illegal EP targets, so set the EP
         // square directly to test the move-generation legality path.
         let mut board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - - 0 1").unwrap();
-        board.set_en_passant_square(Some(Squares::D3));
+        board.set_en_passant_square(Some(Square::D3.inner()));
         let meta = metadata::compute(&board);
         // e4→d3 EP
-        let ep_mv = Move::new(
-            Square::from_square_index(Squares::E4),
-            Square::from_square_index(Squares::D3),
-            MoveFlag::EnPassant,
-        );
+        let ep_mv = Move::new(Square::E4, Square::D3, MoveFlag::EnPassant);
         assert!(is_pseudo_legal(&board, &ep_mv), "EP should be pseudo-legal");
         assert!(
             !is_legal_with_metadata(&board, &ep_mv, &meta),
@@ -715,8 +691,8 @@ mod tests {
         // Same position as above — specific regression test for the move Rd3xf3.
         let board = Board::from_fen("3r3k/8/8/8/8/3R1b2/8/3K4 w - - 0 1").unwrap();
         let meta = metadata::compute(&board);
-        let d3 = Square::from_square_index(Squares::D3);
-        let f3 = Square::from_square_index(Squares::F3);
+        let d3 = Square::D3;
+        let f3 = Square::F3;
         let mv = Move::new(d3, f3, MoveFlag::Standard);
         assert!(
             is_pseudo_legal(&board, &mv),

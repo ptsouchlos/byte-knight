@@ -19,17 +19,22 @@ use crate::{bitboard_helpers, definitions::EMPTY, square::Square};
 /// The board is represented as a 64-bit integer.
 /// A bit is set if the corresponding square is occupied.
 ///
+/// ```ignore
 /// v-a8 (bit 56)
-/// 0 0 0 0 0 0 0 0 <- h8 (bit 63)
-/// 0 0 0 0 0 0 0 0
-/// 0 0 0 0 0 0 0 0
-/// 0 0 0 0 0 0 0 0
-/// 0 0 0 0 1 0 0 0
-/// 0 0 0 0 0 0 0 0 <- h3 (bit 23)
-/// 0 0 0 0 0 0 0 0
-/// 0 0 0 0 0 0 0 0 <- h1 (bit 7)
+/// + --------------- +
+/// | 0 0 0 0 0 0 0 0 | <- h8 (bit 63)
+/// | 0 0 0 0 0 0 0 0 |
+/// | 0 0 0 0 0 0 0 0 |
+/// | 0 0 0 0 0 0 0 0 |
+/// | 0 0 0 0 1 0 0 0 |
+/// | 0 0 0 0 0 0 0 0 | <- h3 (bit 23)
+/// | 0 0 0 0 0 0 0 0 |
+/// | 0 0 0 0 0 0 0 0 | <- h1 (bit 7)
+/// + --------------- +
 /// ^-a1 (bit 0)
-///
+/// ```
+/// This corresponds to [Little Endian Rank-File Mapping](https://www.chessprogramming.org/Square_Mapping_Considerations#Little-Endian_Rank-File_Mapping).
+/// See also [`Square`] for further details on how this maps to square indicies.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Bitboard {
     data: u64,
@@ -304,7 +309,7 @@ impl From<u64> for Bitboard {
 
 impl From<Square> for Bitboard {
     fn from(square: Square) -> Self {
-        Bitboard::from_square(square.to_square_index())
+        Bitboard::from_square(square.inner())
     }
 }
 
@@ -338,7 +343,7 @@ impl Display for Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use crate::{bitboard_helpers, definitions::Squares};
+    use crate::bitboard_helpers;
 
     use super::*;
 
@@ -431,10 +436,10 @@ mod tests {
 
     #[test]
     fn from_square() {
-        let bb_a8 = Bitboard::from_square(Squares::A8);
-        let bb_g8 = Bitboard::from_square(Squares::G8);
-        let bb_h8 = Bitboard::from_square(Squares::H8);
-        let bb = Bitboard::from_square(Squares::D5);
+        let bb_a8 = Bitboard::from(Square::A8);
+        let bb_g8 = Bitboard::from(Square::G8);
+        let bb_h8 = Bitboard::from(Square::H8);
+        let bb = Bitboard::from(Square::D5);
 
         assert_eq!(bb_a8.data, 72057594037927936);
         assert_eq!(bb_g8.data, 4611686018427387904);
@@ -444,7 +449,7 @@ mod tests {
 
     #[test]
     fn square_shifting() {
-        let mut bb = Bitboard::from_square(Squares::B4);
+        let mut bb = Bitboard::from(Square::B4);
         let mut bb_front = bb << 8;
         let mut bb_back = bb >> 8;
         println!("{bb}\n{bb_front}\n{bb_back}");
@@ -453,9 +458,9 @@ mod tests {
         let front_square = bitboard_helpers::next_bit(&mut bb_front) as u8;
         let back_square = bitboard_helpers::next_bit(&mut bb_back) as u8;
 
-        assert_eq!(original_square, Squares::B4);
-        assert_eq!(front_square, Squares::B5);
-        assert_eq!(back_square, Squares::B3);
+        assert_eq!(original_square, Square::B4.inner());
+        assert_eq!(front_square, Square::B5.inner());
+        assert_eq!(back_square, Square::B3.inner());
     }
 
     #[test]

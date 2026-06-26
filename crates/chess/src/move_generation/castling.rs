@@ -3,10 +3,7 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use crate::{
-    bitboard::Bitboard, board::Board, definitions::Squares, move_generation, pieces::Piece,
-    side::Side,
-};
+use crate::{bitboard::Bitboard, board::Board, move_generation, pieces::Piece, side::Side};
 
 // Credit to Hobbes author for CastleSafety and CastleTravel masks.
 /// Squares that must not be attacked when the king castles

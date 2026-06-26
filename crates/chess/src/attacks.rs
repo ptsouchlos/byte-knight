@@ -604,11 +604,12 @@ mod tests {
         attacks::{self, BISHOP_ATTACKS, ROOK_ATTACKS},
         bitboard::Bitboard,
         board::Board,
-        definitions::{NumberOf, Squares},
+        definitions::NumberOf,
         magics::{BISHOP_MAGICS, ROOK_MAGICS},
         move_generation,
         pieces::Piece,
         side::Side,
+        square::Square,
     };
 
     const EXPECTED_ORTHOGONAL_ATTACKS: [u64; NumberOf::SQUARES] = [
@@ -1229,13 +1230,13 @@ mod tests {
         board.make_uci_move("f7f5").unwrap();
         println!("{}\n{}", board.to_fen(), board);
         let blockers = attacks::blockers_for_king(&board, Side::White);
-        let expected_blockers = Bitboard::from_square(Squares::E5);
+        let expected_blockers = Bitboard::from(Square::E5);
         assert_eq!(blockers, expected_blockers);
 
         const FEN_2: &str = "8/p2r1pK1/6p1/1kp1P1P1/2p5/2P5/8/4R3 b - - 0 43";
         let board_2 = Board::from_fen(FEN_2).unwrap();
         let b2_blockers = attacks::blockers_for_king(&board_2, Side::White);
-        let expected_b2_blockers = Bitboard::from_square(Squares::F7);
+        let expected_b2_blockers = Bitboard::from(Square::F7);
         assert_eq!(b2_blockers, expected_b2_blockers);
     }
 }

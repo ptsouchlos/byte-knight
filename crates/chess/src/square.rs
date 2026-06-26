@@ -4,22 +4,40 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use crate::{
-    bitboard::Bitboard,
-    bitboard_helpers,
-    color::Color,
-    definitions::{DARK_SQUARES, NumberOf},
-    file::File,
+    bitboard::Bitboard, bitboard_helpers, color::Color, definitions::NumberOf, file::File,
     rank::Rank,
 };
 
 use anyhow::{Result, bail};
 
-/// Represents a square on the chess board.
+/// Represents a single square on an `8x8` chess board.
+///
+/// Internally encoded using the following bit pattern:
+/// ```ignore
+///      ---- ----- ------
+///     | -- | Rnk | File |
+///      ----------|------|
+///     | 0 0 0 0 0 0 0 0 |
+/// MSB  ----|-----|------  LSB
+/// ```
+///
+/// This pattern is also known as [Least Significant File Mapping](https://www.chessprogramming.org/Square_Mapping_Considerations#Deduction_on_Files_and_Ranks).
+/// The square index can be computed with `square = file + rank * 8`.
+/// The indices of each square on the board is given as follows:
+/// ```text
+/// 8| 56 57 58 59 59 61 62 63
+/// 7| 48 49 50 51 52 53 54 55
+/// 6| 40 41 42 43 44 45 46 47
+/// 5| 32 33 34 35 36 37 38 39
+/// 4| 24 25 26 27 28 29 30 31
+/// 3| 16 17 18 19 20 21 22 23
+/// 2|  8  9 10 11 12 13 14 15
+/// 1|  0  1  2  3  4  5  6  7
+///  +------------------------
+///    a  b  c  d  e  f  g  h
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Square {
-    pub file: File,
-    pub rank: Rank,
-}
+pub struct Square(u8);
 
 impl Square {
     pub const A1: Self = Self::new(File::A, Rank::R1);
@@ -97,15 +115,21 @@ impl Square {
     pub const MIN: u8 = 0;
     pub const MAX: u8 = 63;
 
+    pub const CORNERS: [Self; 4] = [Self::A1, Self::H1, Self::A8, Self::H8];
+
+    const DARK_SQUARES: u64 = 0xAA55AA55AA55AA55;
+    const FILE_MASK: u8 = 0b0000_0111;
+    const RANK_MASK: u8 = 0b0011_1000;
+
     pub const fn new(file: File, rank: Rank) -> Self {
-        Self { file, rank }
+        Self(file ^ (rank << 3))
     }
 
     /// Creates a new square from a file character and rank number.
     pub fn from_file_rank(file: char, rank: u8) -> Result<Self> {
         let file = File::try_from(file)?;
         let rank = Rank::try_from(rank)?;
-        Ok(Self { file, rank })
+        Ok(Self::new(file, rank))
     }
 
     /// Creates a new square from a bitboard.
@@ -117,17 +141,18 @@ impl Square {
     }
 
     /// Convert to a raw square index (0-63).
-    pub const fn to_square_index(&self) -> u8 {
-        to_square(self.file as u8, self.rank as u8)
+    pub const fn inner(&self) -> u8 {
+        self.0
+    }
+
+    pub const fn index(&self) -> usize {
+        self.inner() as usize
     }
 
     /// Convert a square index to a [`Square`] object.
     pub const fn from_square_index(square: u8) -> Self {
-        assert!(square < NumberOf::SQUARES as u8);
-        Self {
-            file: File::of(square),
-            rank: Rank::of(square),
-        }
+        assert!(square < Self::MAX);
+        Self::new(File::of(square), Rank::of(square))
     }
 
     /// Offset the square by the given file and rank deltas.
@@ -163,12 +188,12 @@ impl Square {
 
     /// Get the bitboard representation of the square.
     pub fn bitboard(&self) -> Bitboard {
-        Bitboard::from_square(self.to_square_index())
+        Bitboard::from_square(self.inner())
     }
 
     /// Returns `true` if the square is a dark square.
     pub fn is_dark(&self) -> bool {
-        Bitboard::from(DARK_SQUARES) & self.bitboard() != Bitboard::EMPTY
+        Bitboard::from(Self::DARK_SQUARES) & self.bitboard() != Bitboard::EMPTY
     }
 
     /// Returns `true` if the square is a light square.
@@ -187,7 +212,7 @@ impl Square {
 
     /// Flips the current square and returns a new instance at the flipped location.
     pub fn flip(&self) -> Self {
-        let sq = self.to_square_index();
+        let sq = self.inner();
         let flipped_sq = flip(sq);
         Self::from_square_index(flipped_sq)
     }
@@ -336,7 +361,7 @@ pub const fn is_square_on_rank(square: u8, rank: u8) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::{NumberOf, Squares},
+        definitions::NumberOf,
         file::File,
         rank::Rank,
         square::{Square, is_square_on_rank, to_square},
@@ -344,9 +369,9 @@ mod tests {
 
     #[test]
     fn check_square_on_rank() {
-        assert!(is_square_on_rank(Squares::A1, Rank::R1 as u8));
-        assert!(!is_square_on_rank(Squares::A1, Rank::R2 as u8));
-        assert!(is_square_on_rank(Squares::C5, Rank::R5 as u8));
+        assert!(is_square_on_rank(Square::A1.inner(), Rank::R1 as u8));
+        assert!(!is_square_on_rank(Square::A1.inner(), Rank::R2 as u8));
+        assert!(is_square_on_rank(Square::C5.inner(), Rank::R5 as u8));
     }
 
     #[test]

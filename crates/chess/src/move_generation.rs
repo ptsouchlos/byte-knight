@@ -341,11 +341,7 @@ pub fn are_legal(board: &Board, list: &MoveList) -> bool {
 #[cfg(test)]
 mod tests {
 
-    use crate::{
-        board::Board,
-        definitions::{NumberOf, Squares},
-        move_generation,
-    };
+    use crate::{board::Board, definitions::NumberOf, move_generation};
 
     use super::*;
 

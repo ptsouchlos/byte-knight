@@ -95,14 +95,14 @@ fn generate_legal_pawn_mobility(
     diagonal_pin_rays: Bitboard,
     checkers: Bitboard,
 ) -> Bitboard {
-    let is_pinned = pinned_pieces.intersects(Bitboard::from_square(square.to_square_index()));
+    let is_pinned = pinned_pieces.intersects(Bitboard::from_square(square.inner()));
     let us = board.side_to_move();
     let their_pieces = board.pieces(us.opposite());
     let direction = match us {
         Side::White => NORTH as u8,
         Side::Black => SOUTH as u8,
     };
-    let from_square = square.to_square_index();
+    let from_square = square.inner();
     let to_square = match us {
         Side::White => {
             let (result, did_overflow) = from_square.overflowing_add(direction);
@@ -173,9 +173,8 @@ fn generate_legal_pawn_mobility(
     };
 
     let legal_pushes = (pushes & !occupancy) & hv_pin_ray_mask;
-    let attacks = attacks::pawn(square.to_square_index(), us)
-        & (their_pieces | en_passant_bb)
-        & diag_pin_ray_mask;
+    let attacks =
+        attacks::pawn(square.inner(), us) & (their_pieces | en_passant_bb) & diag_pin_ray_mask;
 
     (legal_pushes | attacks) & (capture_mask | push_mask)
 }
@@ -210,10 +209,10 @@ fn generate_normal_piece_legal_mobility(
     orthogonal_pin_rays: Bitboard,
     diagonal_pin_rays: Bitboard,
 ) -> Bitboard {
-    let is_pinned = pinned_mask.intersects(Bitboard::from_square(square.to_square_index()));
+    let is_pinned = pinned_mask.intersects(Bitboard::from_square(square.inner()));
     let us = board.side_to_move();
     let their_pieces = board.pieces(us.opposite());
-    let from_square = square.to_square_index();
+    let from_square = square.inner();
     let occupancy = board.all_pieces();
     let pin_rays = orthogonal_pin_rays | diagonal_pin_rays;
 
@@ -228,7 +227,7 @@ fn generate_normal_piece_legal_mobility(
         let king_sq = board.king_square(us);
 
         let pinners = their_pieces & pin_rays;
-        let piece_bb = Bitboard::from_square(square.to_square_index());
+        let piece_bb = Bitboard::from_square(square.inner());
         let mut true_ray_mask = Bitboard::default();
 
         for pinner_sq in pinners.iter() {
@@ -274,7 +273,7 @@ fn generate_king_legal_mobility(
 
     let king_bb = board.piece_bitboard(Piece::King, us);
 
-    let king_moves_bb = attacks::king(square.to_square_index());
+    let king_moves_bb = attacks::king(square.inner());
 
     let attacked_squares_occupancy = occupancy & !king_bb;
     let attacked_squares =
@@ -477,7 +476,7 @@ pub fn generate_all_moves(board: &Board) -> MoveList {
 
 #[cfg(test)]
 mod tests {
-    use crate::{definitions::Squares, moves::MoveFlag};
+    use crate::moves::MoveFlag;
 
     use super::*;
 

@@ -577,7 +577,7 @@ mod tests {
         assert!(ep_square.is_some());
         let expected_sq = Square::from_file_rank(File::E.to_char(), Rank::R3.as_number())
             .unwrap()
-            .to_square_index();
+            .inner();
         assert_eq!(ep_square.unwrap(), expected_sq);
 
         let bad_eq_square = "e99";

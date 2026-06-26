@@ -582,14 +582,14 @@ impl Display for MagicNumber {
 
 #[cfg(test)]
 mod tests {
-    use crate::{definitions::Squares, move_generation};
+    use crate::{move_generation, square::Square};
 
     use super::*;
 
     #[test]
     fn test_magic_number_index() {
         // test a1 for the rook
-        let relevant_bits = move_generation::relevant_rook_bits(Squares::A1);
+        let relevant_bits = move_generation::relevant_rook_bits(Square::A1.inner());
         let blockers = move_generation::create_blocker_permutations(relevant_bits);
         let magic_value = 684547693657194778;
         let magic = MagicNumber::new(
@@ -611,7 +611,7 @@ mod tests {
     #[test]
     fn magic_number_display() {
         // test a1 for the rook
-        let relevant_bits = move_generation::relevant_rook_bits(Squares::A1);
+        let relevant_bits = move_generation::relevant_rook_bits(Square::A1.inner());
         let magic_value = 684547693657194778;
         let magic = MagicNumber::new(
             relevant_bits,
@@ -626,7 +626,7 @@ mod tests {
         );
 
         // test c4 for the bishop
-        let magic = BISHOP_MAGICS[Squares::C4 as usize];
+        let magic = BISHOP_MAGICS[Square::C4.index()];
         assert_eq!(
             format!("{magic}"),
             "bb         9024834391117824 shift   57 offset   1280 magic           71605963260416"

@@ -2,7 +2,7 @@ use crate::{attacks, bitboard::Bitboard, board::Board, side::Side, square::Squar
 
 pub fn is_square_attacked(board: &Board, square: Square, attacking_side: Side) -> bool {
     !attacks::all_attackers_of(
-        square.to_square_index(),
+        square.inner(),
         board,
         attacking_side,
         board.all_pieces(),

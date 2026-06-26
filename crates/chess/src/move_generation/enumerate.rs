@@ -40,7 +40,7 @@ pub(crate) fn enumerate_moves(
         return;
     }
 
-    let from_sq_idx = from.to_square_index();
+    let from_sq_idx = from.inner();
     let (from_file, _from_rank) = square::from_square(from_sq_idx);
 
     let us = board.side_to_move();

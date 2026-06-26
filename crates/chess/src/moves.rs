@@ -157,8 +157,8 @@ impl Move {
     /// Creates a new [`Move`].
     pub fn new(from: Square, to: Square, descriptor: MoveFlag) -> Self {
         Self {
-            move_info: (to.to_square_index() as u16)
-                | ((from.to_square_index() as u16) << MOVE_INFO_FROM_SHIFT)
+            move_info: (to.inner() as u16)
+                | ((from.inner() as u16) << MOVE_INFO_FROM_SHIFT)
                 | ((descriptor as u16) << MOVE_INFO_MOVE_DESCRIPTOR_SHIFT),
         }
     }
@@ -310,8 +310,8 @@ mod tests {
             let from = Square::new(File::F, Rank::R4);
             let to = Square::new(File::E, Rank::R6);
             let m = Move::new(from, to, MoveFlag::EnPassant);
-            assert_eq!(m.from(), from.to_square_index());
-            assert_eq!(m.to(), to.to_square_index());
+            assert_eq!(m.from(), from.inner());
+            assert_eq!(m.to(), to.inner());
             assert!(!m.is_pawn_two_up());
             assert!(!m.is_castle());
             assert!(m.is_en_passant_capture());
@@ -383,8 +383,8 @@ mod tests {
         assert!(!mv.is_castle());
         assert!(!mv.is_promotion());
         assert!(!mv.is_null_move());
-        assert_eq!(mv.from(), from.to_square_index());
-        assert_eq!(mv.to(), to.to_square_index());
+        assert_eq!(mv.from(), from.inner());
+        assert_eq!(mv.to(), to.inner());
 
         mv = Move::new(from, to, MoveFlag::DoublePush);
 
@@ -394,8 +394,8 @@ mod tests {
         assert!(!mv.is_promotion());
         assert!(!mv.is_null_move());
         assert!(mv.flag() == MoveFlag::DoublePush);
-        assert_eq!(mv.from(), from.to_square_index());
-        assert_eq!(mv.to(), to.to_square_index());
+        assert_eq!(mv.from(), from.inner());
+        assert_eq!(mv.to(), to.inner());
     }
 
     #[test]

@@ -8,7 +8,7 @@ use crate::{
     bitboard::Bitboard,
     board::Board,
     board_state::MovePieceInfo,
-    definitions::{CastlingAvailability, Squares},
+    definitions::CastlingAvailability,
     move_generation,
     moves::{self, Move, MoveFlag},
     pieces::{Piece, SQUARE_NAME},
@@ -55,16 +55,13 @@ impl Board {
         };
 
         let (piece, side) = self
-            .piece_on_square(from.to_square_index())
+            .piece_on_square(from.inner())
             .ok_or_else(|| anyhow::anyhow!("No piece on square"))?;
 
         // now just figure out the move descriptor
         // need to check if the move is a castle, en passant, promotion or a pawn two up move
         let can_double_push = piece == Piece::Pawn
-            && square::is_square_on_rank(
-                from.to_square_index(),
-                Rank::pawn_start_rank(side).as_number(),
-            );
+            && square::is_square_on_rank(from.inner(), Rank::pawn_start_rank(side).as_number());
 
         let is_double_push = can_double_push
             && (from.rank.as_number() as i8).abs_diff(to.rank.as_number() as i8) == 2;
@@ -72,7 +69,7 @@ impl Board {
         let is_castle = piece == Piece::King && (from.file as i8).abs_diff(to.file as i8) == 2;
         let is_en_passant = piece == Piece::Pawn
             && self.en_passant_square().is_some()
-            && self.en_passant_square().unwrap() == to.to_square_index();
+            && self.en_passant_square().unwrap() == to.inner();
 
         let states = [is_double_push, is_castle, is_en_passant];
         if states.iter().filter(|&&x| x).count() > 1 {
@@ -137,6 +134,7 @@ impl Board {
         let them = us.opposite();
         let can_castle = self.castling_rights() > 0;
         let update_zobrist_hash = true;
+        let to_sq = Square::from_square_index(to);
 
         // en passant capture is handled separately
         if !mv.is_en_passant_capture()
@@ -150,8 +148,7 @@ impl Board {
             if cap == Piece::Rook {
                 // check if the rook was on a corner square
                 // if so, remove the castling rights for that side
-                let corners = [Squares::A8, Squares::H8, Squares::A1, Squares::H1];
-                if corners.contains(&to) {
+                if Square::CORNERS.contains(&to_sq) {
                     self.set_castling_rights(
                         self.castling_rights() & !(get_castling_right_to_remove(them, to)),
                     );
@@ -536,21 +533,22 @@ pub(crate) fn ep_capture_is_legal(board: &Board, from: u8, ep_square: u8, us: Si
 
 /// Helper function to get what castling rights to remove based on the square the piece moved from.
 fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
+    let from_sq = Square::from(from);
     match us {
-        Side::White => match from {
+        Side::White => match from_sq {
             // rook moves
-            Squares::A1 => CastlingAvailability::WHITE_QUEENSIDE,
-            Squares::H1 => CastlingAvailability::WHITE_KINGSIDE,
-            Squares::E1 => {
+            Square::A1 => CastlingAvailability::WHITE_QUEENSIDE,
+            Square::H1 => CastlingAvailability::WHITE_KINGSIDE,
+            Square::E1 => {
                 CastlingAvailability::WHITE_QUEENSIDE | CastlingAvailability::WHITE_KINGSIDE
             }
             _ => 0,
         },
-        Side::Black => match from {
+        Side::Black => match from_sq {
             // rook moves
-            Squares::A8 => CastlingAvailability::BLACK_QUEENSIDE,
-            Squares::H8 => CastlingAvailability::BLACK_KINGSIDE,
-            Squares::E8 => {
+            Square::A8 => CastlingAvailability::BLACK_QUEENSIDE,
+            Square::H8 => CastlingAvailability::BLACK_KINGSIDE,
+            Square::E8 => {
                 CastlingAvailability::BLACK_QUEENSIDE | CastlingAvailability::BLACK_KINGSIDE
             }
             _ => 0,
@@ -563,7 +561,6 @@ mod tests {
     use crate::{
         bitboard::Bitboard,
         board::Board,
-        definitions::Squares,
         move_generation::{self, move_filter::MoveFilter},
         move_list::MoveList,
         moves::{Move, MoveFlag},
@@ -579,11 +576,11 @@ mod tests {
 
         let en_passant_move = move_list
             .iter()
-            .find(|mv| mv.to() == crate::definitions::Squares::D6)
+            .find(|mv| mv.to() == Square::D6.inner())
             .unwrap();
 
         println!("Making en passant move: {en_passant_move}");
-        assert!(board.piece_on_square(Squares::C5).is_some());
+        assert!(board.piece_on_square(Square::C5.inner()).is_some());
         assert!(board.check_move_preconditions(en_passant_move).is_ok());
         let move_result = board.make_move(en_passant_move);
         assert!(move_result.is_ok());

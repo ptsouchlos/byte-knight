@@ -50,7 +50,7 @@ impl Display for Board {
             for file in 0..8 {
                 let square =
                     Square::new(File::try_from(file).unwrap(), Rank::try_from(rank).unwrap());
-                if let Some((piece, side)) = self.piece_on_square(square.to_square_index()) {
+                if let Some((piece, side)) = self.piece_on_square(square.inner()) {
                     let piece_char = match piece {
                         Piece::King => 'K',
                         Piece::Queen => 'Q',
@@ -378,9 +378,7 @@ impl Board {
 
     /// Checks if a given square is empty.
     pub fn is_square_empty(&self, square: &Square) -> bool {
-        !self
-            .all_pieces()
-            .is_square_occupied(square.to_square_index())
+        !self.all_pieces().is_square_occupied(square.inner())
     }
 
     /// Helper function to check if a given side has kingside castling rights.
@@ -608,7 +606,7 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::{DEFAULT_FEN, Squares},
+        definitions::DEFAULT_FEN,
         file::File,
         move_generation::{self, move_filter::MoveFilter},
         move_list::MoveList,
@@ -623,11 +621,11 @@ mod tests {
     fn threefold_repetition_detection() {
         let mut board = Board::from_fen("k7/8/KQ6/8/8/8/8/8 w - - 0 1").unwrap();
 
-        let bk_square_1 = Square::from_square_index(Squares::A8);
-        let bk_square_2 = Square::from_square_index(Squares::B8);
+        let bk_square_1 = Square::A8;
+        let bk_square_2 = Square::B8;
 
-        let wq_square_1 = Square::from_square_index(Squares::B6);
-        let wq_square_2 = Square::from_square_index(Squares::C5);
+        let wq_square_1 = Square::B6;
+        let wq_square_2 = Square::C5;
 
         let white_queen_move = Move::new(wq_square_1, wq_square_2, MoveFlag::Standard);
         let while_queen_reverse_move = Move::new(wq_square_2, wq_square_1, MoveFlag::Standard);
