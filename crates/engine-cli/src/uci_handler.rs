@@ -175,7 +175,8 @@ impl<W: Write> UciHandler<W> {
                         // Make a copy of the side before passing to printing history table
                         let side = self.engine.board().side_to_move();
                         self.engine
-                            .history_table()
+                            .history_tables()
+                            .quiet_history
                             .print_for_side(side, &mut self.output)?;
                     }
                     EngineCommand::Perft(depth) => {

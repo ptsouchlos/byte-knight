@@ -11,7 +11,7 @@ use std::{
 #[cfg(feature = "tuning")]
 use crate::tuneable::set_param;
 use crate::{
-    history_table::HistoryTable,
+    history::Histories,
     killers_table::KillerMovesTable,
     log_level::{LogDebug, LogInfo},
     search::{Search, SearchResult, limits::SearchLimits},
@@ -138,8 +138,8 @@ impl Engine {
         self.thread_data.transposition_table.size()
     }
 
-    pub fn history_table(&self) -> &HistoryTable {
-        &self.thread_data.history_table
+    pub fn history_tables(&self) -> &Histories {
+        &self.thread_data.histories
     }
 
     pub fn killers_table(&self) -> &KillerMovesTable {

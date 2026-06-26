@@ -12,8 +12,8 @@ use chess::{board::Board, moves::Move};
 use uci_parser::UciSearchOptions;
 
 use crate::{
-    history_table::HistoryTable, killers_table::KillerMovesTable, node::NodeStack,
-    score::ScoreType, search::limits::SearchLimits, ttable::TranspositionTable,
+    history::Histories, killers_table::KillerMovesTable, node::NodeStack, score::ScoreType,
+    search::limits::SearchLimits, ttable::TranspositionTable,
 };
 
 /// Number of nodes searched between wall-clock polls for the hard time limit.
@@ -22,7 +22,7 @@ const NODES_BETWEEN_TIME_CHECKS: u64 = 2048;
 
 pub struct ThreadData {
     pub(crate) transposition_table: TranspositionTable,
-    pub(crate) history_table: HistoryTable,
+    pub(crate) histories: Histories,
     pub(crate) killers_table: KillerMovesTable,
     pub(crate) bestmove_stability: u64,
     pub(crate) prev_best_move: Option<Move>,
@@ -45,7 +45,7 @@ impl Default for ThreadData {
     fn default() -> Self {
         ThreadData {
             transposition_table: TranspositionTable::default(),
-            history_table: HistoryTable::default(),
+            histories: Histories::default(),
             killers_table: KillerMovesTable::default(),
             bestmove_stability: 0,
             prev_best_move: None,
@@ -95,7 +95,7 @@ impl ThreadData {
 
     pub fn clear(&mut self) {
         self.transposition_table.clear();
-        self.history_table.clear();
+        self.histories.clear();
         self.killers_table.clear();
     }
 

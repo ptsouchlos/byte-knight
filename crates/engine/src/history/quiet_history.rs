@@ -14,7 +14,7 @@ use chess::{
 
 use crate::score::{LargeScoreType, Score};
 
-pub struct HistoryTable {
+pub struct QuietHistory {
     table: [[[LargeScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
 }
 
@@ -34,7 +34,7 @@ pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
         .saturating_sub(Score::HISTORY_OFFSET)
 }
 
-impl HistoryTable {
+impl QuietHistory {
     pub(crate) fn new() -> Self {
         let table =
             [[[Default::default(); NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES];
@@ -74,7 +74,7 @@ impl HistoryTable {
                     let square = file + rank * NumberOf::FILES;
                     write!(
                         output,
-                        "{:5} ",
+                        "{:6} ",
                         self.table[side as usize][piece_type][square]
                     )?;
                 }
@@ -85,7 +85,7 @@ impl HistoryTable {
     }
 }
 
-impl Default for HistoryTable {
+impl Default for QuietHistory {
     fn default() -> Self {
         Self::new()
     }
@@ -95,12 +95,12 @@ impl Default for HistoryTable {
 mod tests {
     use crate::defs::MAX_DEPTH;
 
-    use super::{HistoryTable, calculate_bonus_for_depth};
+    use super::{QuietHistory, calculate_bonus_for_depth};
     use chess::{moves::Move, pieces::Piece, side::Side, square::Square};
 
     #[test]
     fn initialize_history_table() {
-        let history_table = HistoryTable::new();
+        let history_table = QuietHistory::new();
         // loop through all sides, piece types, and squares
         for side in 0..2 {
             for piece_type in 0..6 {
@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn store_and_read() {
-        let mut history_table = HistoryTable::new();
+        let mut history_table = QuietHistory::new();
         let mv = Move::new(Square::B1, Square::A1, chess::moves::MoveFlag::Standard);
         let side = Side::Black;
         let piece = Piece::Pawn;

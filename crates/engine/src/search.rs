@@ -27,7 +27,7 @@ use crate::{
     aspiration_window::AspirationWindow,
     defs::{MAX_DEPTH, MAX_PLY},
     evaluation::ByteKnightEvaluation,
-    history_table::{self},
+    history::quiet_history,
     lmr,
     log_level::LogLevel,
     move_picker,
@@ -503,7 +503,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let fp_margin = fp_base() + depth as i32 * fp_scale();
 
         // Loop through all moves in best-first order.
-        while let Some(mv) = picker.next(board, &td.history_table) {
+        while let Some(mv) = picker.next(board, &td.histories) {
             let loop_counter = picker.moves_yielded() - 1;
 
             // Calculate the LMR reduction and depth which will be used later in FP
@@ -699,8 +699,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         td.killers_table.update(ply as usize, mv, piece);
 
                         // calculate history bonus
-                        let bonus = history_table::calculate_bonus_for_depth(depth);
-                        td.history_table.update(
+                        let bonus = quiet_history::calculate_bonus_for_depth(depth);
+                        td.histories.update(
                             board.side_to_move(),
                             piece,
                             mv,
@@ -714,7 +714,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             if prev_mv == mv {
                                 continue;
                             }
-                            td.history_table.update(
+                            td.histories.update(
                                 board.side_to_move(),
                                 prev_piece,
                                 prev_mv,
@@ -951,7 +951,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_move: Option<Move> = None;
         let original_alpha = alpha_use;
 
-        while let Some(mv) = picker.next(board, &td.history_table) {
+        while let Some(mv) = picker.next(board, &td.histories) {
             // ------------------------------------------------------------
             // Delta pruning
             // ------------------------------------------------------------
@@ -1337,7 +1337,7 @@ mod tests {
                         Square::from_square_index(square),
                         MoveFlag::Standard,
                     );
-                    let score = td.history_table.get(side, piece, mv);
+                    let score = td.histories.get(side, piece, mv);
                     if score > max_history {
                         max_history = score;
                     }

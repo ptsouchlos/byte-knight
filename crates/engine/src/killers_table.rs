@@ -29,7 +29,7 @@ pub struct KillerMovesTable {
 }
 
 impl KillerMovesTable {
-    pub(crate) fn new() -> Self {
+    pub(crate) const fn new() -> Self {
         let table = [[None; MAX_KILLERS_PER_PLY]; MAX_PLY as usize];
 
         Self { table }
