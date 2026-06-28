@@ -32,7 +32,7 @@ jobs:
         run: echo "sha=$(cd fast-chess && git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Cache fastchess binary
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: fast-chess/fastchess
           key: fastchess-${{ runner.os }}-${{ steps.fastchess-commit.outputs.sha }}
