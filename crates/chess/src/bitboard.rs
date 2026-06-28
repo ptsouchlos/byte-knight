@@ -145,6 +145,54 @@ impl Bitboard {
     pub fn empty(&self) -> bool {
         self.data == 0
     }
+
+    /// Get the least significant set square in the bitboard.
+    #[inline(always)]
+    pub const fn lsb(self) -> Square {
+        Square::from_square_index(self.as_number().trailing_zeros() as u8)
+    }
+
+    pub const fn pop_lsb(&mut self) -> Square {
+        let lsb = self.lsb();
+        self.clear_square(lsb.inner());
+        lsb
+    }
+}
+
+pub struct BitboardIter {
+    bitboard: Bitboard,
+}
+
+impl Iterator for BitboardIter {
+    type Item = Square;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.bitboard.is_empty() {
+            None
+        } else {
+            Some(self.bitboard.lsb())
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.bitboard.number_of_occupied_squares() as usize;
+        (size, Some(size))
+    }
+}
+
+impl ExactSizeIterator for BitboardIter {
+    fn len(&self) -> usize {
+        self.bitboard.number_of_occupied_squares() as usize
+    }
+}
+
+impl IntoIterator for Bitboard {
+    type Item = Square;
+    type IntoIter = BitboardIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        BitboardIter { bitboard: self }
+    }
 }
 
 impl PartialOrd<u64> for Bitboard {

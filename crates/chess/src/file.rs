@@ -115,6 +115,12 @@ impl TryFrom<char> for File {
     }
 }
 
+impl Into<u8> for File {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

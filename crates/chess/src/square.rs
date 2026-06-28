@@ -3,10 +3,7 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use crate::{
-    bitboard::Bitboard, bitboard_helpers, color::Color, definitions::NumberOf, file::File,
-    rank::Rank,
-};
+use crate::{bitboard::Bitboard, bitboard_helpers, color::Color, file::File, rank::Rank};
 
 use anyhow::{Result, bail};
 
@@ -114,15 +111,18 @@ impl Square {
 
     pub const MIN: u8 = 0;
     pub const MAX: u8 = 63;
+    pub const COUNT: u8 = 64;
 
     pub const CORNERS: [Self; 4] = [Self::A1, Self::H1, Self::A8, Self::H8];
 
     const DARK_SQUARES: u64 = 0xAA55AA55AA55AA55;
     const FILE_MASK: u8 = 0b0000_0111;
     const RANK_MASK: u8 = 0b0011_1000;
+    const RANK_SHIFT: u8 = 3;
 
+    /// Create a new square from a file and rank.
     pub const fn new(file: File, rank: Rank) -> Self {
-        Self(file ^ (rank << 3))
+        Self((file as u8) ^ ((rank as u8) << Self::RANK_SHIFT))
     }
 
     /// Creates a new square from a file character and rank number.
@@ -147,6 +147,19 @@ impl Square {
 
     pub const fn index(&self) -> usize {
         self.inner() as usize
+    }
+
+    pub const fn file(&self) -> File {
+        File::of(self.inner() & Self::FILE_MASK)
+    }
+
+    pub const fn rank(&self) -> Rank {
+        Rank::of((self.inner() & Self::RANK_MASK) >> Self::RANK_SHIFT)
+    }
+
+    #[inline(always)]
+    pub fn iter() -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator<Item = Self> {
+        (Self::MIN..=Self::MAX).map(Self)
     }
 
     /// Convert a square index to a [`Square`] object.
@@ -176,8 +189,8 @@ impl Square {
     /// assert!(new_square.is_none());
     /// ```
     pub const fn offset(&self, file_delta: i8, rank_delta: i8) -> Option<Self> {
-        let new_file = self.file.offset(file_delta);
-        let new_rank = self.rank.offset(rank_delta);
+        let new_file = self.file().offset(file_delta);
+        let new_rank = self.rank().offset(rank_delta);
         if new_file.is_none() || new_rank.is_none() {
             return None;
         }
@@ -187,13 +200,13 @@ impl Square {
     }
 
     /// Get the bitboard representation of the square.
-    pub fn bitboard(&self) -> Bitboard {
+    pub fn as_bitboard(&self) -> Bitboard {
         Bitboard::from_square(self.inner())
     }
 
     /// Returns `true` if the square is a dark square.
     pub fn is_dark(&self) -> bool {
-        Bitboard::from(Self::DARK_SQUARES) & self.bitboard() != Bitboard::EMPTY
+        Bitboard::from(Self::DARK_SQUARES) & self.as_bitboard() != Bitboard::EMPTY
     }
 
     /// Returns `true` if the square is a light square.
@@ -377,16 +390,16 @@ mod tests {
     #[test]
     fn parse_square_from_uci_str() {
         let square = Square::try_from("e4").unwrap();
-        assert_eq!(square.file, File::E);
-        assert_eq!(square.rank, Rank::R4);
+        assert_eq!(square.file(), File::E);
+        assert_eq!(square.rank(), Rank::R4);
     }
 
     #[test]
     fn offset() {
         let square = Square::try_from("e4").unwrap();
         let new_square = square.offset(1, 1).unwrap();
-        assert_eq!(new_square.file, File::F);
-        assert_eq!(new_square.rank, Rank::R5);
+        assert_eq!(new_square.file(), File::F);
+        assert_eq!(new_square.rank(), Rank::R5);
 
         let square = Square::try_from("a1").unwrap();
         let new_square = square.offset(-1, -1);
@@ -401,8 +414,8 @@ mod tests {
                 let square = Square::from_square_index(sq);
                 let flipped = square.flip();
                 assert_eq!(flipped.flip(), square);
-                assert_eq!(flipped.file, square.file);
-                assert_eq!(flipped.rank.as_number(), (Rank::R8 - square.rank) as u8);
+                assert_eq!(flipped.file(), square.file());
+                assert_eq!(flipped.rank().as_number(), (Rank::R8 - square.rank()) as u8);
             }
         }
     }

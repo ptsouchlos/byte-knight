@@ -313,9 +313,9 @@ impl Board {
     }
 
     /// Returns the current square of the king for a given side.
-    pub fn king_square(&self, side: Side) -> u8 {
+    pub fn king_square(&self, side: Side) -> Square {
         let king_bb = self.piece_bitboard(Piece::King, side);
-        bitboard_helpers::next_bit(&mut king_bb.clone()) as u8
+        bitboard_helpers::next_bit(&mut king_bb.clone()).into()
     }
 
     /// Find what piece is on a given square.

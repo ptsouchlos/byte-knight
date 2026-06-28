@@ -50,7 +50,7 @@ fn calculate_en_passant_bitboard(
             occupancy &= !(Bitboard::from_square(captured_sq));
             let mut discovered_checkers = move_generation::calculate_checkers(board, occupancy);
             let king_sq = board.king_square(board.side_to_move());
-            let (_, king_rank) = square::from_square(king_sq);
+            let king_rank = king_sq.rank();
             discovered_checkers &= RANK_BITBOARDS[king_rank as usize];
 
             let is_discovered_check = discovered_checkers.number_of_occupied_squares() > 0
@@ -230,11 +230,12 @@ fn generate_normal_piece_legal_mobility(
         let piece_bb = Bitboard::from_square(square.inner());
         let mut true_ray_mask = Bitboard::default();
 
-        for pinner_sq in pinners.iter() {
+        for pinner in pinners.iter() {
+            let pinner_sq = Square::from_square_index(pinner);
             let ray = rays::between(pinner_sq, king_sq);
 
             if ray.intersects(piece_bb) {
-                true_ray_mask |= ray | Bitboard::from_square(pinner_sq);
+                true_ray_mask |= ray | Bitboard::from(pinner_sq);
             }
         }
 
@@ -393,19 +394,14 @@ pub fn generate_moves_with_metadata(
         MoveFilter::Quiets => !(their_pieces | pawn_promos_bb | ep_bb),
     };
 
-    let king_sq_idx = board.king_square(us);
-    let king_sq = Square::from_square_index(king_sq_idx);
-    let king_bb = Bitboard::from_square(king_sq_idx);
+    let king_sq = board.king_square(us);
+    let king_bb = king_sq.as_bitboard();
 
     let mut move_list = MoveList::new();
 
     // King moves first
-    let king_moves = generate_king_legal_mobility(
-        Square::from_square_index(king_sq_idx),
-        board,
-        meta.capture_mask,
-        meta.checkers,
-    ) & filter;
+    let king_moves =
+        generate_king_legal_mobility(king_sq, board, meta.capture_mask, meta.checkers) & filter;
 
     enumerate_moves(
         &king_moves,
@@ -520,28 +516,28 @@ mod tests {
 
     #[test]
     fn rays_between_verification() {
-        let ray = rays::between(Squares::A1, Squares::H8);
+        let ray = rays::between(Square::A1, Square::H8);
 
-        let expected = Bitboard::from_square(Squares::B2)
-            | Bitboard::from_square(Squares::C3)
-            | Bitboard::from_square(Squares::D4)
-            | Bitboard::from_square(Squares::E5)
-            | Bitboard::from_square(Squares::F6)
-            | Bitboard::from_square(Squares::G7);
+        let expected = Bitboard::from(Square::B2)
+            | Bitboard::from(Square::C3)
+            | Bitboard::from(Square::D4)
+            | Bitboard::from(Square::E5)
+            | Bitboard::from(Square::F6)
+            | Bitboard::from(Square::G7);
         println!("{ray}");
         assert_eq!(ray, expected);
 
-        let ray = rays::between(Squares::H1, Squares::A8);
+        let ray = rays::between(Square::H1, Square::A8);
 
-        let expected = Bitboard::from_square(Squares::G2)
-            | Bitboard::from_square(Squares::F3)
-            | Bitboard::from_square(Squares::E4)
-            | Bitboard::from_square(Squares::D5)
-            | Bitboard::from_square(Squares::C6)
-            | Bitboard::from_square(Squares::B7);
+        let expected = Bitboard::from(Square::G2)
+            | Bitboard::from(Square::F3)
+            | Bitboard::from(Square::E4)
+            | Bitboard::from(Square::D5)
+            | Bitboard::from(Square::C6)
+            | Bitboard::from(Square::B7);
         assert_eq!(ray, expected);
 
-        let ray = rays::between(Squares::A1, Squares::C2);
+        let ray = rays::between(Square::A1, Square::C2);
         assert!(ray == Bitboard::default());
     }
 

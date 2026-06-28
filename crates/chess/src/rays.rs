@@ -11,6 +11,7 @@ use crate::{
     definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
     file::File,
     rank::Rank,
+    square::Square,
 };
 
 #[allow(long_running_const_eval)]
@@ -58,8 +59,8 @@ const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the squares between `from` and `to`.
-pub fn between(from: u8, to: u8) -> Bitboard {
-    RAYS_BETWEEN[from as usize][to as usize]
+pub fn between(from: Square, to: Square) -> Bitboard {
+    RAYS_BETWEEN[from.index()][to.index()]
 }
 
 /// Returns a [`Bitboard`] representing the edge squares of the chessboard, excluding the specified file and rank.
@@ -106,16 +107,18 @@ pub fn line(from: u8, to: u8) -> Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use crate::{bitboard::Bitboard, definitions::Squares, pieces::SQUARE_NAME};
+    use crate::{bitboard::Bitboard, pieces::SQUARE_NAME, square::Square};
 
     #[test]
     fn validate_rays_between() {
-        for from in 0..64_u8 {
-            for to in 0..64_u8 {
+        for from in Square::iter() {
+            for to in Square::iter() {
                 let bb = super::between(from, to);
                 println!(
                     "{} -> {}\n{}",
-                    SQUARE_NAME[from as usize], SQUARE_NAME[to as usize], bb
+                    SQUARE_NAME[from.index()],
+                    SQUARE_NAME[to.index()],
+                    bb
                 );
                 // Verify symmetry: between(a, b) == between(b, a)
                 assert_eq!(bb, super::between(to, from));
@@ -126,22 +129,26 @@ mod tests {
     #[test]
     fn test_initialize_rays_between() {
         let rays_between = super::initialize_rays_between();
-        for from in 0..64_u8 {
-            for to in 0..64_u8 {
-                let bb = rays_between[from as usize][to as usize];
+        for from in Square::iter() {
+            for to in Square::iter() {
+                let bb = rays_between[from.index()][to.index()];
                 let expected_bb = super::between(from, to);
                 assert_eq!(
-                    bb, expected_bb,
+                    bb,
+                    expected_bb,
                     "Rays between {} and {} do not match.",
-                    SQUARE_NAME[from as usize], SQUARE_NAME[to as usize]
+                    SQUARE_NAME[from.index()],
+                    SQUARE_NAME[to.index()]
                 );
 
-                let bb_rev = rays_between[to as usize][from as usize];
+                let bb_rev = rays_between[to.index()][from.index()];
                 let expected_bb_rev = super::between(to, from);
                 assert_eq!(
-                    bb_rev, expected_bb_rev,
+                    bb_rev,
+                    expected_bb_rev,
                     "Rays between {} and {} do not match.",
-                    SQUARE_NAME[to as usize], SQUARE_NAME[from as usize]
+                    SQUARE_NAME[to.index()],
+                    SQUARE_NAME[from.index()]
                 );
             }
         }

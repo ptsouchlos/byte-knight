@@ -19,6 +19,7 @@ use crate::{
     pieces::Piece,
     rays,
     side::Side,
+    square::Square,
 };
 
 #[allow(long_running_const_eval)]
@@ -229,8 +230,8 @@ pub(crate) const fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboar
 /// # Returns
 /// - A [`Bitboard`] representing all the valid attacks for a rook at the given `square` with the given occupancy.
 ///
-pub const fn rook(square: u8, occupancy: Bitboard) -> Bitboard {
-    let magic = ROOK_MAGICS[square as usize];
+pub const fn rook(square: Square, occupancy: Bitboard) -> Bitboard {
+    let magic = ROOK_MAGICS[square.index()];
     let index = magic.index(occupancy);
     ROOK_ATTACKS[index]
 }
@@ -243,8 +244,8 @@ pub const fn rook(square: u8, occupancy: Bitboard) -> Bitboard {
 ///
 /// # Returns
 /// - A [`Bitboard`] representing all the valid attacks for a bishop at the given square with the given occupancy.
-pub const fn bishop(square: u8, occupancy: Bitboard) -> Bitboard {
-    let magic = BISHOP_MAGICS[square as usize];
+pub const fn bishop(square: Square, occupancy: Bitboard) -> Bitboard {
+    let magic = BISHOP_MAGICS[square.index()];
     let index = magic.index(occupancy);
     BISHOP_ATTACKS[index]
 }
@@ -257,7 +258,7 @@ pub const fn bishop(square: u8, occupancy: Bitboard) -> Bitboard {
 ///
 /// # Returns
 /// - A [`Bitboard`] representing all the valid attacks for a queen at the given square with the given occupancy.
-pub fn queen(square: u8, occupancy: Bitboard) -> Bitboard {
+pub fn queen(square: Square, occupancy: Bitboard) -> Bitboard {
     rook(square, occupancy) | bishop(square, occupancy)
 }
 
@@ -269,8 +270,8 @@ pub fn queen(square: u8, occupancy: Bitboard) -> Bitboard {
 ///
 /// # Returns
 /// - A [`Bitboard`] representing all the valid attacks for a pawn at the given square on the given side.
-pub fn pawn(square: u8, side: Side) -> Bitboard {
-    let bb = Bitboard::from_square(square);
+pub fn pawn(square: Square, side: Side) -> Bitboard {
+    let bb = Bitboard::from(square);
     match side {
         Side::White => bitboard_helpers::north_west(bb) | bitboard_helpers::north_east(bb),
         Side::Black => bitboard_helpers::south_west(bb) | bitboard_helpers::south_east(bb),
@@ -351,9 +352,8 @@ const KING_ATTACKS: [Bitboard; NumberOf::SQUARES] = [
 ///
 /// # Returns
 /// - A [`Bitboard`] representing all the valid attacks for a king at the given square.
-pub fn king(square: u8) -> Bitboard {
-    assert!(square < NumberOf::SQUARES as u8);
-    KING_ATTACKS[square as usize]
+pub fn king(square: Square) -> Bitboard {
+    KING_ATTACKS[square.index()]
 }
 
 const KNIGHT_ATTACKS: [Bitboard; NumberOf::SQUARES] = [
@@ -465,9 +465,8 @@ fn generate_knight(square: u8) -> Bitboard {
 ///
 /// # Returns
 /// - A [`Bitboard`] representing all the valid attacks for a knight at the given square.
-pub fn knight(square: u8) -> Bitboard {
-    assert!(square < NumberOf::SQUARES as u8);
-    KNIGHT_ATTACKS[square as usize]
+pub fn knight(square: Square) -> Bitboard {
+    KNIGHT_ATTACKS[square.index()]
 }
 
 /// Get attack bitboard for the given piece, square occupancy and side to move.
@@ -480,7 +479,12 @@ pub fn knight(square: u8) -> Bitboard {
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the possible attacks of piece on the given square with the given occupancy.
-pub fn for_piece_on_square(piece: Piece, square: u8, occupancy: Bitboard, side: Side) -> Bitboard {
+pub fn for_piece_on_square(
+    piece: Piece,
+    square: Square,
+    occupancy: Bitboard,
+    side: Side,
+) -> Bitboard {
     match piece {
         Piece::Bishop => attacks::bishop(square, occupancy),
         Piece::King => attacks::king(square),
@@ -504,14 +508,15 @@ pub fn for_piece(piece: Piece, board: &Board, occupancy: Bitboard, side: Side) -
     let mut attacks_bb = Bitboard::default();
     let piece_bb = board.piece_bitboard(piece, side);
     for square in piece_bb.iter() {
-        attacks_bb |= for_piece_on_square(piece, square, occupancy, side);
+        let sq = Square::from_square_index(square);
+        attacks_bb |= for_piece_on_square(piece, sq, occupancy, side);
     }
 
     attacks_bb
 }
 
 pub fn all_attackers_of(
-    sq: u8,
+    sq: Square,
     board: &Board,
     attacking_side: Side,
     occupancy: Bitboard,
