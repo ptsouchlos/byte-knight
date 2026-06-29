@@ -55,21 +55,22 @@ impl Board {
         };
 
         let (piece, side) = self
-            .piece_on_square(from.inner())
+            .piece_on_square(from)
             .ok_or_else(|| anyhow::anyhow!("No piece on square"))?;
 
         // now just figure out the move descriptor
         // need to check if the move is a castle, en passant, promotion or a pawn two up move
         let can_double_push = piece == Piece::Pawn
-            && square::is_square_on_rank(from.inner(), Rank::pawn_start_rank(side).as_number());
+            && square::is_square_on_rank(from.inner(), Rank::pawn_start_rank(side).inner());
 
-        let is_double_push = can_double_push
-            && (from.rank.as_number() as i8).abs_diff(to.rank.as_number() as i8) == 2;
+        let is_double_push =
+            can_double_push && (from.rank().inner() as i8).abs_diff(to.rank().inner() as i8) == 2;
 
-        let is_castle = piece == Piece::King && (from.file as i8).abs_diff(to.file as i8) == 2;
+        let is_castle = piece == Piece::King
+            && (from.file().inner() as i8).abs_diff(to.file().inner() as i8) == 2;
         let is_en_passant = piece == Piece::Pawn
             && self.en_passant_square().is_some()
-            && self.en_passant_square().unwrap() == to.inner();
+            && self.en_passant_square().unwrap() == to;
 
         let states = [is_double_push, is_castle, is_en_passant];
         if states.iter().filter(|&&x| x).count() > 1 {
@@ -79,7 +80,7 @@ impl Board {
         let move_desc = if is_double_push {
             MoveFlag::DoublePush
         } else if is_castle {
-            if to.file > from.file {
+            if to.file() > from.file() {
                 moves::MoveFlag::CastleK
             } else {
                 moves::MoveFlag::CastleQ
@@ -113,12 +114,9 @@ impl Board {
         self.check_move_preconditions(mv)?;
 
         let from = mv.from();
-        let to: u8 = mv.to();
+        let to = mv.to();
         let (piece, _) = self.piece_on_square(from).ok_or_else(|| {
-            anyhow::anyhow!(
-                "No piece on square {} to move from",
-                SQUARE_NAME[from as usize]
-            )
+            anyhow::anyhow!("No piece on square {} to move from", SQUARE_NAME[from])
         })?;
 
         let captured = self.captured(mv);
@@ -134,7 +132,6 @@ impl Board {
         let them = us.opposite();
         let can_castle = self.castling_rights() > 0;
         let update_zobrist_hash = true;
-        let to_sq = Square::from_square_index(to);
 
         // en passant capture is handled separately
         if !mv.is_en_passant_capture()
@@ -148,7 +145,7 @@ impl Board {
             if cap == Piece::Rook {
                 // check if the rook was on a corner square
                 // if so, remove the castling rights for that side
-                if Square::CORNERS.contains(&to_sq) {
+                if Square::CORNERS.contains(&to) {
                     self.set_castling_rights(
                         self.castling_rights() & !(get_castling_right_to_remove(them, to)),
                     );
@@ -164,11 +161,11 @@ impl Board {
             // without a promotion flag. This covers both the pawn's own promotion
             // rank AND the opponent's back rank (which a TT hash collision could
             // target by replaying a non-pawn move as a pawn move).
-            let to_rank = to / 8;
-            if (to_rank == 0 || to_rank == 7) && !mv.is_promotion() {
+            let to_rank = to.rank();
+            if (to_rank == Rank::R1 || to_rank == Rank::R8) && !mv.is_promotion() {
                 bail!(
                     "Pawn moved to impossible rank {}: {}",
-                    to_rank + 1,
+                    to_rank.index() + 1,
                     mv.to_long_algebraic()
                 );
             }
@@ -178,11 +175,18 @@ impl Board {
             // cloning the current board.
             let ep_square_to_set = if mv.is_pawn_two_up() {
                 let en_passant_square = if us == Side::White {
-                    to - 8u8
+                    to.inner() - 8u8
                 } else {
-                    to + 8u8
+                    to.inner() + 8u8
                 };
-                if ep_capture_is_legal(self, from, en_passant_square, us) {
+                if ep_capture_is_legal(
+                    self,
+                    from,
+                    en_passant_square
+                        .try_into()
+                        .expect("Invalid ep square {en_passant_square}"),
+                    us,
+                ) {
                     Some(en_passant_square)
                 } else {
                     None
@@ -208,14 +212,17 @@ impl Board {
                 // If white, the pawn is one rank below the destination square.
                 // If black, the pawn is one rank above the destination square.
                 let en_passant_pawn_location = if us == Side::White {
-                    to - 8u8
+                    to.inner() - 8u8
                 } else {
-                    to + 8u8
+                    to.inner() + 8u8
                 };
 
                 let pawns = self.piece_bitboard(Piece::Pawn, them);
+                let ep_pawn_sq = en_passant_pawn_location
+                    .try_into()
+                    .expect("Invalid loc for captured ep pawn {en_passant_pawn_location}");
                 debug_assert!(
-                    pawns.is_square_occupied(en_passant_pawn_location),
+                    pawns.is_square_occupied(ep_pawn_sq),
                     "En passant pawn not on square {} for move {}\n{}",
                     SQUARE_NAME[en_passant_pawn_location as usize],
                     mv.to_long_algebraic(),
@@ -223,16 +230,11 @@ impl Board {
                 );
 
                 // Remove the EP captured pawn from the board.
-                self.remove_piece(
-                    them,
-                    Piece::Pawn,
-                    en_passant_pawn_location,
-                    update_zobrist_hash,
-                );
+                self.remove_piece(them, Piece::Pawn, ep_pawn_sq, update_zobrist_hash);
             }
 
             // Apply the EP square computed before the pawn moved.
-            self.set_en_passant_square(ep_square_to_set);
+            self.set_en_passant_square(ep_square_to_set.map(|sq| Square::from_square_index(sq)));
         } else {
             // reset the en passant square if it exists
             if self.en_passant_square().is_some() {
@@ -258,34 +260,18 @@ impl Board {
             // Handle castling, note that we've already moved the piece in question, which in this case would be the king.
             // So now we need to move the rook to the correct square.
             match to {
-                Squares::G1 => self.move_piece(
-                    us,
-                    Piece::Rook,
-                    Squares::H1,
-                    Squares::F1,
-                    update_zobrist_hash,
-                ),
-                Squares::C1 => self.move_piece(
-                    us,
-                    Piece::Rook,
-                    Squares::A1,
-                    Squares::D1,
-                    update_zobrist_hash,
-                ),
-                Squares::G8 => self.move_piece(
-                    us,
-                    Piece::Rook,
-                    Squares::H8,
-                    Squares::F8,
-                    update_zobrist_hash,
-                ),
-                Squares::C8 => self.move_piece(
-                    us,
-                    Piece::Rook,
-                    Squares::A8,
-                    Squares::D8,
-                    update_zobrist_hash,
-                ),
+                Square::G1 => {
+                    self.move_piece(us, Piece::Rook, Square::H1, Square::F1, update_zobrist_hash)
+                }
+                Square::C1 => {
+                    self.move_piece(us, Piece::Rook, Square::A1, Square::D1, update_zobrist_hash)
+                }
+                Square::G8 => {
+                    self.move_piece(us, Piece::Rook, Square::H8, Square::F8, update_zobrist_hash)
+                }
+                Square::C8 => {
+                    self.move_piece(us, Piece::Rook, Square::A8, Square::D8, update_zobrist_hash)
+                }
                 _ => panic!("Invalid castling move"),
             }
         }
@@ -318,11 +304,8 @@ impl Board {
         // check if the move is legal
         // if it is not, we need to undo the move
         let king_square = self.king_square(us);
-        let is_king_in_check = move_generation::square_state::is_square_attacked(
-            self,
-            Square::from_square_index(king_square),
-            them,
-        );
+        let is_king_in_check =
+            move_generation::square_state::is_square_attacked(self, king_square, them);
 
         if is_king_in_check {
             self.unmake_move()?;
@@ -364,7 +347,7 @@ impl Board {
             // Unmaking a null move so we just need to switch the side back and restore the en passant square if needed. There are no pieces to move or capture to restore.
             // Note that we don't need to update the zobrist hash here as it is restored from the game state.
             if let Some(sq) = state.en_passant_square {
-                self.set_en_passant_square(Some(sq));
+                self.set_en_passant_square(Some(Square::from_square_index(sq)));
             }
 
             return Ok(());
@@ -390,10 +373,10 @@ impl Board {
         if chess_move.is_castle() {
             // also need to move the rook back
             let (rook_from, rook_to) = match to {
-                Squares::G1 => (Squares::H1, Squares::F1),
-                Squares::C1 => (Squares::A1, Squares::D1),
-                Squares::G8 => (Squares::H8, Squares::F8),
-                Squares::C8 => (Squares::A8, Squares::D8),
+                Square::G1 => (Square::H1, Square::F1),
+                Square::C1 => (Square::A1, Square::D1),
+                Square::G8 => (Square::H8, Square::F8),
+                Square::C8 => (Square::A8, Square::D8),
                 _ => panic!("Invalid castling move"),
             };
 
@@ -405,11 +388,13 @@ impl Board {
         if let Some(captured_piece) = captured_piece {
             match chess_move.is_en_passant_capture() {
                 true => {
-                    let en_passant_square: u8 = if us == Side::White {
-                        to - 8u8
+                    let en_passant_square = if us == Side::White {
+                        to.offset(0, -1i8)
                     } else {
-                        to + 8u8
-                    };
+                        to.offset(0, 1i8)
+                    }
+                    .expect("Invalid target ep square for {us} with to -> {to}");
+
                     self.add_piece(them, Piece::Pawn, en_passant_square, update_zobrist_hash);
                     // we don't need to set the en passant square here as it is restored from the game state
                 }
@@ -439,7 +424,14 @@ impl Board {
     }
 
     /// Undo a move on the board. Passthrough call to [`Board::remove_piece`] and [`Board::add_piece`].
-    fn undo_move(&mut self, side: Side, piece: Piece, from: u8, to: u8, update_zobrist_hash: bool) {
+    fn undo_move(
+        &mut self,
+        side: Side,
+        piece: Piece,
+        from: Square,
+        to: Square,
+        update_zobrist_hash: bool,
+    ) {
         self.remove_piece(side, piece, to, update_zobrist_hash);
         self.add_piece(side, piece, from, update_zobrist_hash);
     }
@@ -452,7 +444,7 @@ impl Board {
     /// * `piece` - The piece to add.
     /// * `square` - The square to add the piece to.
     /// * `update_zobrist_hash` - Whether to update the zobrist hash for the addition of the piece.
-    fn add_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
+    fn add_piece(&mut self, side: Side, piece: Piece, square: Square, update_zobrist_hash: bool) {
         self.set_piece_square(piece, side, square);
         if update_zobrist_hash {
             self.update_zobrist_hash_for_piece(square, piece, side)
@@ -467,7 +459,13 @@ impl Board {
     /// * `piece` - The piece to remove.
     /// * `square` - The square to remove the piece from.
     /// * `update_zobrist_hash` - Whether to update the zobrist hash for the removal of the piece.
-    fn remove_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
+    fn remove_piece(
+        &mut self,
+        side: Side,
+        piece: Piece,
+        square: Square,
+        update_zobrist_hash: bool,
+    ) {
         debug_assert!(self.piece_on_square(square).is_some());
         self.remove_piece_from_square(piece, side, square);
         if update_zobrist_hash {
@@ -481,8 +479,8 @@ impl Board {
         &mut self,
         side: Side,
         piece: Piece,
-        from: u8,
-        to: u8,
+        from: Square,
+        to: Square,
         update_zobrist_hash: bool,
     ) {
         self.remove_piece(side, piece, from, update_zobrist_hash);
@@ -501,18 +499,23 @@ impl Board {
 ///
 /// Based on the Stockfish optimization in
 /// https://github.com/official-stockfish/Stockfish/commit/2321cf2f77b241d685ee68c9896f6574a6f12d0d
-pub(crate) fn ep_capture_is_legal(board: &Board, from: u8, ep_square: u8, us: Side) -> bool {
+pub(crate) fn ep_capture_is_legal(
+    board: &Board,
+    from: Square,
+    ep_square: Square,
+    us: Side,
+) -> bool {
     let them = us.opposite();
 
     // Any opposing pawns that could attack the EP square?
     let pawns = attacks::pawn(ep_square, us) & board.piece_bitboard(Piece::Pawn, them);
-    if pawns.empty() {
+    if pawns.is_empty() {
         return false;
     }
 
     let king_sq = board.king_square(them);
-    let (king_file, _) = square::from_square(king_sq);
-    let (from_file, _) = square::from_square(from);
+    let king_file = king_sq.file();
+    let from_file = from.file();
 
     // Blockers for them's king from the pre-move position.
     let king_blockers = attacks::blockers_for_king(board, them);
@@ -520,22 +523,20 @@ pub(crate) fn ep_capture_is_legal(board: &Board, from: u8, ep_square: u8, us: Si
 
     // No discovered check if `from` was not a blocker, or if king and `from`
     // share a file (the discovered ray would still be blocked by the new pawn).
-    let no_discovery =
-        !(Bitboard::from_square(from) & not_blockers).empty() || king_file == from_file;
+    let no_discovery = !(Bitboard::from(from) & not_blockers).is_empty() || king_file == from_file;
     if !no_discovery {
         return false;
     }
 
     // At least one capturing pawn must be unpinned (or pinned along the
     // king-EP line, which keeps the pin intact after the capture).
-    !(pawns & (not_blockers | rays::line(ep_square, king_sq))).empty()
+    !(pawns & (not_blockers | rays::line(ep_square, king_sq))).is_empty()
 }
 
 /// Helper function to get what castling rights to remove based on the square the piece moved from.
-fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
-    let from_sq = Square::from(from);
+fn get_castling_right_to_remove(us: Side, from: Square) -> u8 {
     match us {
-        Side::White => match from_sq {
+        Side::White => match from {
             // rook moves
             Square::A1 => CastlingAvailability::WHITE_QUEENSIDE,
             Square::H1 => CastlingAvailability::WHITE_KINGSIDE,
@@ -544,7 +545,7 @@ fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
             }
             _ => 0,
         },
-        Side::Black => match from_sq {
+        Side::Black => match from {
             // rook moves
             Square::A8 => CastlingAvailability::BLACK_QUEENSIDE,
             Square::H8 => CastlingAvailability::BLACK_KINGSIDE,
@@ -574,13 +575,10 @@ mod tests {
         let mut board = Board::from_fen("8/2k5/8/2Pp3r/K7/8/8/8 w - d6 0 1").unwrap();
         let move_list = move_generation::legal::generate_moves(&board, MoveFilter::All);
 
-        let en_passant_move = move_list
-            .iter()
-            .find(|mv| mv.to() == Square::D6.inner())
-            .unwrap();
+        let en_passant_move = move_list.iter().find(|mv| mv.to() == Square::D6).unwrap();
 
         println!("Making en passant move: {en_passant_move}");
-        assert!(board.piece_on_square(Square::C5.inner()).is_some());
+        assert!(board.piece_on_square(Square::C5).is_some());
         assert!(board.check_move_preconditions(en_passant_move).is_ok());
         let move_result = board.make_move(en_passant_move);
         assert!(move_result.is_ok());
@@ -624,15 +622,15 @@ mod tests {
 
         let mut queen_bb = board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 1);
-        assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
+        assert_eq!(queen_bb, Bitboard::from(Square::D1));
 
         let mv_ok = board.make_move(&initial_mv);
         assert!(mv_ok.is_ok());
 
         queen_bb = board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 2);
-        let mut compare_bb = Bitboard::from_square(Squares::D1);
-        compare_bb.set_square(Squares::C8);
+        let mut compare_bb = Bitboard::from(Square::D1);
+        compare_bb.set_square(Square::C8);
         assert_eq!(queen_bb, compare_bb);
 
         let undo_result = board.unmake_move();
@@ -640,7 +638,7 @@ mod tests {
 
         queen_bb = board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 1);
-        assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
+        assert_eq!(queen_bb, Bitboard::from(Square::D1));
     }
 
     #[test]
@@ -822,11 +820,7 @@ mod tests {
     fn reject_pawn_to_own_promotion_rank_without_flag() {
         // White pawn on a7, push to a8 as Standard (missing promotion flag)
         let mut board = Board::from_fen("8/P5k1/8/8/8/8/8/4K3 w - - 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::A7),
-            Square::from_square_index(Squares::A8),
-            MoveFlag::Standard,
-        );
+        let mv = Move::new(Square::A7, Square::A8, MoveFlag::Standard);
         assert!(board.make_move_unchecked(&mv).is_err());
     }
 
@@ -834,11 +828,7 @@ mod tests {
     fn reject_pawn_to_opponent_back_rank() {
         // White pawn on b2, TT collision moves it to a1 (rank 0)
         let mut board = Board::from_fen("4k3/8/8/8/8/8/1P6/4K3 w - - 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::B2),
-            Square::from_square_index(Squares::A1),
-            MoveFlag::Standard,
-        );
+        let mv = Move::new(Square::B2, Square::A1, MoveFlag::Standard);
         assert!(board.make_move_unchecked(&mv).is_err());
     }
 
@@ -846,11 +836,7 @@ mod tests {
     fn reject_black_pawn_to_own_promotion_rank_without_flag() {
         // Black pawn on h2, push to h1 as Standard (missing promotion flag)
         let mut board = Board::from_fen("4k3/8/8/8/8/8/7p/4K3 b - - 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::H2),
-            Square::from_square_index(Squares::H1),
-            MoveFlag::Standard,
-        );
+        let mv = Move::new(Square::H2, Square::H1, MoveFlag::Standard);
         assert!(board.make_move_unchecked(&mv).is_err());
     }
 
@@ -858,11 +844,7 @@ mod tests {
     fn reject_black_pawn_to_opponent_back_rank() {
         // Black pawn on g7, TT collision moves it to h8 (rank 7)
         let mut board = Board::from_fen("4k3/6p1/8/8/8/8/8/4K3 b - - 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::G7),
-            Square::from_square_index(Squares::H8),
-            MoveFlag::Standard,
-        );
+        let mv = Move::new(Square::G7, Square::H8, MoveFlag::Standard);
         assert!(board.make_move_unchecked(&mv).is_err());
     }
 
@@ -870,11 +852,7 @@ mod tests {
     fn reject_castle_with_occupied_intermediate() {
         // White king on e1, rook on h1, bishop on f1 blocks castling
         let mut board = Board::from_fen("4k3/8/8/8/8/8/8/4KB1R w K - 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::E1),
-            Square::from_square_index(Squares::G1),
-            MoveFlag::CastleK,
-        );
+        let mv = Move::new(Square::E1, Square::G1, MoveFlag::CastleK);
         assert!(board.make_move_unchecked(&mv).is_err());
     }
 
@@ -882,11 +860,7 @@ mod tests {
     fn reject_castle_without_rook() {
         // White king on e1, no rook on h1 but has kingside rights
         let mut board = Board::from_fen("4k3/8/8/8/8/8/8/4K3 w K - 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::E1),
-            Square::from_square_index(Squares::G1),
-            MoveFlag::CastleK,
-        );
+        let mv = Move::new(Square::E1, Square::G1, MoveFlag::CastleK);
         assert!(board.make_move_unchecked(&mv).is_err());
     }
 
@@ -894,11 +868,7 @@ mod tests {
     fn reject_ep_without_matching_square() {
         // White pawn on e5, no EP square set, but move has EP flag
         let mut board = Board::from_fen("4k3/8/8/4Pp2/8/8/8/4K3 w - - 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::E5),
-            Square::from_square_index(Squares::F6),
-            MoveFlag::EnPassant,
-        );
+        let mv = Move::new(Square::E5, Square::F6, MoveFlag::EnPassant);
         assert!(board.make_move_unchecked(&mv).is_err());
     }
 
@@ -906,11 +876,7 @@ mod tests {
     fn reject_ep_without_target_pawn() {
         // White pawn on e5, EP square set to f6 but no black pawn on f5
         let mut board = Board::from_fen("4k3/8/8/4P3/8/8/8/4K3 w - f6 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::E5),
-            Square::from_square_index(Squares::F6),
-            MoveFlag::EnPassant,
-        );
+        let mv = Move::new(Square::E5, Square::F6, MoveFlag::EnPassant);
         assert!(board.make_move_unchecked(&mv).is_err());
     }
 
@@ -918,11 +884,7 @@ mod tests {
     fn accept_valid_promotion() {
         // White pawn on a7, proper queen promotion should succeed
         let mut board = Board::from_fen("8/P5k1/8/8/8/8/8/4K3 w - - 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::A7),
-            Square::from_square_index(Squares::A8),
-            MoveFlag::PromotionQueen,
-        );
+        let mv = Move::new(Square::A7, Square::A8, MoveFlag::PromotionQueen);
         assert!(board.make_move_unchecked(&mv).is_ok());
     }
 
@@ -930,11 +892,7 @@ mod tests {
     fn accept_valid_castle() {
         // White king on e1, rook on h1, path clear
         let mut board = Board::from_fen("4k3/8/8/8/8/8/8/4K2R w K - 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::E1),
-            Square::from_square_index(Squares::G1),
-            MoveFlag::CastleK,
-        );
+        let mv = Move::new(Square::E1, Square::G1, MoveFlag::CastleK);
         assert!(board.make_move_unchecked(&mv).is_ok());
     }
 
@@ -942,11 +900,7 @@ mod tests {
     fn accept_valid_en_passant() {
         // White pawn on e5, black pawn on f5, EP square f6
         let mut board = Board::from_fen("4k3/8/8/4Pp2/8/8/8/4K3 w - f6 0 1").unwrap();
-        let mv = Move::new(
-            Square::from_square_index(Squares::E5),
-            Square::from_square_index(Squares::F6),
-            MoveFlag::EnPassant,
-        );
+        let mv = Move::new(Square::E5, Square::F6, MoveFlag::EnPassant);
         assert!(board.make_move_unchecked(&mv).is_ok());
     }
 

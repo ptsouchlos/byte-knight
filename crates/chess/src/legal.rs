@@ -20,14 +20,13 @@ use crate::{
     bitboard::Bitboard,
     board::Board,
     definitions::RANK_BITBOARDS,
-    file::File,
-    move_generation::{self, NORTH, SOUTH, metadata::CheckPinMetadata, square_state},
+    move_generation::{self, metadata::CheckPinMetadata, square_state},
     moves::{Move, MoveFlag},
     pieces::Piece,
     rank::Rank,
     rays,
     side::Side,
-    square::{self, Square},
+    square::Square,
 };
 
 /// Checks if a given [`Move`] on the given [`Board`].
@@ -103,20 +102,20 @@ fn is_pseudo_legal_pawn(
     board: &Board,
     us: Side,
     them: Side,
-    from: u8,
-    to: u8,
+    from: Square,
+    to: Square,
     flag: MoveFlag,
     occupancy: Bitboard,
 ) -> bool {
     let start_rank = Rank::pawn_start_rank(us);
     let promo_rank = Rank::promotion_rank(us);
-    let push_delta = match us {
-        Side::White => NORTH as i8,
-        Side::Black => -(SOUTH as i8),
+    let push_rank_offset = match us {
+        Side::White => 1i8,
+        Side::Black => -1i8,
     };
 
-    let from_rank = Rank::of(from);
-    let to_rank = Rank::of(to);
+    let from_rank = from.rank();
+    let to_rank = to.rank();
 
     if flag.is_promotion() && to_rank != promo_rank {
         return false;
@@ -130,8 +129,14 @@ fn is_pseudo_legal_pawn(
             if from_rank != start_rank {
                 return false;
             }
-            let intermediate = (from as i8 + push_delta) as u8;
-            let dest = (from as i8 + 2 * push_delta) as u8;
+            let intermediate = from
+                .offset(0, push_rank_offset)
+                .expect("Invalid single push from {from}");
+
+            let dest = from
+                .offset(0, 2 * push_rank_offset)
+                .expect("Invalid double push destination from {from}");
+
             dest == to
                 && !occupancy.is_square_occupied(intermediate)
                 && !occupancy.is_square_occupied(to)
@@ -144,11 +149,15 @@ fn is_pseudo_legal_pawn(
                 return false;
             }
             // The enemy pawn being captured must actually exist.
-            let captured_sq = match us {
-                // EP capture is 1 row back towards starting rank
-                Side::White => to - 8,
-                Side::Black => to + 8,
+            let captured_sq_rank_offset = match us {
+                Side::White => -1i8,
+                Side::Black => 1i8,
             };
+
+            let captured_sq = to
+                .offset(0, captured_sq_rank_offset)
+                .expect("Invalid capture square for EP dest for {from} -> {to}");
+
             // Check that the captured EP piece is in fact their pawn.
             board
                 .piece_on_square(captured_sq)
@@ -159,9 +168,11 @@ fn is_pseudo_legal_pawn(
             false
         }
         _ => {
-            let file_diff = (File::of(from) as u8).abs_diff(File::of(to) as u8);
+            let file_diff = (from.file() as u8).abs_diff(to.file() as u8);
             if file_diff == 0 {
-                let dest = (from as i8 + push_delta) as u8;
+                let dest = from
+                    .offset(0, push_rank_offset)
+                    .expect("Invalid destination square from {from}");
                 dest == to && !occupancy.is_square_occupied(to)
             } else if file_diff == 1 {
                 attacks::pawn(from, us).is_square_occupied(to)
@@ -176,8 +187,8 @@ fn is_pseudo_legal_pawn(
 fn is_pseudo_legal_king(
     board: &Board,
     us: Side,
-    from: u8,
-    to: u8,
+    from: Square,
+    to: Square,
     flag: MoveFlag,
     occupancy: Bitboard,
 ) -> bool {
@@ -187,17 +198,17 @@ fn is_pseudo_legal_king(
                 Side::White => (Square::E1, Square::H1, Square::F1, Square::G1),
                 Side::Black => (Square::E8, Square::H8, Square::F8, Square::G8),
             };
-            if from != king_sq.inner() || to != g_sq.inner() {
+            if from != king_sq || to != g_sq {
                 return false;
             }
             if !board.can_castle_kingside(us) {
                 return false;
             }
             board
-                .piece_on_square(rook_sq.inner())
+                .piece_on_square(rook_sq)
                 .is_some_and(|(p, s)| p == Piece::Rook && s == us)
-                && !occupancy.is_square_occupied(f_sq.inner())
-                && !occupancy.is_square_occupied(g_sq.inner())
+                && !occupancy.is_square_occupied(f_sq)
+                && !occupancy.is_square_occupied(g_sq)
                 && !square_state::is_square_attacked(
                     board,
                     Square::from_square_index(king_sq.inner()),
@@ -219,18 +230,18 @@ fn is_pseudo_legal_king(
                 Side::White => (Square::E1, Square::A1, Square::D1, Square::C1, Square::B1),
                 Side::Black => (Square::E8, Square::A8, Square::D8, Square::C8, Square::B8),
             };
-            if from != king_sq.inner() || to != c_sq.inner() {
+            if from != king_sq || to != c_sq {
                 return false;
             }
             if !board.can_castle_queenside(us) {
                 return false;
             }
             board
-                .piece_on_square(rook_sq.inner())
+                .piece_on_square(rook_sq)
                 .is_some_and(|(p, s)| p == Piece::Rook && s == us)
-                && !occupancy.is_square_occupied(d_sq.inner())
-                && !occupancy.is_square_occupied(c_sq.inner())
-                && !occupancy.is_square_occupied(b_sq.inner())
+                && !occupancy.is_square_occupied(d_sq)
+                && !occupancy.is_square_occupied(c_sq)
+                && !occupancy.is_square_occupied(b_sq)
                 && !square_state::is_square_attacked(
                     board,
                     Square::from_square_index(king_sq.inner()),
@@ -297,19 +308,19 @@ pub fn is_legal_with_metadata(board: &Board, mv: &Move, meta: &CheckPinMetadata)
 
     // Single check evasion: non-king piece must capture the checker or block the ray.
     if meta.in_check() {
-        let to_bb = Bitboard::from_square(to);
+        let to_bb = Bitboard::from(to);
         if !to_bb.intersects(meta.capture_mask | meta.push_mask) {
             return false;
         }
         // A pinned piece that evades check must still stay on its pin ray.
-        if Bitboard::from_square(from).intersects(meta.pinned) {
+        if Bitboard::from(from).intersects(meta.pinned) {
             return pinned_move_is_on_ray(meta, from, to, king_sq, board.pieces(them));
         }
         return true;
     }
 
     // Pinned piece: destination must stay on the pin ray.
-    if Bitboard::from_square(from).intersects(meta.pinned) {
+    if Bitboard::from(from).intersects(meta.pinned) {
         return pinned_move_is_on_ray(meta, from, to, king_sq, board.pieces(them));
     }
 
@@ -335,13 +346,13 @@ pub fn is_legal(board: &Board, mv: &Move) -> bool {
 ///
 /// Removes the king from occupancy so x-ray attacks through the king are
 /// detected. For captures, also removes the captured piece.
-fn king_destination_safe(board: &Board, to: u8, them: Side, occupancy: Bitboard) -> bool {
+fn king_destination_safe(board: &Board, to: Square, them: Side, occupancy: Bitboard) -> bool {
     let us = board.side_to_move();
     let king_bb = board.piece_bitboard(Piece::King, us);
     // Remove king so sliders attacking through it are detected.
     let occ = occupancy & !king_bb;
     // Remove any captured piece so X-ray defense behind it is detected.
-    let occ = occ & !Bitboard::from_square(to);
+    let occ = occ & !Bitboard::from(to);
     attacks::all_attackers_of(to, board, them, occ).is_empty()
 }
 
@@ -353,39 +364,45 @@ fn ep_legal(
     board: &Board,
     mv: &Move,
     meta: &CheckPinMetadata,
-    king_sq: u8,
+    king_sq: Square,
     us: Side,
     them: Side,
     occupancy: Bitboard,
 ) -> bool {
     let from = mv.from();
     let to = mv.to();
+
     // The pawn being captured sits one rank behind the EP square.
     let captured_sq = match us {
-        Side::White => to - 8,
-        Side::Black => to + 8,
+        Side::White => to.offset(0, -1i8),
+        Side::Black => to.offset(0, 1i8),
     };
-    let captured_bb = Bitboard::from_square(captured_sq);
-    let to_bb = Bitboard::from_square(to);
 
-    // In check: EP must capture the checking pawn or land on the push-mask ray.
-    if meta.in_check()
-        && !captured_bb.intersects(meta.checkers)
-        && !to_bb.intersects(meta.push_mask)
-    {
-        return false;
+    if let Some(cap_sq) = captured_sq {
+        let captured_bb = Bitboard::from(cap_sq);
+        let to_bb = Bitboard::from(to);
+
+        // In check: EP must capture the checking pawn or land on the push-mask ray.
+        if meta.in_check()
+            && !captured_bb.intersects(meta.checkers)
+            && !to_bb.intersects(meta.push_mask)
+        {
+            return false;
+        }
+
+        // Horizontal discovered check: remove both pawns and test king's rank.
+        let modified_occ = occupancy & !Bitboard::from(from) & !Bitboard::from(cap_sq);
+        let king_rank = king_sq.rank();
+        let rank_bb = RANK_BITBOARDS[king_rank as usize];
+        let rank_attackers = attacks::rook(king_sq, modified_occ)
+            & rank_bb
+            & (board.piece_bitboard(Piece::Rook, them) | board.piece_bitboard(Piece::Queen, them));
+
+        rank_attackers.is_empty()
+    } else {
+        // The EP capture square is invalid, so return false
+        false
     }
-
-    // Horizontal discovered check: remove both pawns and test king's rank.
-    let modified_occ =
-        occupancy & !Bitboard::from_square(from) & !Bitboard::from_square(captured_sq);
-    let (_, king_rank) = square::from_square(king_sq);
-    let rank_bb = RANK_BITBOARDS[king_rank as usize];
-    let rank_attackers = attacks::rook(king_sq, modified_occ)
-        & rank_bb
-        & (board.piece_bitboard(Piece::Rook, them) | board.piece_bitboard(Piece::Queen, them));
-
-    rank_attackers.is_empty()
 }
 
 /// Checks if the move of a pinned piece is along the pinned ray.
@@ -401,18 +418,18 @@ fn ep_legal(
 /// True if the pinned move is on the ray, false otherwise.
 fn pinned_move_is_on_ray(
     meta: &CheckPinMetadata,
-    from: u8,
-    to: u8,
-    king_sq: u8,
+    from: Square,
+    to: Square,
+    king_sq: Square,
     their_pieces: Bitboard,
 ) -> bool {
     let all_pin_rays = meta.orthogonal_pin_rays | meta.diagonal_pin_rays;
     // Iterate enemy pieces that lie on any pin ray to find the pinner of `from`.
-    for pinner_sq in (their_pieces & all_pin_rays).iter() {
+    for pinner_sq in their_pieces & all_pin_rays {
         let ray = rays::between(pinner_sq, king_sq);
         if ray.is_square_occupied(from) {
             // `from` is between the king and this pinner — this is our pin ray.
-            let full_ray = ray | Bitboard::from_square(pinner_sq);
+            let full_ray = ray | Bitboard::from(pinner_sq);
             return full_ray.is_square_occupied(to);
         }
     }
@@ -645,7 +662,7 @@ mod tests {
         // FEN parsing now strips obviously-illegal EP targets, so set the EP
         // square directly to test the move-generation legality path.
         let mut board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - - 0 1").unwrap();
-        board.set_en_passant_square(Some(Square::D3.inner()));
+        board.set_en_passant_square(Some(Square::D3));
         let meta = metadata::compute(&board);
         // e4→d3 EP
         let ep_mv = Move::new(Square::E4, Square::D3, MoveFlag::EnPassant);

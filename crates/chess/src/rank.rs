@@ -3,7 +3,10 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::ops::Sub;
+use std::{
+    fmt::Display,
+    ops::{Index, Sub},
+};
 
 use crate::{bitboard::Bitboard, definitions::RANK_BITBOARDS, side::Side};
 use anyhow::Result;
@@ -23,6 +26,23 @@ pub enum Rank {
 }
 
 impl Rank {
+    pub const MIN: u8 = 0;
+    pub const MAX: u8 = 7;
+    pub const COUNT: usize = 8;
+
+    pub const fn all() -> [Self; Self::COUNT] {
+        [
+            Rank::R1,
+            Rank::R2,
+            Rank::R3,
+            Rank::R4,
+            Rank::R5,
+            Rank::R6,
+            Rank::R7,
+            Rank::R8,
+        ]
+    }
+
     /// Returns the rank of the promotion square for the given side.
     pub const fn promotion_rank(side: Side) -> Rank {
         match side {
@@ -40,7 +60,7 @@ impl Rank {
     }
 
     /// Returns the rank as a number.
-    pub fn as_number(&self) -> u8 {
+    pub fn inner(&self) -> u8 {
         *self as u8
     }
 
@@ -92,6 +112,18 @@ impl Rank {
     pub fn to_bitboard(self) -> Bitboard {
         RANK_BITBOARDS[self as usize]
     }
+
+    pub fn index(self) -> usize {
+        self.inner() as usize
+    }
+
+    pub fn iter() -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator<Item = Self> {
+        Self::all().into_iter()
+    }
+
+    pub fn char(&self) -> char {
+        (self.inner() + b'1') as char
+    }
 }
 
 impl TryFrom<u8> for Rank {
@@ -120,6 +152,20 @@ impl Sub for Rank {
     }
 }
 
+impl<T> Index<Rank> for [T; Rank::COUNT] {
+    type Output = T;
+
+    fn index(&self, rank: Rank) -> &Self::Output {
+        &self[rank.index()]
+    }
+}
+
+impl Display for Rank {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_string().fmt(f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,5 +188,10 @@ mod tests {
         assert_eq!(Rank::R6.to_bitboard(), 0x0000FF0000000000);
         assert_eq!(Rank::R7.to_bitboard(), 0x00FF000000000000);
         assert_eq!(Rank::R8.to_bitboard(), 0xFF00000000000000);
+    }
+
+    #[test]
+    fn print_rank() {
+        assert_eq!(format!("{}", Rank::R1), "1");
     }
 }

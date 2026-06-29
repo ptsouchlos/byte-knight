@@ -3,6 +3,8 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
+use std::{fmt::Display, u8};
+
 use anyhow::Result;
 
 use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS};
@@ -22,6 +24,10 @@ pub enum File {
 }
 
 impl File {
+    pub const MIN: u8 = 0;
+    pub const MAX: u8 = 7;
+    pub const COUNT: usize = 8;
+
     /// Returns the file offset by `delta` if it is within range.
     /// Returns `None` if the resulting file is out of bounds.
     ///
@@ -45,6 +51,19 @@ impl File {
             return Some(unsafe { std::mem::transmute::<u8, File>(new_file as u8) });
         }
         None
+    }
+
+    pub const fn all() -> [Self; Self::COUNT] {
+        [
+            File::A,
+            File::B,
+            File::C,
+            File::D,
+            File::E,
+            File::F,
+            File::G,
+            File::H,
+        ]
     }
 
     pub const fn to_bitboard(self) -> Bitboard {
@@ -77,6 +96,18 @@ impl File {
             Self::G => 'g',
             Self::H => 'h',
         }
+    }
+
+    pub const fn inner(&self) -> u8 {
+        *self as u8
+    }
+
+    pub const fn index(&self) -> usize {
+        self.inner() as usize
+    }
+
+    pub fn iter() -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator<Item = Self> {
+        File::all().into_iter()
     }
 }
 
@@ -118,6 +149,12 @@ impl TryFrom<char> for File {
 impl Into<u8> for File {
     fn into(self) -> u8 {
         self as u8
+    }
+}
+
+impl Display for File {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_char().fmt(f)
     }
 }
 

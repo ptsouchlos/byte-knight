@@ -41,8 +41,8 @@ pub struct Bitboard {
 }
 
 impl Bitboard {
-    pub const EMPTY: Bitboard = Bitboard::new(0);
-    pub const FULL: Bitboard = Bitboard::new(0xFFFFFFFFFFFFFFFF);
+    const EMPTY: Bitboard = Bitboard::new(0);
+    const FULL: Bitboard = Bitboard::new(0xFFFFFFFFFFFFFFFF);
 
     /// Create a new Bitboard with the given data.
     pub const fn new(data: u64) -> Self {
@@ -50,8 +50,8 @@ impl Bitboard {
     }
 
     /// Create an empty Bitboard.
-    pub const fn default() -> Self {
-        Bitboard { data: 0 }
+    pub const fn empty() -> Self {
+        Self::EMPTY
     }
 
     /// Create a bitboard from the given square index.
@@ -61,23 +61,23 @@ impl Bitboard {
 
     /// Create a filled Bitboard.
     pub const fn filled() -> Self {
-        Bitboard { data: u64::MAX }
+        Self::FULL
     }
 
     /// Check if a square is occupied.
-    pub fn is_square_occupied(&self, square: u8) -> bool {
-        self.data & (1 << square) != 0
+    pub fn is_square_occupied(&self, square: Square) -> bool {
+        self.data & (1 << square.inner()) != 0
     }
 
     /// Mark a square as occupied.
-    pub const fn set_square(&mut self, square: u8) {
+    pub const fn set_square(&mut self, square: Square) {
         self.clear_square(square);
-        self.data |= 1 << square;
+        self.data |= 1 << square.inner();
     }
 
     /// Clear a given square.
-    pub const fn clear_square(&mut self, square: u8) {
-        self.data &= !(1 << square);
+    pub const fn clear_square(&mut self, square: Square) {
+        self.data &= !(1 << square.inner());
     }
 
     /// Get the number of occupied squares on the board.
@@ -97,6 +97,10 @@ impl Bitboard {
     /// True if the [`Bitboard`] is empty, false otherwise.
     pub const fn is_empty(&self) -> bool {
         self.data == EMPTY
+    }
+
+    pub const fn is_nonempty(&self) -> bool {
+        !self.is_empty()
     }
 
     /// Check if the bitboard intersects with another bitboard.
@@ -138,24 +142,28 @@ impl Bitboard {
         })
     }
 
-    /// Check if the bitboard is empty.
-    ///
-    /// # Returns
-    /// - `bool` - True if the bitboard is empty. False otherwise.
-    pub fn empty(&self) -> bool {
-        self.data == 0
-    }
-
     /// Get the least significant set square in the bitboard.
     #[inline(always)]
-    pub const fn lsb(self) -> Square {
-        Square::from_square_index(self.as_number().trailing_zeros() as u8)
+    pub fn lsb(self) -> Option<Square> {
+        if !self.is_empty() {
+            Some(Square::from_square_index(
+                self.as_number().trailing_zeros() as u8
+            ))
+        } else {
+            None
+        }
     }
 
-    pub const fn pop_lsb(&mut self) -> Square {
-        let lsb = self.lsb();
-        self.clear_square(lsb.inner());
-        lsb
+    pub fn pop_lsb(&mut self) -> Option<Square> {
+        let lsb = self.lsb()?;
+        self.clear_square(lsb);
+        Some(lsb)
+    }
+}
+
+impl Default for Bitboard {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 
@@ -170,7 +178,7 @@ impl Iterator for BitboardIter {
         if self.bitboard.is_empty() {
             None
         } else {
-            Some(self.bitboard.lsb())
+            self.bitboard.lsb()
         }
     }
 
@@ -192,6 +200,24 @@ impl IntoIterator for Bitboard {
 
     fn into_iter(self) -> Self::IntoIter {
         BitboardIter { bitboard: self }
+    }
+}
+
+impl IntoIterator for &Bitboard {
+    type Item = Square;
+    type IntoIter = BitboardIter;
+    #[inline(always)]
+    fn into_iter(self) -> Self::IntoIter {
+        BitboardIter { bitboard: *self }
+    }
+}
+
+impl IntoIterator for &mut Bitboard {
+    type Item = Square;
+    type IntoIter = BitboardIter;
+    #[inline(always)]
+    fn into_iter(self) -> Self::IntoIter {
+        BitboardIter { bitboard: *self }
     }
 }
 
@@ -367,12 +393,6 @@ impl From<u8> for Bitboard {
     }
 }
 
-impl Default for Bitboard {
-    fn default() -> Self {
-        Bitboard::default()
-    }
-}
-
 // Allow printing the Bitboard
 impl Display for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -405,29 +425,29 @@ mod tests {
     #[test]
     fn is_square_occupied() {
         let bb = Bitboard::new(0x8000000000000001);
-        assert!(bb.is_square_occupied(0));
-        assert!(bb.is_square_occupied(63));
-        assert!(!bb.is_square_occupied(1));
-        assert!(!bb.is_square_occupied(62));
+        assert!(bb.is_square_occupied(0u8.try_into().unwrap()));
+        assert!(bb.is_square_occupied(63u8.try_into().unwrap()));
+        assert!(!bb.is_square_occupied(1u8.try_into().unwrap()));
+        assert!(!bb.is_square_occupied(62u8.try_into().unwrap()));
     }
 
     #[test]
     fn set_square() {
         let mut bb = Bitboard::new(0);
-        bb.set_square(0);
-        bb.set_square(63);
+        bb.set_square(0u8.try_into().unwrap());
+        bb.set_square(63u8.try_into().unwrap());
         assert_eq!(bb.data, 0x8000000000000001);
 
         bb = Bitboard::new(0);
-        bb.set_square(28);
+        bb.set_square(28u8.try_into().unwrap());
         assert_eq!(bb.data, 0x10000000);
     }
 
     #[test]
     fn clear_square() {
         let mut bb = Bitboard::new(0xFFFFFFFFFFFFFFFF);
-        bb.clear_square(0);
-        bb.clear_square(63);
+        bb.clear_square(0u8.try_into().unwrap());
+        bb.clear_square(63u8.try_into().unwrap());
         assert_eq!(bb.data, 0x7FFFFFFFFFFFFFFE);
     }
 

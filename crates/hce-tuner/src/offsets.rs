@@ -162,25 +162,21 @@ mod tests {
         let file = File::C;
         let rank = Rank::R2;
 
-        let sq = Square::from_file_rank(file.to_char(), rank.as_number()).unwrap();
+        let sq = Square::from_file_rank(file.to_char(), rank.inner()).unwrap();
         let offset = Offsets::offset_for_passed_pawn(sq.inner() as usize, Side::Black);
         assert_eq!(Offsets::PASSED_PAWN, offset);
         let offset = Offsets::offset_for_passed_pawn(sq.inner() as usize, Side::White);
         assert_eq!(389, offset);
 
-        let doubled_offset =
-            Offsets::offset_for_doubled_pawn(sq.inner() as usize, Side::White);
+        let doubled_offset = Offsets::offset_for_doubled_pawn(sq.inner() as usize, Side::White);
         assert_eq!(Offsets::DOUBLED_PAWN + file as usize, doubled_offset);
 
-        let double_offset_2 =
-            Offsets::offset_for_doubled_pawn(sq.inner() as usize, Side::Black);
+        let double_offset_2 = Offsets::offset_for_doubled_pawn(sq.inner() as usize, Side::Black);
         assert_eq!(Offsets::DOUBLED_PAWN + file as usize, double_offset_2);
 
-        let isolated_offset =
-            Offsets::offset_for_isolated_pawn(sq.inner() as usize, Side::White);
+        let isolated_offset = Offsets::offset_for_isolated_pawn(sq.inner() as usize, Side::White);
         assert_eq!(Offsets::ISOLATED_PAWN + file as usize, isolated_offset);
-        let isolated_offset_2 =
-            Offsets::offset_for_isolated_pawn(sq.inner() as usize, Side::Black);
+        let isolated_offset_2 = Offsets::offset_for_isolated_pawn(sq.inner() as usize, Side::Black);
         assert_eq!(Offsets::ISOLATED_PAWN + file as usize, isolated_offset_2);
 
         let bishop_pair_offset = Offsets::offset_for_bishop_pair();

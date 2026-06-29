@@ -593,7 +593,7 @@ pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
 
     let occ = board.all_pieces() ^ snipers;
 
-    for sq in snipers.iter() {
+    for sq in snipers {
         let bb = rays::between(king_square, sq) & occ;
         if bb.number_of_occupied_squares() == 1 {
             blockers |= bb;
@@ -904,38 +904,38 @@ mod tests {
 
     #[test]
     fn test_knight_attacks() {
-        for sq in 0..NumberOf::SQUARES as u8 {
+        for sq in Bitboard::filled() {
             let attacks = attacks::knight(sq);
             println!("Bitboard::new({:#x}),", attacks.as_number());
-            assert_eq!(attacks, Bitboard::new(EXPECTED_KNIGHT_ATTACKS[sq as usize]))
+            assert_eq!(attacks, Bitboard::new(EXPECTED_KNIGHT_ATTACKS[sq]))
         }
     }
 
     #[test]
     fn test_king_attacks() {
-        for sq in 0..NumberOf::SQUARES as u8 {
+        for sq in Bitboard::filled() {
             let attacks = attacks::king(sq);
             println!("{}", attacks);
             // println!("Bitboard::new({}),", attacks);
             assert_eq!(
                 attacks.as_number(),
-                EXPECTED_KING_ATTACKS[sq as usize],
+                EXPECTED_KING_ATTACKS[sq],
                 "King attack\n{}\nDoes not match\n{}",
                 attacks,
-                Bitboard::new(EXPECTED_KING_ATTACKS[sq as usize])
+                Bitboard::new(EXPECTED_KING_ATTACKS[sq])
             )
         }
     }
 
     #[test]
     fn test_queen_attacks() {
-        for sq in 0..NumberOf::SQUARES as u8 {
+        for sq in Bitboard::filled() {
             let attacks = attacks::queen(sq, Bitboard::default());
             println!("{}", attacks);
             assert_eq!(
                 attacks,
-                Bitboard::new(EXPECTED_DIAGONAL_ATTACKS[sq as usize])
-                    | Bitboard::new(EXPECTED_ORTHOGONAL_ATTACKS[sq as usize])
+                Bitboard::new(EXPECTED_DIAGONAL_ATTACKS[sq])
+                    | Bitboard::new(EXPECTED_ORTHOGONAL_ATTACKS[sq])
             )
         }
     }
@@ -1157,7 +1157,7 @@ mod tests {
             0,
         ];
 
-        for sq in 0..NumberOf::SQUARES as u8 {
+        for sq in Bitboard::filled() {
             let white_attacks = attacks::pawn(sq, crate::side::Side::White);
             let black_attacks = attacks::pawn(sq, crate::side::Side::Black);
             println!(
@@ -1165,14 +1165,8 @@ mod tests {
                 sq, white_attacks, black_attacks
             );
             assert_ne!(white_attacks, black_attacks);
-            assert_eq!(
-                black_attacks.as_number(),
-                expected_black_pawn_attacks[sq as usize]
-            );
-            assert_eq!(
-                white_attacks.as_number(),
-                expected_white_pawn_attacks[sq as usize]
-            );
+            assert_eq!(black_attacks.as_number(), expected_black_pawn_attacks[sq]);
+            assert_eq!(white_attacks.as_number(), expected_white_pawn_attacks[sq]);
         }
     }
 
@@ -1180,7 +1174,7 @@ mod tests {
     fn test_attacks_for_piece_on_square() {
         let board = Board::default();
 
-        for sq in 0..NumberOf::SQUARES as u8 {
+        for sq in Bitboard::filled() {
             for piece in Piece::iter() {
                 let occ = board.all_pieces();
                 let side = Side::White;
@@ -1213,7 +1207,7 @@ mod tests {
                 let mut expected_attacks = Bitboard::default();
                 let piece_bb = board.piece_bitboard(piece, side);
                 let occ = board.all_pieces();
-                for square in piece_bb.iter() {
+                for square in piece_bb {
                     expected_attacks |= attacks::for_piece_on_square(piece, square, occ, side);
                 }
 

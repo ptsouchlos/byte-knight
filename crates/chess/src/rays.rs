@@ -28,17 +28,28 @@ const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::
     let mut to = 0u8;
     while from < NumberOf::SQUARES as u8 {
         while to < NumberOf::SQUARES as u8 {
-            if attacks::rook(from, Bitboard::default()).intersects(Bitboard::from_square(to)) {
+            if attacks::rook(Square::from_square_index(from), Bitboard::default())
+                .intersects(Bitboard::from_square(to))
+            {
                 rays_between[from as usize][to as usize] = Bitboard::new(
-                    attacks::rook(from, Bitboard::from_square(to)).as_number()
-                        & attacks::rook(to, Bitboard::from_square(from)).as_number(),
+                    attacks::rook(Square::from_square_index(from), Bitboard::from_square(to))
+                        .as_number()
+                        & attacks::rook(Square::from_square_index(to), Bitboard::from_square(from))
+                            .as_number(),
                 );
             }
 
-            if attacks::bishop(from, Bitboard::default()).intersects(Bitboard::from_square(to)) {
+            if attacks::bishop(Square::from_square_index(from), Bitboard::default())
+                .intersects(Bitboard::from_square(to))
+            {
                 rays_between[from as usize][to as usize] = Bitboard::new(
-                    attacks::bishop(from, Bitboard::from_square(to)).as_number()
-                        & attacks::bishop(to, Bitboard::from_square(from)).as_number(),
+                    attacks::bishop(Square::from_square_index(from), Bitboard::from_square(to))
+                        .as_number()
+                        & attacks::bishop(
+                            Square::from_square_index(to),
+                            Bitboard::from_square(from),
+                        )
+                        .as_number(),
                 );
             }
 
@@ -89,16 +100,16 @@ pub fn edges(file: u8, rank: u8) -> Bitboard {
 /// # Returns
 /// - A [`Bitboard`] representing the line that intersects both `from` and `to`. If `from` and `to` are not aligned,
 ///   this returns an empty `Bitboard`.
-pub fn line(from: u8, to: u8) -> Bitboard {
+pub fn line(from: Square, to: Square) -> Bitboard {
     let bishop_from = attacks::bishop(from, Bitboard::default());
     let bishop_to = attacks::bishop(to, Bitboard::default());
 
     let rook_from = attacks::rook(from, Bitboard::default());
     let rook_to = attacks::rook(to, Bitboard::default());
 
-    if bishop_from.intersects(Bitboard::from_square(to)) {
+    if bishop_from.intersects(Bitboard::from(to)) {
         (bishop_from & bishop_to) | from.into() | to.into()
-    } else if rook_from.intersects(Bitboard::from_square(to)) {
+    } else if rook_from.intersects(Bitboard::from(to)) {
         rook_from & rook_to | from.into() | to.into()
     } else {
         Bitboard::default()
@@ -1615,22 +1626,22 @@ mod tests {
 
     #[test]
     fn test_line() {
-        let from = Squares::C4;
-        let to = Squares::F7;
+        let from = Square::C4;
+        let to = Square::F7;
         let line_bb = super::line(from, to);
         let expected_line_bb =
-            super::between(Squares::A2, Squares::G8) | Squares::A2.into() | Squares::G8.into();
+            super::between(Square::A2, Square::G8) | Square::A2.into() | Square::G8.into();
 
         assert_eq!(
             line_bb, expected_line_bb,
             "Line between {} and {} does not match.",
-            SQUARE_NAME[from as usize], SQUARE_NAME[to as usize]
+            SQUARE_NAME[from], SQUARE_NAME[to]
         );
 
-        for sq1 in 0..64_u8 {
-            for sq2 in 0..64_u8 {
+        for sq1 in Bitboard::filled() {
+            for sq2 in Bitboard::filled() {
                 let line_bb = super::line(sq1, sq2);
-                let idx = sq1 as usize * 64 + sq2 as usize;
+                let idx = sq1.index() * 64 + sq2.index();
                 let expected_bb = EXPECTED_LINES
                     .iter()
                     .find(|(key, _)| (*key) as usize == idx)

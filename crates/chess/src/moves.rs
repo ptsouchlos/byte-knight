@@ -170,7 +170,7 @@ impl Move {
 
     /// Create a new castle move
     pub fn new_castle(king_from: Square, king_to: Square) -> Self {
-        let flag = if king_to.file > king_from.file {
+        let flag = if king_to.file() > king_from.file() {
             MoveFlag::CastleK
         } else {
             MoveFlag::CastleQ
@@ -180,13 +180,17 @@ impl Move {
     }
 
     /// Returns the from [`Square`] of the move.
-    pub fn from(&self) -> u8 {
-        ((self.move_info & MOVE_INFO_FROM_MASK) >> MOVE_INFO_FROM_SHIFT) as u8
+    pub fn from(&self) -> Square {
+        Square::from_square_index(
+            ((self.move_info & MOVE_INFO_FROM_MASK) >> MOVE_INFO_FROM_SHIFT) as u8,
+        )
     }
 
     /// Returns the to [`Square`] of the move.
-    pub fn to(&self) -> u8 {
-        ((self.move_info & MOVE_INFO_TO_MASK) >> MOVE_INFO_TO_SHIFT) as u8
+    pub fn to(&self) -> Square {
+        Square::from_square_index(
+            ((self.move_info & MOVE_INFO_TO_MASK) >> MOVE_INFO_TO_SHIFT) as u8,
+        )
     }
 
     pub fn flag(&self) -> MoveFlag {

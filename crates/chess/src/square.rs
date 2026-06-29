@@ -3,7 +3,18 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use crate::{bitboard::Bitboard, bitboard_helpers, color::Color, file::File, rank::Rank};
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
+
+use crate::{
+    bitboard::Bitboard,
+    bitboard_helpers,
+    color::Color,
+    file::{self, File},
+    rank::Rank,
+};
 
 use anyhow::{Result, bail};
 
@@ -111,7 +122,7 @@ impl Square {
 
     pub const MIN: u8 = 0;
     pub const MAX: u8 = 63;
-    pub const COUNT: u8 = 64;
+    pub const COUNT: usize = 64;
 
     pub const CORNERS: [Self; 4] = [Self::A1, Self::H1, Self::A8, Self::H8];
 
@@ -164,7 +175,7 @@ impl Square {
 
     /// Convert a square index to a [`Square`] object.
     pub const fn from_square_index(square: u8) -> Self {
-        assert!(square < Self::MAX);
+        assert!(square < Self::COUNT as u8);
         Self::new(File::of(square), Rank::of(square))
     }
 
@@ -206,7 +217,7 @@ impl Square {
 
     /// Returns `true` if the square is a dark square.
     pub fn is_dark(&self) -> bool {
-        Bitboard::from(Self::DARK_SQUARES) & self.as_bitboard() != Bitboard::EMPTY
+        Bitboard::from(Self::DARK_SQUARES) & self.as_bitboard() != Bitboard::default()
     }
 
     /// Returns `true` if the square is a light square.
@@ -228,6 +239,10 @@ impl Square {
         let sq = self.inner();
         let flipped_sq = flip(sq);
         Self::from_square_index(flipped_sq)
+    }
+
+    pub fn to_uci(&self) -> String {
+        format!("{}{}", self.file(), self.rank())
     }
 }
 
@@ -322,6 +337,27 @@ impl TryFrom<u8> for Square {
     }
 }
 
+impl<T> Index<Square> for [T; Square::COUNT] {
+    type Output = T;
+
+    #[inline(always)]
+    fn index(&self, index: Square) -> &Self::Output {
+        &self[index.index()]
+    }
+}
+
+impl<T> IndexMut<Square> for [T; Square::COUNT] {
+    fn index_mut(&mut self, index: Square) -> &mut Self::Output {
+        &mut self[index.index()]
+    }
+}
+
+impl Display for Square {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_uci().fmt(f)
+    }
+}
+
 /// Converts a file and rank tuple to a square
 ///
 /// # Arguments
@@ -366,9 +402,8 @@ pub const fn from_square(square: u8) -> (u8, u8) {
 }
 
 /// Checks if a given square is on a given rank.
-pub const fn is_square_on_rank(square: u8, rank: u8) -> bool {
-    let (_, rnk) = from_square(square);
-    rnk == rank
+pub fn is_square_on_rank(square: Square, rank: Rank) -> bool {
+    square.rank() == rank
 }
 
 #[cfg(test)]
@@ -382,9 +417,9 @@ mod tests {
 
     #[test]
     fn check_square_on_rank() {
-        assert!(is_square_on_rank(Square::A1.inner(), Rank::R1 as u8));
-        assert!(!is_square_on_rank(Square::A1.inner(), Rank::R2 as u8));
-        assert!(is_square_on_rank(Square::C5.inner(), Rank::R5 as u8));
+        assert!(is_square_on_rank(Square::A1, Rank::R1));
+        assert!(!is_square_on_rank(Square::A1, Rank::R2));
+        assert!(is_square_on_rank(Square::C5, Rank::R5));
     }
 
     #[test]
@@ -415,7 +450,7 @@ mod tests {
                 let flipped = square.flip();
                 assert_eq!(flipped.flip(), square);
                 assert_eq!(flipped.file(), square.file());
-                assert_eq!(flipped.rank().as_number(), (Rank::R8 - square.rank()) as u8);
+                assert_eq!(flipped.rank().inner(), (Rank::R8 - square.rank()) as u8);
             }
         }
     }
