@@ -17,7 +17,7 @@ pub(crate) fn castling_hash(rights: u8) -> u64 {
 pub(crate) fn ep_hash(ep_sq: Option<Square>) -> u64 {
     match ep_sq {
         None => values::EN_PASSANT_VALUES[NumberOf::SQUARES],
-        Some(sq) => values::EN_PASSANT_VALUES[sq],
+        Some(sq) => values::EN_PASSANT_VALUES[sq.index()],
     }
 }
 

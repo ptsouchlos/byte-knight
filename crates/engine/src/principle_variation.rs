@@ -87,22 +87,13 @@ impl PrincipleVariation {
 
 #[cfg(test)]
 mod tests {
-    use chess::{definitions::Squares, moves::MoveFlag, square::Square};
+    use chess::{moves::MoveFlag, square::Square};
 
     use super::*;
 
     fn make_moves() -> (Move, Move) {
-        let move1 = Move::new(
-            Square::from_square_index(Squares::E2),
-            Square::from_square_index(Squares::E4),
-            MoveFlag::DoublePush,
-        );
-
-        let move2 = Move::new(
-            Square::from_square_index(Squares::E7),
-            Square::from_square_index(Squares::E5),
-            MoveFlag::DoublePush,
-        );
+        let move1 = Move::new(Square::E2, Square::E4, MoveFlag::DoublePush);
+        let move2 = Move::new(Square::E7, Square::E5, MoveFlag::DoublePush);
 
         (move1, move2)
     }

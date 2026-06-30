@@ -8,7 +8,7 @@ use std::{
     ops::{Index, Sub},
 };
 
-use crate::{bitboard::Bitboard, definitions::RANK_BITBOARDS, side::Side};
+use crate::{bitboard::Bitboard, definitions::RANK_BITBOARDS, side::Side, square::Square};
 use anyhow::Result;
 
 /// Represents a rank on the chess board.
@@ -71,8 +71,8 @@ impl Rank {
     ///
     /// # Returns
     /// The corresponding `Rank`.
-    pub const fn of(sq: u8) -> Self {
-        match sq >> 3 {
+    pub const fn of(sq: Square) -> Self {
+        match sq.inner() >> 3 {
             0 => Self::R1,
             1 => Self::R2,
             2 => Self::R3,

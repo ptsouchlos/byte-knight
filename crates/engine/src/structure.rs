@@ -13,7 +13,7 @@ pub(crate) fn king_pawn_shield_and_storm(board: &Board, side: Side) -> (Bitboard
     let our_pawns = board.piece_bitboard(Piece::Pawn, side);
     let their_pawns = board.piece_bitboard(Piece::Pawn, side.opposite());
 
-    let king_sq_bb = Bitboard::from_square(king_sq);
+    let king_sq_bb = Bitboard::from(king_sq);
     let king_sq_adjacent_bb =
         king_sq_bb | bitboard_helpers::west(king_sq_bb) | bitboard_helpers::east(king_sq_bb);
 

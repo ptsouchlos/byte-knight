@@ -3,11 +3,11 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::{fmt::Display, u8};
+use std::{fmt::Display, ops::Index, u8};
 
 use anyhow::Result;
 
-use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS};
+use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS, square::Square};
 
 /// Represents a file on the chess board.
 #[repr(u8)]
@@ -70,8 +70,8 @@ impl File {
         FILE_BITBOARDS[self as usize]
     }
 
-    pub const fn of(sq: u8) -> Self {
-        match sq & 7u8 {
+    pub const fn of(sq: Square) -> Self {
+        match sq.inner() & 7u8 {
             0 => Self::A,
             1 => Self::B,
             2 => Self::C,
@@ -155,6 +155,13 @@ impl Into<u8> for File {
 impl Display for File {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.to_char().fmt(f)
+    }
+}
+
+impl<T> Index<File> for [T; File::COUNT] {
+    type Output = T;
+    fn index(&self, index: File) -> &Self::Output {
+        &self[index.index()]
     }
 }
 

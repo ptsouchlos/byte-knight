@@ -6,13 +6,11 @@
 use crate::{
     attacks,
     bitboard::Bitboard,
-    bitboard_helpers,
     board::Board,
     move_generation::{NORTH, SOUTH},
     pieces::Piece,
     rays,
     side::Side,
-    square::{self},
 };
 
 /// Precomputed check and pin metadata for the current position.
@@ -77,20 +75,22 @@ pub fn compute(board: &Board) -> CheckPinMetadata {
             & (board.piece_bitboard(Piece::Bishop, them)
                 | board.piece_bitboard(Piece::Queen, them));
 
-    for next_attacker_sq in enemy_sliding_attacks.iter() {
-        let attacker_bb = Bitboard::from_square(next_attacker_sq);
+    for next_attacker_sq in enemy_sliding_attacks {
+        let attacker_bb = Bitboard::from(next_attacker_sq);
 
         let ray = rays::between(king_sq, next_attacker_sq);
 
-        let (king_file, king_rank) = square::from_square(king_sq);
-        let (attacker_file, attacker_rank) = square::from_square(next_attacker_sq);
+        let king_file = king_sq.file();
+        let king_rank = king_sq.rank();
+        let attacker_file = next_attacker_sq.file();
+        let attacker_rank = next_attacker_sq.rank();
         let is_orthogonal = king_file == attacker_file || king_rank == attacker_rank;
-        let is_diagonal = (king_sq as i16 - next_attacker_sq as i16).abs() % 9 == 0
-            || (king_sq as i16 - next_attacker_sq as i16).abs() % 7 == 0;
+        let is_diagonal = (king_sq.inner() as i16 - next_attacker_sq.inner() as i16).abs() % 9 == 0
+            || (king_sq.inner() as i16 - next_attacker_sq.inner() as i16).abs() % 7 == 0;
 
         match (ray & occupancy).number_of_occupied_squares() {
             0 => {
-                checkers |= Bitboard::from_square(next_attacker_sq);
+                checkers |= Bitboard::from(next_attacker_sq);
             }
             1 => {
                 let overlap = ray & our_pieces;
@@ -107,7 +107,7 @@ pub fn compute(board: &Board) -> CheckPinMetadata {
         }
     }
 
-    let mut push_mask = Bitboard::FULL;
+    let mut push_mask = Bitboard::filled();
 
     let checkers_count = checkers.number_of_occupied_squares();
     if checkers_count >= 1 {
@@ -116,8 +116,8 @@ pub fn compute(board: &Board) -> CheckPinMetadata {
         capture_mask = checkers & !(board.piece_bitboard(Piece::King, them));
 
         if is_single_check {
-            let mut checkers_clone = checkers;
-            let checker = bitboard_helpers::next_bit(&mut checkers_clone) as u8;
+            // We've already established that the checkers bitboard has exactly 1 occuppied square.
+            let checker = checkers.lsb().unwrap();
 
             let ray = rays::between(king_sq, checker);
 

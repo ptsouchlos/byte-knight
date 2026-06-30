@@ -134,7 +134,7 @@ impl<Values: EvalValues> Evaluation<Values> {
 
         for piece in [Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen] {
             let piece_bb = board.piece_bitboard(piece, side);
-            for piece_sq in piece_bb.iter() {
+            for piece_sq in piece_bb {
                 let attacks = attacks::for_piece_on_square(piece, piece_sq, occ, side);
                 let mobility =
                     (attacks & !enemy_pawn_attacks & !our_pieces).number_of_occupied_squares();
@@ -200,18 +200,18 @@ impl<Values: EvalValues> Evaluation<Values> {
         let their_pawns = board.piece_bitboard(Piece::Pawn, side.opposite());
 
         let our_rooks = board.piece_bitboard(Piece::Rook, side);
-        for rook_sq in our_rooks.iter() {
+        for rook_sq in our_rooks {
             let file_bb = File::of(rook_sq).to_bitboard();
 
             // Check if there are any pawns on file
             let is_open = (file_bb & (our_pawns | their_pawns)).number_of_occupied_squares() == 0;
             if is_open {
-                score += self.values().open_file_bonus(rook_sq, side);
+                score += self.values().open_file_bonus(rook_sq.inner(), side);
             } else {
                 // Check that there are no friendly pawns on file
                 let is_semi_open = (file_bb & our_pawns).number_of_occupied_squares() == 0;
                 if is_semi_open {
-                    score += self.values().semi_open_file_bonus(rook_sq, side);
+                    score += self.values().semi_open_file_bonus(rook_sq.inner(), side);
                 }
             }
         }
@@ -278,10 +278,10 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         let occupancy = board.all_pieces();
         // loop through occupied squares
-        for sq in occupancy.iter() {
+        for sq in occupancy {
             let maybe_piece = board.piece_on_square(sq);
             if let Some((piece, side)) = maybe_piece {
-                let phased_score: PhasedScore = self.values.psqt(sq, piece, side);
+                let phased_score: PhasedScore = self.values.psqt(sq.inner(), piece, side);
                 mg[side as usize] += phased_score.mg() as i32;
                 eg[side as usize] += phased_score.eg() as i32;
 
@@ -324,7 +324,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                 let piece_bb = board.piece_bitboard(piece, them);
 
                 // Loop through each sq in the piece bb and see if that piece is attacking the king ring
-                for sq in piece_bb.iter() {
+                for sq in piece_bb {
                     let piece_attacks = attacks::for_piece_on_square(piece, sq, occ, them);
 
                     let overlap = piece_attacks & king_ring;

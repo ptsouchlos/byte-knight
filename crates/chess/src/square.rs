@@ -8,13 +8,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::{
-    bitboard::Bitboard,
-    bitboard_helpers,
-    color::Color,
-    file::{self, File},
-    rank::Rank,
-};
+use crate::{bitboard::Bitboard, bitboard_helpers, color::Color, file::File, rank::Rank};
 
 use anyhow::{Result, bail};
 
@@ -160,12 +154,12 @@ impl Square {
         self.inner() as usize
     }
 
-    pub const fn file(&self) -> File {
-        File::of(self.inner() & Self::FILE_MASK)
+    pub const fn file(self) -> File {
+        File::of(self)
     }
 
-    pub const fn rank(&self) -> Rank {
-        Rank::of((self.inner() & Self::RANK_MASK) >> Self::RANK_SHIFT)
+    pub const fn rank(self) -> Rank {
+        Rank::of(self)
     }
 
     #[inline(always)]
@@ -176,7 +170,8 @@ impl Square {
     /// Convert a square index to a [`Square`] object.
     pub const fn from_square_index(square: u8) -> Self {
         assert!(square < Self::COUNT as u8);
-        Self::new(File::of(square), Rank::of(square))
+        let sq = Square(square);
+        Self::new(File::of(sq), Rank::of(sq))
     }
 
     /// Offset the square by the given file and rank deltas.

@@ -13,7 +13,7 @@ use std::{
     },
 };
 
-use chess::{moves::Move, pieces::SQUARE_NAME};
+use chess::{moves::Move, square::Square};
 #[cfg(feature = "tuning")]
 use engine::tuneable::{list_params, print_params_ob};
 use engine::{defs::About, engine::Engine, search::limits::SearchLimits};
@@ -21,8 +21,8 @@ use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
 use crate::input_handler::{CommandProxy, EngineCommand, InputHandler};
 
-fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
-    uci_parser::Square::from_str(SQUARE_NAME[square as usize]).unwrap()
+fn square_index_to_uci_square(square: Square) -> uci_parser::Square {
+    uci_parser::Square::from_str(square.to_uci().as_str()).unwrap()
 }
 
 fn move_to_uci_move(mv: &Move) -> UciMove {

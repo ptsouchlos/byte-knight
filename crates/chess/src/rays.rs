@@ -23,12 +23,12 @@ static RAYS_BETWEEN: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] = initia
 /// - A 2D array where each entry [from][to] contains a Bitboard representing the squares between `from` and `to`.
 const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] {
     let mut rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] =
-        [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SQUARES];
+        [[Bitboard::empty(); NumberOf::SQUARES]; NumberOf::SQUARES];
     let mut from = 0u8;
     let mut to = 0u8;
     while from < NumberOf::SQUARES as u8 {
         while to < NumberOf::SQUARES as u8 {
-            if attacks::rook(Square::from_square_index(from), Bitboard::default())
+            if attacks::rook(Square::from_square_index(from), Bitboard::empty())
                 .intersects(Bitboard::from_square(to))
             {
                 rays_between[from as usize][to as usize] = Bitboard::new(
@@ -39,7 +39,7 @@ const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::
                 );
             }
 
-            if attacks::bishop(Square::from_square_index(from), Bitboard::default())
+            if attacks::bishop(Square::from_square_index(from), Bitboard::empty())
                 .intersects(Bitboard::from_square(to))
             {
                 rays_between[from as usize][to as usize] = Bitboard::new(
@@ -82,9 +82,9 @@ pub fn between(from: Square, to: Square) -> Bitboard {
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the edge squares of the chessboard, excluding the specified
-pub fn edges(file: u8, rank: u8) -> Bitboard {
-    let file_bb = FILE_BITBOARDS[file as usize];
-    let rank_bb = RANK_BITBOARDS[rank as usize];
+pub fn edges(file: File, rank: Rank) -> Bitboard {
+    let file_bb = FILE_BITBOARDS[file];
+    let rank_bb = RANK_BITBOARDS[rank];
     (FILE_BITBOARDS[File::A as usize] & !file_bb)
         | (FILE_BITBOARDS[File::H as usize] & !file_bb)
         | (RANK_BITBOARDS[Rank::R1 as usize] & !rank_bb)

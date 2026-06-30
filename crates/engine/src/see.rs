@@ -111,16 +111,17 @@ pub fn see(board: &Board, mv: Move, threshold: i32) -> bool {
     }
 
     // Seed occupancy: remove the capturing piece so sliders behind it are exposed.
-    let mut occ = board.all_pieces() ^ Bitboard::from_square(from);
+    let mut occ = board.all_pieces() ^ Bitboard::from(from);
 
     // For en-passant the captured pawn is not on `to`; remove it explicitly so that
     // sliders behind it can be discovered in the swap loop.
     if mv.is_en_passant_capture() {
-        let ep_pawn_sq = attacks::ep_capture_square(to, attacker_side);
-        occ ^= Bitboard::from_square(ep_pawn_sq);
+        let ep_pawn_sq = attacks::ep_capture_square(to, attacker_side)
+            .expect("EP capture square invalid for move {mv}");
+        occ ^= Bitboard::from(ep_pawn_sq);
     } else {
         // Remove to as that's the target square
-        occ ^= Bitboard::from_square(to);
+        occ ^= Bitboard::from(to);
     }
 
     // Opponent gets to recapture first.

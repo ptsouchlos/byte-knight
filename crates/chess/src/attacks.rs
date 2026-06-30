@@ -32,14 +32,14 @@ pub(crate) static BISHOP_ATTACKS: [Bitboard; 5248] = generate_bishop_attacks();
 ///
 /// This will generate all possible attacks using the bishop magic numbers as defined in the magics module.
 const fn generate_bishop_attacks() -> [Bitboard; 5248] {
-    let mut table = [Bitboard::default(); 5248];
+    let mut table = [Bitboard::empty(); 5248];
     let mut sq = 0u8;
     while sq < NumberOf::SQUARES as u8 {
         let magic = BISHOP_MAGICS[sq as usize];
 
-        let mut subset = Bitboard::default();
+        let mut subset = Bitboard::empty();
 
-        let attacks = diagonal_ray_attacks(sq, subset.as_number());
+        let attacks = diagonal_ray_attacks(Square::from_square_index(sq), subset.as_number());
         let blockers = subset;
         let idx = magic.index(blockers);
         table[idx] = attacks;
@@ -51,7 +51,7 @@ const fn generate_bishop_attacks() -> [Bitboard; 5248] {
 
         // Repeat for all subsets until subset is zero
         while subset.as_number() != 0 {
-            let attacks = diagonal_ray_attacks(sq, subset.as_number());
+            let attacks = diagonal_ray_attacks(Square::from_square_index(sq), subset.as_number());
             let blockers = subset;
             let idx = magic.index(blockers);
             table[idx] = attacks;
@@ -72,14 +72,14 @@ const fn generate_bishop_attacks() -> [Bitboard; 5248] {
 ///
 /// This will generate all possible rook attacks using the rook magic numbers as defined in the magics module.
 const fn generate_rook_attacks() -> [Bitboard; 102400] {
-    let mut table = [Bitboard::default(); 102400];
+    let mut table = [Bitboard::empty(); 102400];
     let mut sq = 0u8;
     while sq < NumberOf::SQUARES as u8 {
         let magic = ROOK_MAGICS[sq as usize];
 
-        let mut subset = Bitboard::default();
+        let mut subset = Bitboard::empty();
 
-        let attacks = orthogonal_ray_attacks(sq, subset.as_number());
+        let attacks = orthogonal_ray_attacks(Square::from_square_index(sq), subset.as_number());
         let blockers = subset;
         let idx = magic.index(blockers);
         table[idx] = attacks;
@@ -91,7 +91,7 @@ const fn generate_rook_attacks() -> [Bitboard; 102400] {
 
         // Repeat for all subsets until subset is zero
         while subset.as_number() != 0 {
-            let attacks = orthogonal_ray_attacks(sq, subset.as_number());
+            let attacks = orthogonal_ray_attacks(Square::from_square_index(sq), subset.as_number());
             let blockers = subset;
             let idx = magic.index(blockers);
             table[idx] = attacks;
@@ -115,9 +115,9 @@ const fn generate_rook_attacks() -> [Bitboard; 102400] {
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the diagonal ray attacks from the given square.
-pub(crate) const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
+pub(crate) const fn diagonal_ray_attacks(square: Square, occupied: u64) -> Bitboard {
     let mut attacks = 0u64;
-    let bb = square as u64;
+    let bb = square.inner() as u64;
 
     // Northeast
     let mut ray = bb;
@@ -174,9 +174,9 @@ pub(crate) const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard 
 /// # Returns
 /// - A [`Bitboard`] representing the orthogonal ray attacks from the given square.
 #[allow(long_running_const_eval)]
-pub(crate) const fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
+pub(crate) const fn orthogonal_ray_attacks(square: Square, occupied: u64) -> Bitboard {
     let mut attacks = 0u64;
-    let bb = square as u64;
+    let bb = square.inner() as u64;
 
     let mut ray = bb;
     // North
@@ -555,10 +555,10 @@ pub fn all_attackers_of(
 ///
 /// # Returns
 /// The square occupied by the pawn that is being EP captured.
-pub fn ep_capture_square(to: u8, side: Side) -> u8 {
+pub fn ep_capture_square(to: Square, side: Side) -> Option<Square> {
     match side {
-        Side::White => to - 8,
-        Side::Black => to + 8,
+        Side::White => to.offset(0, -1),
+        Side::Black => to.offset(0, 1),
     }
 }
 
@@ -943,7 +943,8 @@ mod tests {
     #[test]
     fn test_diagonal_ray_attacks() {
         for (sq, &expected) in EXPECTED_DIAGONAL_ATTACKS.iter().enumerate() {
-            let attacks: crate::bitboard::Bitboard = super::diagonal_ray_attacks(sq as u8, 0);
+            let attacks: crate::bitboard::Bitboard =
+                super::diagonal_ray_attacks(Square::from_square_index(sq as u8), 0);
             println!("Square: {}\nAttacks:\n{}", sq, attacks);
             assert_eq!(attacks.as_number(), expected);
         }
@@ -952,7 +953,8 @@ mod tests {
     #[test]
     fn test_orthogonal_ray_attacks() {
         for sq in 0..64_u8 {
-            let attacks: crate::bitboard::Bitboard = super::orthogonal_ray_attacks(sq, 0);
+            let attacks: crate::bitboard::Bitboard =
+                super::orthogonal_ray_attacks(Square::from_square_index(sq as u8), 0);
             println!("Square: {}\nAttacks:\n{}", sq, attacks);
             assert_eq!(
                 attacks.as_number(),
@@ -963,8 +965,8 @@ mod tests {
 
     #[test]
     fn validate_rook_attack_table() {
-        for sq in 0..64_u8 {
-            let magic = ROOK_MAGICS[sq as usize];
+        for sq in Bitboard::filled() {
+            let magic = ROOK_MAGICS[sq];
             let relevant_bits = move_generation::relevant_rook_bits(sq);
             let blockers_list = move_generation::create_blocker_permutations(relevant_bits);
             for blockers in blockers_list {
@@ -993,8 +995,8 @@ mod tests {
 
     #[test]
     fn validate_bishop_attack_table() {
-        for sq in 0..64_u8 {
-            let magic = BISHOP_MAGICS[sq as usize];
+        for sq in Bitboard::filled() {
+            let magic = BISHOP_MAGICS[sq];
             let relevant_bits = move_generation::relevant_bishop_bits(sq);
             let blockers_list = move_generation::create_blocker_permutations(relevant_bits);
             for blockers in blockers_list {

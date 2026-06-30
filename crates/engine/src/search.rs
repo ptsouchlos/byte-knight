@@ -1421,7 +1421,6 @@ mod tests {
 
         use chess::{
             board::Board,
-            definitions::Squares,
             moves::{Move, MoveFlag},
             square::Square,
         };
@@ -1464,22 +1463,14 @@ mod tests {
         #[test]
         fn tt_collision_pawn_to_promotion_rank() {
             // Position with White pawn on a7. Inject a7a8 as Standard (no promo flag).
-            let bad_move = Move::new(
-                Square::from_square_index(Squares::A7),
-                Square::from_square_index(Squares::A8),
-                MoveFlag::Standard,
-            );
+            let bad_move = Move::new(Square::A7, Square::A8, MoveFlag::Standard);
             search_with_poisoned_tt("3qk3/P7/8/8/8/8/8/4K3 w - - 0 1", bad_move, 8);
         }
 
         #[test]
         fn tt_collision_pawn_to_back_rank() {
             // Position with White pawn on b2. Inject b2a1 as Standard.
-            let bad_move = Move::new(
-                Square::from_square_index(Squares::B2),
-                Square::from_square_index(Squares::A1),
-                MoveFlag::Standard,
-            );
+            let bad_move = Move::new(Square::B2, Square::A1, MoveFlag::Standard);
             search_with_poisoned_tt("4k3/8/8/8/8/8/1P6/4K3 w - - 0 1", bad_move, 8);
         }
 
@@ -1488,22 +1479,14 @@ mod tests {
             // White can castle kingside but we inject the castle move for a
             // position where f1 is occupied by a bishop — the move should be
             // rejected by is_legal.
-            let bad_move = Move::new(
-                Square::from_square_index(Squares::E1),
-                Square::from_square_index(Squares::G1),
-                MoveFlag::CastleK,
-            );
+            let bad_move = Move::new(Square::E1, Square::G1, MoveFlag::CastleK);
             search_with_poisoned_tt("4k3/8/8/8/8/8/8/4KB1R w K - 0 1", bad_move, 8);
         }
 
         #[test]
         fn tt_collision_en_passant_without_target() {
             // White pawn on e5, no EP square set. Inject EP move e5f6.
-            let bad_move = Move::new(
-                Square::from_square_index(Squares::E5),
-                Square::from_square_index(Squares::F6),
-                MoveFlag::EnPassant,
-            );
+            let bad_move = Move::new(Square::E5, Square::F6, MoveFlag::EnPassant);
             search_with_poisoned_tt("4k3/8/8/4P3/8/8/8/4K3 w - - 0 1", bad_move, 8);
         }
 
@@ -1511,22 +1494,14 @@ mod tests {
         fn tt_collision_castle_without_rook() {
             // King on e1, no rook on h1 but has K rights (bogus FEN).
             // Inject kingside castle.
-            let bad_move = Move::new(
-                Square::from_square_index(Squares::E1),
-                Square::from_square_index(Squares::G1),
-                MoveFlag::CastleK,
-            );
+            let bad_move = Move::new(Square::E1, Square::G1, MoveFlag::CastleK);
             search_with_poisoned_tt("4k3/8/8/8/8/8/4PPPP/4K3 w K - 0 1", bad_move, 8);
         }
 
         #[test]
         fn tt_collision_black_pawn_to_back_rank() {
             // Black pawn on g7. Inject g7h8 as Standard (backward to rank 7).
-            let bad_move = Move::new(
-                Square::from_square_index(Squares::G7),
-                Square::from_square_index(Squares::H8),
-                MoveFlag::Standard,
-            );
+            let bad_move = Move::new(Square::G7, Square::H8, MoveFlag::Standard);
             search_with_poisoned_tt("4k3/6p1/8/8/8/8/8/4K3 b - - 0 1", bad_move, 8);
         }
     }

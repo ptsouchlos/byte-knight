@@ -60,8 +60,8 @@ impl Board {
 
         // now just figure out the move descriptor
         // need to check if the move is a castle, en passant, promotion or a pawn two up move
-        let can_double_push = piece == Piece::Pawn
-            && square::is_square_on_rank(from.inner(), Rank::pawn_start_rank(side).inner());
+        let can_double_push =
+            piece == Piece::Pawn && square::is_square_on_rank(from, Rank::pawn_start_rank(side));
 
         let is_double_push =
             can_double_push && (from.rank().inner() as i8).abs_diff(to.rank().inner() as i8) == 2;

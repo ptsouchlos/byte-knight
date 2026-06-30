@@ -589,7 +589,7 @@ mod tests {
     #[test]
     fn test_magic_number_index() {
         // test a1 for the rook
-        let relevant_bits = move_generation::relevant_rook_bits(Square::A1.inner());
+        let relevant_bits = move_generation::relevant_rook_bits(Square::A1);
         let blockers = move_generation::create_blocker_permutations(relevant_bits);
         let magic_value = 684547693657194778;
         let magic = MagicNumber::new(
@@ -611,7 +611,7 @@ mod tests {
     #[test]
     fn magic_number_display() {
         // test a1 for the rook
-        let relevant_bits = move_generation::relevant_rook_bits(Square::A1.inner());
+        let relevant_bits = move_generation::relevant_rook_bits(Square::A1);
         let magic_value = 684547693657194778;
         let magic = MagicNumber::new(
             relevant_bits,
