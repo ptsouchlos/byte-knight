@@ -48,9 +48,9 @@ fn calculate_en_passant_bitboard(
                 Side::White => -1i8,
                 Side::Black => 1i8,
             };
-            let captured_sq = sq
-                .offset(0, captured_sq_offset)
-                .expect("Invalid EP capture square from {sq} with offset {captured_sq_offsets}");
+            let captured_sq = sq.offset(0, captured_sq_offset).unwrap_or_else(|| {
+                unreachable!("Invalid EP capture square from {sq} with offset {captured_sq_offset}")
+            });
 
             occupancy &= !(Bitboard::from(captured_sq));
             let mut discovered_checkers = move_generation::calculate_checkers(board, occupancy);

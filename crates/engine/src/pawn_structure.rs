@@ -10,7 +10,7 @@ use chess::{
     definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
     pieces::Piece,
     side::Side,
-    square::{self, Square},
+    square::Square,
 };
 
 pub struct PawnStructure {

@@ -175,11 +175,7 @@ impl Iterator for BitboardIter {
     type Item = Square;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.bitboard.is_empty() {
-            None
-        } else {
-            self.bitboard.lsb()
-        }
+        self.bitboard.pop_lsb()
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {

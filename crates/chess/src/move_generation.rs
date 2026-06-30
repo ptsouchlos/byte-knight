@@ -199,7 +199,7 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
             Side::White => from_square.offset(0, 1),
             Side::Black => from_square.offset(0, -1),
         }
-        .expect("Invalid starting square for pawn {from_sq}");
+        .unwrap_or_else(|| unreachable!("Invalid starting square for pawn {from_square}"));
 
         // pawn non-capture moves
         if matches!(

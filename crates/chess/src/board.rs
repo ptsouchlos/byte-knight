@@ -165,13 +165,13 @@ impl Board {
         self.state.hashes.update_hash(keys::ep_hash(
             self.state
                 .en_passant_square
-                .map(|sq| Square::from_square_index(sq)),
+                .map(Square::from_square_index),
         ));
         self.state.en_passant_square = square.map(|sq| sq.inner());
         self.state.hashes.update_hash(keys::ep_hash(
             self.state
                 .en_passant_square
-                .map(|sq| Square::from_square_index(sq)),
+                .map(Square::from_square_index),
         ));
     }
 
@@ -361,7 +361,7 @@ impl Board {
     pub fn en_passant_square(&self) -> Option<Square> {
         self.state
             .en_passant_square
-            .map(|sq| Square::from_square_index(sq))
+            .map(Square::from_square_index)
     }
 
     /// Returns the half move clock of this [`Board`].

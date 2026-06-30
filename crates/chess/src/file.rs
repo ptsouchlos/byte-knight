@@ -3,7 +3,7 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::{fmt::Display, ops::Index, u8};
+use std::{fmt::Display, ops::Index};
 
 use anyhow::Result;
 
@@ -146,9 +146,9 @@ impl TryFrom<char> for File {
     }
 }
 
-impl Into<u8> for File {
-    fn into(self) -> u8 {
-        self as u8
+impl From<File> for u8 {
+    fn from(file: File) -> u8 {
+        file as u8
     }
 }
 

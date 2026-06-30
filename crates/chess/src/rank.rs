@@ -162,7 +162,7 @@ impl<T> Index<Rank> for [T; Rank::COUNT] {
 
 impl Display for Rank {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.to_string().fmt(f)
+        self.char().fmt(f)
     }
 }
 

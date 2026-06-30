@@ -57,7 +57,7 @@ pub fn next_bit(bitboard: &mut Bitboard) -> usize {
 /// ```
 /// use chess::bitboard::Bitboard;
 /// use chess::bitboard_helpers::north_fill;
-/// use chess::definitions::Squares;
+/// use chess::square::Square;
 /// let bb = Bitboard::from(Square::A2) | Bitboard::from(Square::H2) | Bitboard::from(Square::D4);
 /// let filled = north_fill(bb);
 /// // Should look like this:
@@ -88,7 +88,7 @@ pub const fn north_fill(bitboard: Bitboard) -> Bitboard {
 /// ```
 /// use chess::bitboard::Bitboard;
 /// use chess::bitboard_helpers::south_fill;
-/// use chess::definitions::Squares;
+/// use chess::square::Square;
 /// let bb = Bitboard::from(Square::A7) | Bitboard::from(Square::H7) | Bitboard::from(Square::D5);
 /// let filled = south_fill(bb);
 /// // // Should look like this:
@@ -119,7 +119,7 @@ pub const fn south_fill(bitboard: Bitboard) -> Bitboard {
 /// ```
 /// use chess::bitboard::Bitboard;
 /// use chess::bitboard_helpers::east_fill;
-/// use chess::definitions::Squares;
+/// use chess::square::Square;
 /// let bb = Bitboard::from(Square::A1) | Bitboard::from(Square::C3);
 /// let filled = east_fill(bb);
 /// // Should fill eastward on each rank without wrapping to the next rank
@@ -148,7 +148,7 @@ pub const fn east_fill(bitboard: Bitboard) -> Bitboard {
 /// ```
 /// use chess::bitboard::Bitboard;
 /// use chess::bitboard_helpers::west_fill;
-/// use chess::definitions::Squares;
+/// use chess::square::Square;
 /// let bb = Bitboard::from(Square::H2) | Bitboard::from(Square::D4);
 /// let filled = west_fill(bb);
 /// // Should fill eastward on each rank without wrapping to the next rank

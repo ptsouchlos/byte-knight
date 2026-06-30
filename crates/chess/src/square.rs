@@ -121,8 +121,6 @@ impl Square {
     pub const CORNERS: [Self; 4] = [Self::A1, Self::H1, Self::A8, Self::H8];
 
     const DARK_SQUARES: u64 = 0xAA55AA55AA55AA55;
-    const FILE_MASK: u8 = 0b0000_0111;
-    const RANK_MASK: u8 = 0b0011_1000;
     const RANK_SHIFT: u8 = 3;
 
     /// Create a new square from a file and rank.
@@ -187,8 +185,8 @@ impl Square {
     ///
     /// let square = Square::try_from("e4").unwrap();
     /// let new_square = square.offset(1, 1).unwrap();
-    /// assert_eq!(new_square.file, File::F);
-    /// assert_eq!(new_square.rank, Rank::R5);
+    /// assert_eq!(new_square.file(), File::F);
+    /// assert_eq!(new_square.rank(), Rank::R5);
     ///
     /// let square = Square::try_from("a1").unwrap();
     /// let new_square = square.offset(-1, -1);
@@ -260,11 +258,11 @@ impl Square {
 /// use chess::rank::Rank;
 ///
 /// let sq = Square::new(File::A, Rank::R1);
-/// let flipped_sq = flip(sq.to_square_index());
+/// let flipped_sq = flip(sq.inner());
 /// assert_eq!(flipped_sq, 56);
 /// let new_sq = Square::from_square_index(flipped_sq);
-/// assert_eq!(new_sq.file, File::A);
-/// assert_eq!(new_sq.rank, Rank::R8);
+/// assert_eq!(new_sq.file(), File::A);
+/// assert_eq!(new_sq.rank(), Rank::R8);
 pub const fn flip(sq: u8) -> u8 {
     sq ^ 56
 }
@@ -291,11 +289,11 @@ pub const fn flip(sq: u8) -> u8 {
 /// use chess::rank::Rank;
 ///
 /// let sq = Square::new(File::A, Rank::R1);
-/// let flipped_sq = flip_if(true, sq.to_square_index());
+/// let flipped_sq = flip_if(true, sq.inner());
 /// assert_eq!(flipped_sq, 56);
 /// let new_sq = Square::from_square_index(flipped_sq);
-/// assert_eq!(new_sq.file, File::A);
-/// assert_eq!(new_sq.rank, Rank::R8);
+/// assert_eq!(new_sq.file(), File::A);
+/// assert_eq!(new_sq.rank(), Rank::R8);
 pub fn flip_if(should_flip: bool, sq: u8) -> u8 {
     if should_flip { flip(sq) } else { sq }
 }

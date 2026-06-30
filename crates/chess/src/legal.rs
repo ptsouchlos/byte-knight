@@ -131,11 +131,11 @@ fn is_pseudo_legal_pawn(
             }
             let intermediate = from
                 .offset(0, push_rank_offset)
-                .expect("Invalid single push from {from}");
+                .unwrap_or_else(|| unreachable!("Invalid single push from {from}"));
 
             let dest = from
                 .offset(0, 2 * push_rank_offset)
-                .expect("Invalid double push destination from {from}");
+                .unwrap_or_else(|| unreachable!("Invalid double push destination from {from}"));
 
             dest == to
                 && !occupancy.is_square_occupied(intermediate)
@@ -156,7 +156,7 @@ fn is_pseudo_legal_pawn(
 
             let captured_sq = to
                 .offset(0, captured_sq_rank_offset)
-                .expect("Invalid capture square for EP dest for {from} -> {to}");
+                .unwrap_or_else(|| unreachable!("Invalid capture square for EP dest for {from} -> {to}"));
 
             // Check that the captured EP piece is in fact their pawn.
             board
@@ -172,7 +172,7 @@ fn is_pseudo_legal_pawn(
             if file_diff == 0 {
                 let dest = from
                     .offset(0, push_rank_offset)
-                    .expect("Invalid destination square from {from}");
+                    .unwrap_or_else(|| unreachable!("Invalid destination square from {from}"));
                 dest == to && !occupancy.is_square_occupied(to)
             } else if file_diff == 1 {
                 attacks::pawn(from, us).is_square_occupied(to)

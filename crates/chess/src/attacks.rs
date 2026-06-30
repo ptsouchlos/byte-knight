@@ -954,7 +954,7 @@ mod tests {
     fn test_orthogonal_ray_attacks() {
         for sq in 0..64_u8 {
             let attacks: crate::bitboard::Bitboard =
-                super::orthogonal_ray_attacks(Square::from_square_index(sq as u8), 0);
+                super::orthogonal_ray_attacks(Square::from_square_index(sq), 0);
             println!("Square: {}\nAttacks:\n{}", sq, attacks);
             assert_eq!(
                 attacks.as_number(),

@@ -182,9 +182,7 @@ impl Board {
                 if ep_capture_is_legal(
                     self,
                     from,
-                    en_passant_square
-                        .try_into()
-                        .expect("Invalid ep square {en_passant_square}"),
+                    Square::from_square_index(en_passant_square),
                     us,
                 ) {
                     Some(en_passant_square)
@@ -218,9 +216,7 @@ impl Board {
                 };
 
                 let pawns = self.piece_bitboard(Piece::Pawn, them);
-                let ep_pawn_sq = en_passant_pawn_location
-                    .try_into()
-                    .expect("Invalid loc for captured ep pawn {en_passant_pawn_location}");
+                let ep_pawn_sq = Square::from_square_index(en_passant_pawn_location);
                 debug_assert!(
                     pawns.is_square_occupied(ep_pawn_sq),
                     "En passant pawn not on square {} for move {}\n{}",
@@ -234,7 +230,7 @@ impl Board {
             }
 
             // Apply the EP square computed before the pawn moved.
-            self.set_en_passant_square(ep_square_to_set.map(|sq| Square::from_square_index(sq)));
+            self.set_en_passant_square(ep_square_to_set.map(Square::from_square_index));
         } else {
             // reset the en passant square if it exists
             if self.en_passant_square().is_some() {
@@ -393,7 +389,9 @@ impl Board {
                     } else {
                         to.offset(0, 1i8)
                     }
-                    .expect("Invalid target ep square for {us} with to -> {to}");
+                    .unwrap_or_else(|| {
+                        unreachable!("Invalid target ep square for {us} with to -> {to}")
+                    });
 
                     self.add_piece(them, Piece::Pawn, en_passant_square, update_zobrist_hash);
                     // we don't need to set the en passant square here as it is restored from the game state
