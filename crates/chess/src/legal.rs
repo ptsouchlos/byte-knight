@@ -109,10 +109,6 @@ fn is_pseudo_legal_pawn(
 ) -> bool {
     let start_rank = Rank::pawn_start_rank(us);
     let promo_rank = Rank::promotion_rank(us);
-    let push_rank_offset = match us {
-        Side::White => 1i8,
-        Side::Black => -1i8,
-    };
 
     let from_rank = from.rank();
     let to_rank = to.rank();
@@ -129,13 +125,8 @@ fn is_pseudo_legal_pawn(
             if from_rank != start_rank {
                 return false;
             }
-            let intermediate = from
-                .offset(0, push_rank_offset)
-                .unwrap_or_else(|| unreachable!("Invalid single push from {from}"));
-
-            let dest = from
-                .offset(0, 2 * push_rank_offset)
-                .unwrap_or_else(|| unreachable!("Invalid double push destination from {from}"));
+            let intermediate = from.forward_unchecked(us);
+            let dest = intermediate.forward_unchecked(us);
 
             dest == to
                 && !occupancy.is_square_occupied(intermediate)
@@ -148,15 +139,8 @@ fn is_pseudo_legal_pawn(
             if !attacks::pawn(from, us).is_square_occupied(to) {
                 return false;
             }
-            // The enemy pawn being captured must actually exist.
-            let captured_sq_rank_offset = match us {
-                Side::White => -1i8,
-                Side::Black => 1i8,
-            };
-
-            let captured_sq = to
-                .offset(0, captured_sq_rank_offset)
-                .unwrap_or_else(|| unreachable!("Invalid capture square for EP dest for {from} -> {to}"));
+            // The enemy pawn being captured sits one rank behind the EP square.
+            let captured_sq = to.backward_unchecked(us);
 
             // Check that the captured EP piece is in fact their pawn.
             board
@@ -170,9 +154,7 @@ fn is_pseudo_legal_pawn(
         _ => {
             let file_diff = (from.file() as u8).abs_diff(to.file() as u8);
             if file_diff == 0 {
-                let dest = from
-                    .offset(0, push_rank_offset)
-                    .unwrap_or_else(|| unreachable!("Invalid destination square from {from}"));
+                let dest = from.forward_unchecked(us);
                 dest == to && !occupancy.is_square_occupied(to)
             } else if file_diff == 1 {
                 attacks::pawn(from, us).is_square_occupied(to)
@@ -373,10 +355,7 @@ fn ep_legal(
     let to = mv.to();
 
     // The pawn being captured sits one rank behind the EP square.
-    let captured_sq = match us {
-        Side::White => to.offset(0, -1i8),
-        Side::Black => to.offset(0, 1i8),
-    };
+    let captured_sq = to.backward(us);
 
     if let Some(cap_sq) = captured_sq {
         let captured_bb = Bitboard::from(cap_sq);

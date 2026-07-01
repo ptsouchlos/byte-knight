@@ -116,8 +116,7 @@ pub fn see(board: &Board, mv: Move, threshold: i32) -> bool {
     // For en-passant the captured pawn is not on `to`; remove it explicitly so that
     // sliders behind it can be discovered in the swap loop.
     if mv.is_en_passant_capture() {
-        let ep_pawn_sq = attacks::ep_capture_square(to, attacker_side)
-            .unwrap_or_else(|| unreachable!("EP capture square invalid for move {mv:?}"));
+        let ep_pawn_sq = to.backward_unchecked(attacker_side);
         occ ^= Bitboard::from(ep_pawn_sq);
     } else {
         // Remove to as that's the target square

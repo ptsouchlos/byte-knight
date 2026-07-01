@@ -384,14 +384,7 @@ impl Board {
         if let Some(captured_piece) = captured_piece {
             match chess_move.is_en_passant_capture() {
                 true => {
-                    let en_passant_square = if us == Side::White {
-                        to.offset(0, -1i8)
-                    } else {
-                        to.offset(0, 1i8)
-                    }
-                    .unwrap_or_else(|| {
-                        unreachable!("Invalid target ep square for {us} with to -> {to}")
-                    });
+                    let en_passant_square = to.backward_unchecked(us);
 
                     self.add_piece(them, Piece::Pawn, en_passant_square, update_zobrist_hash);
                     // we don't need to set the en passant square here as it is restored from the game state

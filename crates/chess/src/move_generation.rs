@@ -195,11 +195,7 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
         let attack_bb = attacks::pawn(from_square, us);
 
         let mut bb_moves = Bitboard::default();
-        let to_square = match us {
-            Side::White => from_square.offset(0, 1),
-            Side::Black => from_square.offset(0, -1),
-        }
-        .unwrap_or_else(|| unreachable!("Invalid starting square for pawn {from_square}"));
+        let to_square = from_square.forward_unchecked(us);
 
         // pawn non-capture moves
         if matches!(
@@ -214,10 +210,7 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
             };
 
             let double_push_square = if can_double_push {
-                match us {
-                    Side::White => to_square.offset(0, 1),
-                    Side::Black => to_square.offset(0, -1),
-                }
+                to_square.forward(us)
             } else {
                 None
             };

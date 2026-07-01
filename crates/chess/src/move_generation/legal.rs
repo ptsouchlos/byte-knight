@@ -44,13 +44,7 @@ fn calculate_en_passant_bitboard(
             let mut occupancy = board.all_pieces();
             occupancy &= !(Bitboard::from_square(from));
 
-            let captured_sq_offset = match board.side_to_move() {
-                Side::White => -1i8,
-                Side::Black => 1i8,
-            };
-            let captured_sq = sq.offset(0, captured_sq_offset).unwrap_or_else(|| {
-                unreachable!("Invalid EP capture square from {sq} with offset {captured_sq_offset}")
-            });
+            let captured_sq = sq.backward_unchecked(board.side_to_move());
 
             occupancy &= !(Bitboard::from(captured_sq));
             let mut discovered_checkers = move_generation::calculate_checkers(board, occupancy);
