@@ -547,21 +547,6 @@ pub fn all_attackers_of(
         | (pawns & pawn_attacks)
 }
 
-/// Get the en-passant capture square for a give target square and attacking side.
-///
-/// # Arguments
-/// - `to`: The target square for a move.
-/// - `side`: The attacking side
-///
-/// # Returns
-/// The square occupied by the pawn that is being EP captured.
-pub fn ep_capture_square(to: Square, side: Side) -> Option<Square> {
-    match side {
-        Side::White => to.offset(0, -1),
-        Side::Black => to.offset(0, 1),
-    }
-}
-
 /// Get all pieces that are blocking the king from being in check.
 ///
 /// # Arguments
