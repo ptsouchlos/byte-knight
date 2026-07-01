@@ -40,15 +40,13 @@ pub(crate) fn enumerate_moves(
         return;
     }
 
-    let from_sq_idx = from.to_square_index();
-    let (from_file, _from_rank) = square::from_square(from_sq_idx);
+    let from_sq_idx = from.inner();
+    let from_file = from.file();
 
     let us = board.side_to_move();
 
     let promotion_rank = Rank::promotion_rank(us);
-    for to_square in bitboard.iter() {
-        let (file, rank) = square::from_square(to_square);
-
+    for to_square in bitboard {
         let is_en_passant = match board.en_passant_square() {
             Some(en_passant_square) => en_passant_square == to_square && piece == Piece::Pawn,
             None => false,
@@ -56,18 +54,18 @@ pub(crate) fn enumerate_moves(
 
         // 2 rows = 16 squares
         let is_double_move =
-            piece == Piece::Pawn && (to_square as i8 - from_sq_idx as i8).abs() == 16;
+            piece == Piece::Pawn && (to_square.inner() as i8 - from_sq_idx as i8).abs() == 16;
         let is_promotion =
-            piece == Piece::Pawn && square::is_square_on_rank(to_square, promotion_rank as u8);
+            piece == Piece::Pawn && square::is_square_on_rank(to_square, promotion_rank);
 
         if is_double_move && is_en_passant {
             panic!("Double move and en passant should not happen");
         }
 
         // A castle is the only time a king can move 2 squares
-        let is_castle = piece == Piece::King && from_file.abs_diff(file) == 2;
+        let is_castle =
+            piece == Piece::King && from_file.inner().abs_diff(to_square.file().inner()) == 2;
 
-        let to_square = square::to_square_object(file, rank);
         // Promotions are not quiet moves
         if is_promotion && move_filter != MoveFilter::Quiets {
             let flags: &[MoveFlag] = &[

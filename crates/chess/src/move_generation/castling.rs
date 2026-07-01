@@ -4,8 +4,7 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use crate::{
-    bitboard::Bitboard, board::Board, definitions::Squares, move_generation, pieces::Piece,
-    side::Side,
+    bitboard::Bitboard, board::Board, move_generation, pieces::Piece, side::Side, square::Square,
 };
 
 // Credit to Hobbes author for CastleSafety and CastleTravel masks.
@@ -37,12 +36,12 @@ impl CastleTravel {
 ///
 /// # Returns
 /// Square index
-pub fn rook_from(side: Side, kingside: bool) -> u8 {
+pub fn rook_from(side: Side, kingside: bool) -> Square {
     match (side, kingside) {
-        (Side::White, true) => Squares::H1,
-        (Side::White, false) => Squares::A1,
-        (Side::Black, true) => Squares::H8,
-        (Side::Black, false) => Squares::A8,
+        (Side::White, true) => Square::H1,
+        (Side::White, false) => Square::A1,
+        (Side::Black, true) => Square::H8,
+        (Side::Black, false) => Square::A8,
     }
 }
 
@@ -53,10 +52,10 @@ pub fn rook_from(side: Side, kingside: bool) -> u8 {
 ///
 /// # Returns
 /// Square index
-pub fn king_from(side: Side) -> u8 {
+pub fn king_from(side: Side) -> Square {
     match side {
-        Side::White => Squares::E1,
-        Side::Black => Squares::E8,
+        Side::White => Square::E1,
+        Side::Black => Square::E8,
     }
 }
 
@@ -128,7 +127,7 @@ pub(crate) fn legal_mobility(board: &Board, checkers: Bitboard) -> Bitboard {
             && !move_generation::square_state::is_attacked(safety_mask, them, occ, board)
             && rook_in_place
         {
-            castling_moves |= Bitboard::from_square(king_sq + 2);
+            castling_moves |= Bitboard::from_square(king_sq.inner() + 2);
         }
     }
     if queen_side_castle {
@@ -151,7 +150,7 @@ pub(crate) fn legal_mobility(board: &Board, checkers: Bitboard) -> Bitboard {
             && !move_generation::square_state::is_attacked(safety_mask, them, occ, board)
             && rook_in_place
         {
-            castling_moves |= Bitboard::from_square(king_sq - 2);
+            castling_moves |= Bitboard::from_square(king_sq.inner() - 2);
         }
     }
     castling_moves

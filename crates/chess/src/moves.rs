@@ -157,8 +157,8 @@ impl Move {
     /// Creates a new [`Move`].
     pub fn new(from: Square, to: Square, descriptor: MoveFlag) -> Self {
         Self {
-            move_info: (to.to_square_index() as u16)
-                | ((from.to_square_index() as u16) << MOVE_INFO_FROM_SHIFT)
+            move_info: (to.inner() as u16)
+                | ((from.inner() as u16) << MOVE_INFO_FROM_SHIFT)
                 | ((descriptor as u16) << MOVE_INFO_MOVE_DESCRIPTOR_SHIFT),
         }
     }
@@ -170,7 +170,7 @@ impl Move {
 
     /// Create a new castle move
     pub fn new_castle(king_from: Square, king_to: Square) -> Self {
-        let flag = if king_to.file > king_from.file {
+        let flag = if king_to.file() > king_from.file() {
             MoveFlag::CastleK
         } else {
             MoveFlag::CastleQ
@@ -180,13 +180,17 @@ impl Move {
     }
 
     /// Returns the from [`Square`] of the move.
-    pub fn from(&self) -> u8 {
-        ((self.move_info & MOVE_INFO_FROM_MASK) >> MOVE_INFO_FROM_SHIFT) as u8
+    pub fn from(&self) -> Square {
+        Square::from_square_index(
+            ((self.move_info & MOVE_INFO_FROM_MASK) >> MOVE_INFO_FROM_SHIFT) as u8,
+        )
     }
 
     /// Returns the to [`Square`] of the move.
-    pub fn to(&self) -> u8 {
-        ((self.move_info & MOVE_INFO_TO_MASK) >> MOVE_INFO_TO_SHIFT) as u8
+    pub fn to(&self) -> Square {
+        Square::from_square_index(
+            ((self.move_info & MOVE_INFO_TO_MASK) >> MOVE_INFO_TO_SHIFT) as u8,
+        )
     }
 
     pub fn flag(&self) -> MoveFlag {
@@ -264,8 +268,8 @@ impl Move {
     }
 
     pub fn to_long_algebraic(&self) -> String {
-        let from = SQUARE_NAME[self.from() as usize];
-        let to = SQUARE_NAME[self.to() as usize];
+        let from = SQUARE_NAME[self.from()];
+        let to = SQUARE_NAME[self.to()];
         // handle promotion too
         let promotion_piece = self.promotion_piece().map_or(Piece::NONE, |p| p as u32);
         format!(
@@ -286,14 +290,15 @@ mod tests {
     use crate::pieces::Piece;
     use crate::rank::Rank;
     use crate::square::Square;
+
     #[test]
     fn new_move() {
         {
             let from = Square::new(File::B, Rank::R1);
             let to = Square::new(File::C, Rank::R2);
             let m = Move::new(from, to, MoveFlag::Standard);
-            assert_eq!(m.from(), 1);
-            assert_eq!(m.to(), 10);
+            assert_eq!(m.from(), Square::B1);
+            assert_eq!(m.to(), Square::C2);
             assert!(!m.is_promotion());
         }
 
@@ -301,8 +306,8 @@ mod tests {
             let from = Square::new(File::H, Rank::R8);
             let to = Square::new(File::A, Rank::R8);
             let m = Move::new(from, to, MoveFlag::Standard);
-            assert_eq!(m.from(), 63);
-            assert_eq!(m.to(), 56);
+            assert_eq!(m.from(), Square::H8);
+            assert_eq!(m.to(), Square::A8);
             assert!(!m.is_promotion());
         }
 
@@ -310,8 +315,8 @@ mod tests {
             let from = Square::new(File::F, Rank::R4);
             let to = Square::new(File::E, Rank::R6);
             let m = Move::new(from, to, MoveFlag::EnPassant);
-            assert_eq!(m.from(), from.to_square_index());
-            assert_eq!(m.to(), to.to_square_index());
+            assert_eq!(m.from(), from);
+            assert_eq!(m.to(), to);
             assert!(!m.is_pawn_two_up());
             assert!(!m.is_castle());
             assert!(m.is_en_passant_capture());
@@ -320,8 +325,8 @@ mod tests {
             let from = Square::new(File::A, Rank::R2);
             let to = Square::new(File::A, Rank::R4);
             let m = Move::new(from, to, MoveFlag::DoublePush);
-            assert_eq!(m.from(), 8);
-            assert_eq!(m.to(), 24);
+            assert_eq!(m.from(), Square::A2);
+            assert_eq!(m.to(), Square::A4);
             assert!(!m.is_castle());
             assert!(!m.is_en_passant_capture());
             assert!(m.is_pawn_two_up());
@@ -330,8 +335,8 @@ mod tests {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
             let m = Move::new(from, to, MoveFlag::PromotionQueen);
-            assert_eq!(m.from(), 48);
-            assert_eq!(m.to(), 56);
+            assert_eq!(m.from(), Square::A7);
+            assert_eq!(m.to(), Square::A8);
             assert!(m.is_promote_to_queen());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Queen);
@@ -340,8 +345,8 @@ mod tests {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
             let m = Move::new(from, to, MoveFlag::PromotionKnight);
-            assert_eq!(m.from(), 48);
-            assert_eq!(m.to(), 56);
+            assert_eq!(m.from(), Square::A7);
+            assert_eq!(m.to(), Square::A8);
             assert!(m.is_promote_to_knight());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Knight);
@@ -350,8 +355,8 @@ mod tests {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
             let m = Move::new(from, to, MoveFlag::PromotionRook);
-            assert_eq!(m.from(), 48);
-            assert_eq!(m.to(), 56);
+            assert_eq!(m.from(), Square::A7);
+            assert_eq!(m.to(), Square::A8);
             assert!(m.is_promote_to_rook());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Rook);
@@ -360,8 +365,8 @@ mod tests {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
             let m = Move::new(from, to, MoveFlag::PromotionBishop);
-            assert_eq!(m.from(), 48);
-            assert_eq!(m.to(), 56);
+            assert_eq!(m.from(), Square::A7);
+            assert_eq!(m.to(), Square::A8);
             assert!(m.is_promote_to_bishop());
             assert!(!m.is_promote_to_rook());
             assert!(!m.is_promote_to_queen());
@@ -383,8 +388,8 @@ mod tests {
         assert!(!mv.is_castle());
         assert!(!mv.is_promotion());
         assert!(!mv.is_null_move());
-        assert_eq!(mv.from(), from.to_square_index());
-        assert_eq!(mv.to(), to.to_square_index());
+        assert_eq!(mv.from(), from);
+        assert_eq!(mv.to(), to);
 
         mv = Move::new(from, to, MoveFlag::DoublePush);
 
@@ -394,8 +399,8 @@ mod tests {
         assert!(!mv.is_promotion());
         assert!(!mv.is_null_move());
         assert!(mv.flag() == MoveFlag::DoublePush);
-        assert_eq!(mv.from(), from.to_square_index());
-        assert_eq!(mv.to(), to.to_square_index());
+        assert_eq!(mv.from(), from);
+        assert_eq!(mv.to(), to);
     }
 
     #[test]

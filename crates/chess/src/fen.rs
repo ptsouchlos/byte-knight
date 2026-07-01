@@ -13,11 +13,12 @@ use thiserror::Error;
 use crate::{
     board::Board,
     definitions::{CastlingAvailability, DASH, EM_DASH},
+    file::File,
     move_making::ep_capture_is_legal,
     pieces::{PIECE_SHORT_NAMES, Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
-    square::to_square,
+    square::{Square, to_square},
 };
 
 /// Represents the 6 parts of a FEN string.
@@ -160,8 +161,8 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
                     Side::Black
                 };
 
-                let square = to_square(file as u8, rank);
-                board.set_piece_square(piece, side, square);
+                let sq_idx = to_square(file as u8, rank);
+                board.set_piece_square(piece, side, Square::from_square_index(sq_idx));
 
                 file += 1;
             }
@@ -185,10 +186,10 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
 pub(crate) fn piece_placement_to_fen(board: &Board) -> String {
     let mut fen = String::new();
 
-    for rank in (0..8).rev() {
+    for rank in Rank::iter().rev() {
         let mut empty_squares = 0;
-        for file in 0..8 {
-            let square = to_square(file, rank);
+        for file in File::iter() {
+            let square = Square::new(file, rank);
             let maybe_piece = board.piece_on_square(square);
             if let Some(piece) = maybe_piece {
                 if empty_squares > 0 {
@@ -218,7 +219,7 @@ pub(crate) fn piece_placement_to_fen(board: &Board) -> String {
             fen.push_str(&empty_squares.to_string());
         }
 
-        if rank > 0 {
+        if rank > Rank::R1 {
             fen.push('/');
         }
     }
@@ -266,10 +267,10 @@ pub(crate) fn active_color_to_fen(board: &Board) -> String {
     }
 }
 
-fn ep_square_is_valid(board: &Board, ep_square: u8) -> bool {
+fn ep_square_is_valid(board: &Board, ep_square: Square) -> bool {
     let side_to_move = board.side_to_move();
     let pushing_side = side_to_move.opposite();
-    let rank = Rank::of(ep_square);
+    let rank = ep_square.rank();
 
     // The EP target sits behind the pawn that just pushed two squares:
     //   white to move => black just pushed (rank 7 -> 5), EP target on rank 6
@@ -290,22 +291,24 @@ fn ep_square_is_valid(board: &Board, ep_square: u8) -> bool {
     // The pushed pawn sits one square past the EP target in the pushing
     // direction (white pushed up: ep+8; black pushed down: ep-8).
     let post_push_sq = match pushing_side {
-        Side::White => ep_square + 8,
-        Side::Black => ep_square - 8,
+        Side::White => ep_square.inner() + 8,
+        Side::Black => ep_square.inner() - 8,
     };
+
     if !board
         .piece_bitboard(Piece::Pawn, pushing_side)
-        .is_square_occupied(post_push_sq)
+        .is_square_occupied(Square::from_square_index(post_push_sq))
     {
         return false;
     }
 
     // ep_capture_is_legal expects the pre-push state: the pushed pawn on its
     // starting square (rank 2 or 7) with the EP target empty. Walk it back.
-    let pre_push_sq = match pushing_side {
-        Side::White => ep_square - 8,
-        Side::Black => ep_square + 8,
+    let pre_push_sq_idx = match pushing_side {
+        Side::White => ep_square.inner() - 8,
+        Side::Black => ep_square.inner() + 8,
     };
+    let pre_push_sq: Square = pre_push_sq_idx.try_into().unwrap();
 
     // The starting square must be empty in a consistent post-push position;
     // otherwise the FEN is malformed and we can't reconstruct a sane pre-push
@@ -314,7 +317,7 @@ fn ep_square_is_valid(board: &Board, ep_square: u8) -> bool {
     }
 
     let mut board_cpy = board.clone();
-    board_cpy.remove_piece_from_square(Piece::Pawn, pushing_side, post_push_sq);
+    board_cpy.remove_piece_from_square(Piece::Pawn, pushing_side, post_push_sq.try_into().unwrap());
     board_cpy.set_piece_square(Piece::Pawn, pushing_side, pre_push_sq);
 
     ep_capture_is_legal(&board_cpy, pre_push_sq, ep_square, pushing_side)
@@ -344,7 +347,7 @@ fn parse_en_passant_target_square(board: &mut Board, part: &str) -> FenResult {
             .position(|&r| r == part.trim().to_lowercase())
             .unwrap();
 
-        let ep_square = index as u8;
+        let ep_square = Square::from_square_index(index as u8);
 
         // Validate that the EP is legal for the current position.
         if ep_square_is_valid(board, ep_square) {
@@ -365,7 +368,7 @@ fn parse_en_passant_target_square(board: &mut Board, part: &str) -> FenResult {
 /// Converts the en passant target square of a board to a FEN string.
 pub(crate) fn en_passant_target_square_to_fen(board: &Board) -> String {
     match board.en_passant_square() {
-        Some(square) => SQUARE_NAME[square as usize].to_string(),
+        Some(square) => SQUARE_NAME[square].to_string(),
         None => "-".to_string(),
     }
 }
@@ -575,9 +578,7 @@ mod tests {
 
         let ep_square = board.en_passant_square();
         assert!(ep_square.is_some());
-        let expected_sq = Square::from_file_rank(File::E.to_char(), Rank::R3.as_number())
-            .unwrap()
-            .to_square_index();
+        let expected_sq = Square::new(File::E, Rank::R3);
         assert_eq!(ep_square.unwrap(), expected_sq);
 
         let bad_eq_square = "e99";

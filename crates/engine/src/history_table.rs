@@ -42,15 +42,15 @@ impl HistoryTable {
     }
 
     pub(crate) fn get(&self, side: Side, piece: Piece, mv: Move) -> LargeScoreType {
-        self.table[side as usize][piece as usize][mv.to() as usize]
+        self.table[side as usize][piece as usize][mv.to()]
     }
 
     pub(crate) fn update(&mut self, side: Side, piece: Piece, mv: Move, bonus: LargeScoreType) {
-        let current_value = self.table[side as usize][piece as usize][mv.to() as usize];
+        let current_value = self.table[side as usize][piece as usize][mv.to()];
         let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
         let new_value = current_value + clamped_bonus
             - current_value * clamped_bonus.abs() / Score::MAX_HISTORY;
-        self.table[side as usize][piece as usize][mv.to() as usize] = new_value;
+        self.table[side as usize][piece as usize][mv.to()] = new_value;
     }
 
     pub(crate) fn clear(&mut self) {
@@ -96,7 +96,7 @@ mod tests {
     use crate::defs::MAX_DEPTH;
 
     use super::{HistoryTable, calculate_bonus_for_depth};
-    use chess::{definitions::Squares, moves::Move, pieces::Piece, side::Side};
+    use chess::{moves::Move, pieces::Piece, side::Side, square::Square};
 
     #[test]
     fn initialize_history_table() {
@@ -117,11 +117,7 @@ mod tests {
     #[test]
     fn store_and_read() {
         let mut history_table = HistoryTable::new();
-        let mv = Move::new(
-            Squares::B1.try_into().unwrap(),
-            Squares::A1.try_into().unwrap(),
-            chess::moves::MoveFlag::Standard,
-        );
+        let mv = Move::new(Square::B1, Square::A1, chess::moves::MoveFlag::Standard);
         let side = Side::Black;
         let piece = Piece::Pawn;
         let score = 37;

@@ -14,8 +14,8 @@ use crate::move_history::BoardHistory;
 use crate::moves::Move;
 use crate::rank::Rank;
 use crate::square::Square;
+use crate::zobrist;
 use crate::zobrist::{Hashes, keys};
-use crate::{bitboard_helpers, zobrist};
 
 use super::definitions::NumberOf;
 use super::fen;
@@ -50,7 +50,7 @@ impl Display for Board {
             for file in 0..8 {
                 let square =
                     Square::new(File::try_from(file).unwrap(), Rank::try_from(rank).unwrap());
-                if let Some((piece, side)) = self.piece_on_square(square.to_square_index()) {
+                if let Some((piece, side)) = self.piece_on_square(square) {
                     let piece_char = match piece {
                         Piece::King => 'K',
                         Piece::Queen => 'Q',
@@ -115,33 +115,35 @@ impl Board {
         ];
 
         for &(piece, white_bits, black_bits) in layout {
-            for sq in Bitboard::new(white_bits).iter() {
+            let white_bb = Bitboard::new(white_bits);
+            let black_bb = Bitboard::new(black_bits);
+            for sq in white_bb {
                 self.set_piece_square(piece, Side::White, sq);
             }
-            for sq in Bitboard::new(black_bits).iter() {
+            for sq in black_bb {
                 self.set_piece_square(piece, Side::Black, sq);
             }
         }
     }
 
-    pub(crate) fn set_piece_square(&mut self, piece: Piece, side: Side, square: u8) {
+    pub(crate) fn set_piece_square(&mut self, piece: Piece, side: Side, square: Square) {
         let piece_bb = &mut self.bitboards[piece as usize];
         piece_bb.set_square(square);
 
         let side_bb = &mut self.bitboards[NumberOf::PIECE_TYPES + side as usize];
         side_bb.set_square(square);
 
-        self.pieces[square as usize] = Some(piece);
+        self.pieces[square] = Some(piece);
     }
 
-    pub(crate) fn remove_piece_from_square(&mut self, piece: Piece, side: Side, square: u8) {
+    pub(crate) fn remove_piece_from_square(&mut self, piece: Piece, side: Side, square: Square) {
         let piece_bb = &mut self.bitboards[piece as usize];
         piece_bb.clear_square(square);
 
         let side_bb = &mut self.bitboards[NumberOf::PIECE_TYPES + side as usize];
         side_bb.clear_square(square);
 
-        self.pieces[square as usize] = None;
+        self.pieces[square] = None;
     }
 
     /// Sets the side to move and updates the zobrist hash.
@@ -159,14 +161,14 @@ impl Board {
     }
 
     /// Set the en passant square and update the zobrist hash.
-    pub(crate) fn set_en_passant_square(&mut self, square: Option<u8>) {
-        self.state
-            .hashes
-            .update_hash(keys::ep_hash(self.state.en_passant_square));
-        self.state.en_passant_square = square;
-        self.state
-            .hashes
-            .update_hash(keys::ep_hash(self.state.en_passant_square));
+    pub(crate) fn set_en_passant_square(&mut self, square: Option<Square>) {
+        self.state.hashes.update_hash(keys::ep_hash(
+            self.state.en_passant_square.map(Square::from_square_index),
+        ));
+        self.state.en_passant_square = square.map(|sq| sq.inner());
+        self.state.hashes.update_hash(keys::ep_hash(
+            self.state.en_passant_square.map(Square::from_square_index),
+        ));
     }
 
     pub(crate) fn set_half_move_clock(&mut self, half_move_clock: u32) {
@@ -187,7 +189,12 @@ impl Board {
             .update_hash(keys::castling_hash(self.state.castling_rights));
     }
 
-    pub(crate) fn update_zobrist_hash_for_piece(&mut self, square: u8, piece: Piece, side: Side) {
+    pub(crate) fn update_zobrist_hash_for_piece(
+        &mut self,
+        square: Square,
+        piece: Piece,
+        side: Side,
+    ) {
         self.state
             .hashes
             .update_hash(keys::sq_hash(piece, side, square));
@@ -313,9 +320,9 @@ impl Board {
     }
 
     /// Returns the current square of the king for a given side.
-    pub fn king_square(&self, side: Side) -> u8 {
+    pub fn king_square(&self, side: Side) -> Square {
         let king_bb = self.piece_bitboard(Piece::King, side);
-        bitboard_helpers::next_bit(&mut king_bb.clone()) as u8
+        king_bb.lsb().unwrap()
     }
 
     /// Find what piece is on a given square.
@@ -327,11 +334,11 @@ impl Board {
     /// # Returns
     ///
     /// - Optional tuple of the piece and the side that the piece belongs to. (Piece, Side)
-    pub fn piece_on_square(&self, square: u8) -> Option<(Piece, Side)> {
-        let piece = self.pieces[square as usize];
+    pub fn piece_on_square(&self, square: Square) -> Option<(Piece, Side)> {
+        let piece = self.pieces[square];
         piece?;
 
-        let bb = Bitboard::from_square(square);
+        let bb = Bitboard::from(square);
         let side = if !(bb & self.pieces(Side::White)).is_empty() {
             Side::White
         } else {
@@ -347,8 +354,8 @@ impl Board {
     }
 
     /// Returns the en passant square of this [`Board`] (if it exists)
-    pub fn en_passant_square(&self) -> Option<u8> {
-        self.state.en_passant_square
+    pub fn en_passant_square(&self) -> Option<Square> {
+        self.state.en_passant_square.map(Square::from_square_index)
     }
 
     /// Returns the half move clock of this [`Board`].
@@ -377,10 +384,8 @@ impl Board {
     }
 
     /// Checks if a given square is empty.
-    pub fn is_square_empty(&self, square: &Square) -> bool {
-        !self
-            .all_pieces()
-            .is_square_occupied(square.to_square_index())
+    pub fn is_square_empty(&self, square: Square) -> bool {
+        !self.all_pieces().is_square_occupied(square)
     }
 
     /// Helper function to check if a given side has kingside castling rights.
@@ -420,7 +425,7 @@ impl Board {
     /// Get the color of the piece on a given square.
     ///
     /// Returns `Some(Side)` if the square is occupied, otherwise `None`.
-    pub fn color_on(&self, square: u8) -> Option<Side> {
+    pub fn color_on(&self, square: Square) -> Option<Side> {
         let white_pieces = self.white_pieces();
         let black_pieces = self.black_pieces();
         if white_pieces.is_square_occupied(square) {
@@ -549,10 +554,10 @@ impl Board {
                     .swap_bytes(),
             );
 
-            for sq in black_flipped.iter() {
+            for sq in black_flipped {
                 flipped.set_piece_square(piece, Side::White, sq);
             }
-            for sq in white_flipped.iter() {
+            for sq in white_flipped {
                 flipped.set_piece_square(piece, Side::Black, sq);
             }
         }
@@ -608,7 +613,7 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::{DEFAULT_FEN, Squares},
+        definitions::DEFAULT_FEN,
         file::File,
         move_generation::{self, move_filter::MoveFilter},
         move_list::MoveList,
@@ -623,11 +628,11 @@ mod tests {
     fn threefold_repetition_detection() {
         let mut board = Board::from_fen("k7/8/KQ6/8/8/8/8/8 w - - 0 1").unwrap();
 
-        let bk_square_1 = Square::from_square_index(Squares::A8);
-        let bk_square_2 = Square::from_square_index(Squares::B8);
+        let bk_square_1 = Square::A8;
+        let bk_square_2 = Square::B8;
 
-        let wq_square_1 = Square::from_square_index(Squares::B6);
-        let wq_square_2 = Square::from_square_index(Squares::C5);
+        let wq_square_1 = Square::B6;
+        let wq_square_2 = Square::C5;
 
         let white_queen_move = Move::new(wq_square_1, wq_square_2, MoveFlag::Standard);
         let while_queen_reverse_move = Move::new(wq_square_2, wq_square_1, MoveFlag::Standard);
@@ -728,11 +733,12 @@ mod tests {
     #[test]
     fn check_square_is_empty() {
         let board = Board::default_board();
-        // all of these squares should be empty.
+        // All of these squares should be empty.
+        // TODO: Use proper Rank and File iteration
         for rank in (Rank::R3 as u8)..=(Rank::R6 as u8) {
             for file in (File::A as u8)..=(File::H as u8) {
                 let square = square::to_square_object(file, rank);
-                assert!(board.is_square_empty(&square));
+                assert!(board.is_square_empty(square));
             }
         }
     }
@@ -809,11 +815,11 @@ mod tests {
     #[test]
     fn color_on() {
         let board = Board::default_board();
-        for sq in 0..64 {
+        for sq in Bitboard::filled() {
             let color = board.color_on(sq);
-            if sq <= 15 {
+            if sq.index() <= 15 {
                 assert!(color.is_some_and(|c| c == Side::White));
-            } else if sq >= 48 {
+            } else if sq.index() >= 48 {
                 assert!(color.is_some_and(|c| c == Side::Black));
             } else {
                 assert!(color.is_none());

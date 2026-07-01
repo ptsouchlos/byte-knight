@@ -1,13 +1,7 @@
 use crate::{attacks, bitboard::Bitboard, board::Board, side::Side, square::Square};
 
 pub fn is_square_attacked(board: &Board, square: Square, attacking_side: Side) -> bool {
-    !attacks::all_attackers_of(
-        square.to_square_index(),
-        board,
-        attacking_side,
-        board.all_pieces(),
-    )
-    .is_empty()
+    !attacks::all_attackers_of(square, board, attacking_side, board.all_pieces()).is_empty()
 }
 
 pub fn is_attacked(
@@ -16,7 +10,7 @@ pub fn is_attacked(
     occupancy: Bitboard,
     board: &Board,
 ) -> bool {
-    for sq in squares.iter() {
+    for sq in squares {
         if !attacks::all_attackers_of(sq, board, attacking_side, occupancy).is_empty() {
             return true;
         }
@@ -39,9 +33,8 @@ mod tests {
         let us = Side::White;
         let them = us.opposite();
         let black_pieces = board.pieces(them);
-        for sq in black_pieces.iter() {
-            let square = Square::from_square_index(sq);
-            let is_attacked = is_square_attacked(&board, square, us);
+        for sq in black_pieces {
+            let is_attacked = is_square_attacked(&board, sq, us);
             assert!(!is_attacked);
         }
 
@@ -50,8 +43,7 @@ mod tests {
         let side_to_move = board.side_to_move();
         for mv in move_list.iter().filter(|mv| !mv.is_pawn_two_up()) {
             let to = mv.to();
-            let is_attacked =
-                is_square_attacked(&board, Square::from_square_index(to), side_to_move);
+            let is_attacked = is_square_attacked(&board, to, side_to_move);
             assert!(is_attacked, "Square {to} is not attacked by move\n\t{mv}",);
         }
 
@@ -61,7 +53,7 @@ mod tests {
             assert_eq!(board.side_to_move(), Side::Black);
             assert!(square_state::is_square_attacked(
                 &board,
-                Square::from_square_index(king_sq),
+                king_sq,
                 board.side_to_move().opposite()
             ));
         }
@@ -81,7 +73,7 @@ mod tests {
             assert_eq!(board.side_to_move(), Side::Black);
             assert!(!square_state::is_square_attacked(
                 &board,
-                Square::from_square_index(king_sq),
+                king_sq,
                 Side::Black
             ));
         }

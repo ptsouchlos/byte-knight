@@ -3,9 +3,11 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
+use std::{fmt::Display, ops::Index};
+
 use anyhow::Result;
 
-use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS};
+use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS, square::Square};
 
 /// Represents a file on the chess board.
 #[repr(u8)]
@@ -22,6 +24,10 @@ pub enum File {
 }
 
 impl File {
+    pub const MIN: u8 = 0;
+    pub const MAX: u8 = 7;
+    pub const COUNT: usize = 8;
+
     /// Returns the file offset by `delta` if it is within range.
     /// Returns `None` if the resulting file is out of bounds.
     ///
@@ -47,12 +53,25 @@ impl File {
         None
     }
 
+    pub const fn all() -> [Self; Self::COUNT] {
+        [
+            File::A,
+            File::B,
+            File::C,
+            File::D,
+            File::E,
+            File::F,
+            File::G,
+            File::H,
+        ]
+    }
+
     pub const fn to_bitboard(self) -> Bitboard {
         FILE_BITBOARDS[self as usize]
     }
 
-    pub const fn of(sq: u8) -> Self {
-        match sq & 7u8 {
+    pub const fn of(sq: Square) -> Self {
+        match sq.inner() & 7u8 {
             0 => Self::A,
             1 => Self::B,
             2 => Self::C,
@@ -77,6 +96,18 @@ impl File {
             Self::G => 'g',
             Self::H => 'h',
         }
+    }
+
+    pub const fn inner(&self) -> u8 {
+        *self as u8
+    }
+
+    pub const fn index(&self) -> usize {
+        self.inner() as usize
+    }
+
+    pub fn iter() -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator<Item = Self> {
+        File::all().into_iter()
     }
 }
 
@@ -112,6 +143,25 @@ impl TryFrom<char> for File {
             'h' => Ok(Self::H),
             _ => Err(anyhow::Error::msg(format!("Invalid file {value}"))),
         }
+    }
+}
+
+impl From<File> for u8 {
+    fn from(file: File) -> u8 {
+        file as u8
+    }
+}
+
+impl Display for File {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_char().fmt(f)
+    }
+}
+
+impl<T> Index<File> for [T; File::COUNT] {
+    type Output = T;
+    fn index(&self, index: File) -> &Self::Output {
+        &self[index.index()]
     }
 }
 

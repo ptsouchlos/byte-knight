@@ -57,8 +57,8 @@ pub fn next_bit(bitboard: &mut Bitboard) -> usize {
 /// ```
 /// use chess::bitboard::Bitboard;
 /// use chess::bitboard_helpers::north_fill;
-/// use chess::definitions::Squares;
-/// let bb = Bitboard::from_square(Squares::A2) | Bitboard::from_square(Squares::H2) | Bitboard::from_square(Squares::D4);
+/// use chess::square::Square;
+/// let bb = Bitboard::from(Square::A2) | Bitboard::from(Square::H2) | Bitboard::from(Square::D4);
 /// let filled = north_fill(bb);
 /// // Should look like this:
 /// // x - - x - - - x
@@ -88,8 +88,8 @@ pub const fn north_fill(bitboard: Bitboard) -> Bitboard {
 /// ```
 /// use chess::bitboard::Bitboard;
 /// use chess::bitboard_helpers::south_fill;
-/// use chess::definitions::Squares;
-/// let bb = Bitboard::from_square(Squares::A7) | Bitboard::from_square(Squares::H7) | Bitboard::from_square(Squares::D5);
+/// use chess::square::Square;
+/// let bb = Bitboard::from(Square::A7) | Bitboard::from(Square::H7) | Bitboard::from(Square::D5);
 /// let filled = south_fill(bb);
 /// // // Should look like this:
 /// // - - - - - - - -
@@ -119,8 +119,8 @@ pub const fn south_fill(bitboard: Bitboard) -> Bitboard {
 /// ```
 /// use chess::bitboard::Bitboard;
 /// use chess::bitboard_helpers::east_fill;
-/// use chess::definitions::Squares;
-/// let bb = Bitboard::from_square(Squares::A1) | Bitboard::from_square(Squares::C3);
+/// use chess::square::Square;
+/// let bb = Bitboard::from(Square::A1) | Bitboard::from(Square::C3);
 /// let filled = east_fill(bb);
 /// // Should fill eastward on each rank without wrapping to the next rank
 /// assert_eq!(filled.as_number(), 0x00000000000000FF | 0x0000000000FC0000);
@@ -148,8 +148,8 @@ pub const fn east_fill(bitboard: Bitboard) -> Bitboard {
 /// ```
 /// use chess::bitboard::Bitboard;
 /// use chess::bitboard_helpers::west_fill;
-/// use chess::definitions::Squares;
-/// let bb = Bitboard::from_square(Squares::H2) | Bitboard::from_square(Squares::D4);
+/// use chess::square::Square;
+/// let bb = Bitboard::from(Square::H2) | Bitboard::from(Square::D4);
 /// let filled = west_fill(bb);
 /// // Should fill eastward on each rank without wrapping to the next rank
 /// assert_eq!(filled.as_number(), 0x000000000000FF00 | 0x000000000F000000);
@@ -264,8 +264,9 @@ mod tests {
         bitboard_helpers::{
             self, east, north, north_east, north_west, south, south_east, south_west, west,
         },
-        definitions::{RANK_BITBOARDS, Squares},
+        definitions::RANK_BITBOARDS,
         rank::Rank,
+        square::Square,
     };
 
     #[test]
@@ -294,7 +295,7 @@ mod tests {
             Bitboard::new(0x000000000000FFFF),
             Bitboard::new(0x00000000FFFFFFFF),
             Bitboard::new(0xFFFFFFFFFFFFFFFF),
-            Bitboard::from_square(Squares::C3) | Bitboard::from_square(Squares::E6),
+            Bitboard::from(Square::C3) | Bitboard::from(Square::E6),
         ];
 
         for bb in test_bbs {
@@ -318,60 +319,59 @@ mod tests {
     #[test]
     fn test_east_fill() {
         // Test with a single bit first
-        let bb = Bitboard::from_square(Squares::A1);
+        let bb = Bitboard::from(Square::A1);
         let filled = bitboard_helpers::east_fill(bb);
         assert_eq!(filled, RANK_BITBOARDS[Rank::R1 as usize]);
 
         // Test with multiple bits
-        let bb = Bitboard::from_square(Squares::A3)
-            | Bitboard::from_square(Squares::C4)
-            | Bitboard::from_square(Squares::D5);
+        let bb =
+            Bitboard::from(Square::A3) | Bitboard::from(Square::C4) | Bitboard::from(Square::D5);
         let filled = bitboard_helpers::east_fill(bb);
         assert_eq!(filled, Bitboard::new(0x000000F8FCFF0000));
     }
 
     #[test]
     fn test_west_fill() {
-        let bb = Bitboard::from_square(Squares::H8)
-            | Bitboard::from_square(Squares::G7)
-            | Bitboard::from_square(Squares::F6)
-            | Bitboard::from_square(Squares::E5)
-            | Bitboard::from_square(Squares::D4)
-            | Bitboard::from_square(Squares::C3)
-            | Bitboard::from_square(Squares::B2)
-            | Bitboard::from_square(Squares::A1);
+        let bb = Bitboard::from(Square::H8)
+            | Bitboard::from(Square::G7)
+            | Bitboard::from(Square::F6)
+            | Bitboard::from(Square::E5)
+            | Bitboard::from(Square::D4)
+            | Bitboard::from(Square::C3)
+            | Bitboard::from(Square::B2)
+            | Bitboard::from(Square::A1);
         let filled = bitboard_helpers::west_fill(bb);
         assert_eq!(filled, Bitboard::new(0xFF7F3F1F0F070301));
 
-        let single_sq_bb = Bitboard::from_square(Squares::H1);
+        let single_sq_bb = Bitboard::from(Square::H1);
         let filled_bb = bitboard_helpers::west_fill(single_sq_bb);
         assert_eq!(filled_bb, RANK_BITBOARDS[Rank::R1 as usize]);
     }
 
     #[test]
     fn test_direction_shifts() {
-        let bb = Bitboard::from_square(Squares::D4);
-        assert_eq!(north(bb), Bitboard::from_square(Squares::D5));
-        assert_eq!(south(bb), Bitboard::from_square(Squares::D3));
-        assert_eq!(east(bb), Bitboard::from_square(Squares::E4));
-        assert_eq!(west(bb), Bitboard::from_square(Squares::C4));
+        let bb = Bitboard::from(Square::D4);
+        assert_eq!(north(bb), Bitboard::from(Square::D5));
+        assert_eq!(south(bb), Bitboard::from(Square::D3));
+        assert_eq!(east(bb), Bitboard::from(Square::E4));
+        assert_eq!(west(bb), Bitboard::from(Square::C4));
 
         // Do the same for diagonals
-        assert_eq!(north_east(bb), Bitboard::from_square(Squares::E5));
-        assert_eq!(north_west(bb), Bitboard::from_square(Squares::C5));
-        assert_eq!(south_east(bb), Bitboard::from_square(Squares::E3));
-        assert_eq!(south_west(bb), Bitboard::from_square(Squares::C3));
+        assert_eq!(north_east(bb), Bitboard::from(Square::E5));
+        assert_eq!(north_west(bb), Bitboard::from(Square::C5));
+        assert_eq!(south_east(bb), Bitboard::from(Square::E3));
+        assert_eq!(south_west(bb), Bitboard::from(Square::C3));
 
         // Repeat for edge cases
         // Use top right corner
-        let bb = Bitboard::from_square(Squares::H8);
+        let bb = Bitboard::from(Square::H8);
         assert_eq!(north(bb), Bitboard::default());
         assert_eq!(east(bb), Bitboard::default());
-        assert_eq!(west(bb), Bitboard::from_square(Squares::G8));
-        assert_eq!(south(bb), Bitboard::from_square(Squares::H7));
+        assert_eq!(west(bb), Bitboard::from(Square::G8));
+        assert_eq!(south(bb), Bitboard::from(Square::H7));
         assert_eq!(north_east(bb), Bitboard::default());
         assert_eq!(north_west(bb), Bitboard::default());
         assert_eq!(south_east(bb), Bitboard::default());
-        assert_eq!(south_west(bb), Bitboard::from_square(Squares::G7));
+        assert_eq!(south_west(bb), Bitboard::from(Square::G7));
     }
 }

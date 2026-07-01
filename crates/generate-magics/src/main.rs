@@ -13,6 +13,7 @@ use chess::{
     magics::MagicNumber,
     move_generation,
     pieces::{Piece, SQUARE_NAME},
+    square::Square,
 };
 use rand::prelude::*;
 use thiserror::Error;
@@ -41,7 +42,7 @@ fn find_magic<R: Rng>(
     piece: Piece,
     relevant_bb: Bitboard,
     rng: &mut R,
-    square: u8,
+    square: Square,
 ) -> Result<MagicNumber> {
     let mut random_num = generate_random_u64(rng);
     while !is_valid_random_number(random_num, relevant_bb) {
@@ -61,7 +62,7 @@ fn find_magic<R: Rng>(
 
 fn try_to_make_table(
     piece: Piece,
-    square: u8,
+    square: Square,
     &magic: &MagicNumber,
     blockers: &[Bitboard],
 ) -> Result<()> {
@@ -103,7 +104,7 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
     let mut offset = 0;
 
     println!("Finding magic numbers for {piece}");
-    for sq in 0..NumberOf::SQUARES as u8 {
+    for sq in Bitboard::filled() {
         let rook_mask = move_generation::relevant_rook_bits(sq);
         let bishop_mask = move_generation::relevant_bishop_bits(sq);
 
@@ -129,11 +130,7 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
                 magic_numbers.push(magic);
             }
         }
-        println!(
-            "{} {}",
-            SQUARE_NAME[sq as usize],
-            magic_numbers.last().unwrap()
-        );
+        println!("{} {}", SQUARE_NAME[sq], magic_numbers.last().unwrap());
         offset += total_permutations;
     }
 

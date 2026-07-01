@@ -39,13 +39,12 @@ pub(crate) const SOUTH: u64 = 8;
 /// # Returns
 ///
 /// A bitboard representing the relevant bits for the rook attacks at the given square.
-pub fn relevant_rook_bits(square: u8) -> Bitboard {
+pub fn relevant_rook_bits(square: Square) -> Bitboard {
     let mut bb = Bitboard::default();
     bb.set_square(square);
 
-    let (file, rank) = square::from_square(square);
     let rook_rays_bb = attacks::orthogonal_ray_attacks(square, 0);
-    let edges = rays::edges(file, rank);
+    let edges = rays::edges(square.file(), square.rank());
 
     rook_rays_bb & !edges & !bb
 }
@@ -62,12 +61,11 @@ pub fn relevant_rook_bits(square: u8) -> Bitboard {
 /// # Returns
 ///
 /// A bitboard representing the relevant bits for the bishop attacks at the given square.
-pub fn relevant_bishop_bits(square: u8) -> Bitboard {
+pub fn relevant_bishop_bits(square: Square) -> Bitboard {
     let mut bb = Bitboard::default();
     bb.set_square(square);
 
-    let (file, rank) = square::from_square(square);
-    let edges = rays::edges(file, rank);
+    let edges = rays::edges(square.file(), square.rank());
 
     let bishop_ray_attacks = attacks::diagonal_ray_attacks(square, 0);
 
@@ -144,7 +142,7 @@ fn get_castling_moves(board: &Board, move_list: &mut MoveList) {
     let occupancy = board.all_pieces();
     let checkers = calculate_checkers(board, occupancy);
     let legal_castling_mobility = move_generation::castling::legal_mobility(board, checkers);
-    let king_sq = Square::from_square_index(board.king_square(board.side_to_move()));
+    let king_sq = board.king_square(board.side_to_move());
     enumerate_moves(
         &legal_castling_mobility,
         king_sq,
@@ -169,7 +167,7 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_f
     let empty = !occupancy;
 
     let piece_bb = board.piece_bitboard(piece, us);
-    for from_sq in piece_bb.iter() {
+    for from_sq in piece_bb {
         let attack_bb = attacks::for_piece_on_square(piece, from_sq, occupancy, us);
 
         let bb_moves = match move_filter {
@@ -178,14 +176,7 @@ fn get_piece_moves(piece: Piece, board: &Board, move_list: &mut MoveList, move_f
             MoveFilter::All => attack_bb & !our_pieces,
         };
 
-        enumerate::enumerate_moves(
-            &bb_moves,
-            Square::from_square_index(from_sq),
-            piece,
-            board,
-            move_filter,
-            move_list,
-        );
+        enumerate::enumerate_moves(&bb_moves, from_sq, piece, board, move_filter, move_list);
     }
 }
 
@@ -197,56 +188,46 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
     let their_pieces = board.pieces(them);
     let occupancy = board.all_pieces();
     let empty = !occupancy;
-    let direction = if us == Side::White { NORTH } else { SOUTH };
     let pawns_bb = board.piece_bitboard(Piece::Pawn, us);
 
     // loop through all the pawns for us
-    for from_square in pawns_bb.iter() {
+    for from_square in pawns_bb {
         let attack_bb = attacks::pawn(from_square, us);
 
         let mut bb_moves = Bitboard::default();
-        let to_square = match us {
-            Side::White => from_square as u64 + direction,
-            Side::Black => from_square as u64 - direction,
-        };
+        let to_square = from_square.forward_unchecked(us);
 
         // pawn non-capture moves
         if matches!(
             move_filter,
             MoveFilter::All | MoveFilter::Quiets | MoveFilter::Tacticals
         ) {
-            let bb_push = Bitboard::new(1u64 << to_square);
+            let bb_push = Bitboard::from(to_square);
             let bb_single_push = bb_push & empty;
             let can_double_push = match us {
-                Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
-                Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
+                Side::White => square::is_square_on_rank(from_square, Rank::R2),
+                Side::Black => square::is_square_on_rank(from_square, Rank::R7),
             };
 
             let double_push_square = if can_double_push {
-                match us {
-                    Side::White => {
-                        let (value, did_overflow) = to_square.overflowing_add(direction);
-                        if did_overflow { None } else { Some(value) }
-                    }
-                    Side::Black => {
-                        let (value, did_overflow) = to_square.overflowing_sub(direction);
-                        if did_overflow { None } else { Some(value) }
-                    }
-                }
+                to_square.forward(us)
             } else {
                 None
             };
 
             // note that the single push square has to be empty in addition to the double push square being empty
             let is_double_push_unobstructed = if let Some(push_square) = double_push_square {
-                !occupancy.is_square_occupied(to_square as u8)
-                    && !occupancy.is_square_occupied(push_square as u8)
+                !occupancy.is_square_occupied(to_square)
+                    && !occupancy.is_square_occupied(push_square)
             } else {
                 false
             };
 
-            let bb_double_push = if can_double_push && is_double_push_unobstructed {
-                Bitboard::new(1u64 << double_push_square.unwrap()) & empty
+            let bb_double_push = if can_double_push
+                && is_double_push_unobstructed
+                && let Some(dbl_push_sq) = double_push_square
+            {
+                Bitboard::from(dbl_push_sq) & empty
             } else {
                 Bitboard::default()
             };
@@ -274,7 +255,7 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
                     // We only want to add the en passant square if it is within range of the pawn.
                     // This means that the en passant square is within 1 rank of the pawn and the en passant square
                     // is in the pawn's attack table.
-                    let en_passant_bb = Bitboard::from_square(en_passant_square);
+                    let en_passant_bb = Bitboard::from(en_passant_square);
                     let result = en_passant_bb & !(attack_bb);
                     let is_in_range = result == 0;
                     if is_in_range {
@@ -290,7 +271,7 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
 
         enumerate::enumerate_moves(
             &bb_moves,
-            Square::from_square_index(from_square),
+            from_square,
             Piece::Pawn,
             board,
             move_filter,
@@ -302,11 +283,7 @@ fn get_pawn_moves(board: &Board, move_list: &mut MoveList, move_filter: MoveFilt
 /// Check if the side to move is in check.
 pub fn is_in_check(board: &Board) -> bool {
     let king_square = board.king_square(board.side_to_move());
-    square_state::is_square_attacked(
-        board,
-        Square::from_square_index(king_square),
-        board.side_to_move().opposite(),
-    )
+    square_state::is_square_attacked(board, king_square, board.side_to_move().opposite())
 }
 
 /// Check if the side to move is in checkmate.
@@ -341,11 +318,7 @@ pub fn are_legal(board: &Board, list: &MoveList) -> bool {
 #[cfg(test)]
 mod tests {
 
-    use crate::{
-        board::Board,
-        definitions::{NumberOf, Squares},
-        move_generation,
-    };
+    use crate::{board::Board, definitions::NumberOf, move_generation};
 
     use super::*;
 
@@ -358,7 +331,7 @@ mod tests {
         let meta = metadata::compute(&board);
         let checkers = calculate_checkers(&board, occupancy);
         assert_eq!(checkers, 0);
-        assert_eq!(meta.pinned, Bitboard::from_square(Squares::D7));
+        assert_eq!(meta.pinned, Bitboard::from(Square::D7));
     }
 
     #[test]
@@ -396,8 +369,8 @@ mod tests {
         println!("horizontal pin rays:\n{}", meta.orthogonal_pin_rays);
         println!("diagonal pin rays:\n{}", meta.diagonal_pin_rays);
 
-        assert!(meta.pinned.intersects(Bitboard::from_square(Squares::C5)));
-        assert!(meta.pinned.intersects(Bitboard::from_square(Squares::D2)));
+        assert!(meta.pinned.intersects(Bitboard::from(Square::C5)));
+        assert!(meta.pinned.intersects(Bitboard::from(Square::D2)));
     }
 
     #[test]
@@ -413,7 +386,7 @@ mod tests {
         println!("diagonal rays:\n{}", meta.diagonal_pin_rays);
 
         assert_eq!(meta.checkers, 0);
-        assert_eq!(meta.pinned, Bitboard::from_square(Squares::D8));
+        assert_eq!(meta.pinned, Bitboard::from(Square::D8));
     }
 
     #[test]
@@ -428,7 +401,7 @@ mod tests {
         println!("diagonal rays:\n{}", meta.diagonal_pin_rays);
 
         assert_eq!(meta.checkers, 0);
-        assert_eq!(meta.pinned, Bitboard::from_square(Squares::F7));
+        assert_eq!(meta.pinned, Bitboard::from(Square::F7));
         assert_eq!(meta.orthogonal_pin_rays, 0);
         assert!(meta.diagonal_pin_rays > 0);
     }
@@ -505,7 +478,8 @@ mod tests {
         let mut offset_sum: u64 = 0;
         const BASE: u64 = 2_u64;
         for (square, value) in rook_relevant_bit_expected.into_iter().enumerate() {
-            let rook_bits = move_generation::relevant_rook_bits(square as u8);
+            let rook_bits =
+                move_generation::relevant_rook_bits(Square::from_square_index(square as u8));
             assert_eq!(rook_bits.as_number(), value);
 
             offset_sum += BASE.pow(rook_bits.as_number().count_ones());
@@ -586,7 +560,8 @@ mod tests {
         const BASE: u64 = 2_u64;
 
         for (square, value) in bishop_relevant_bit_expected.into_iter().enumerate() {
-            let bishop_bits = move_generation::relevant_bishop_bits(square as u8);
+            let bishop_bits =
+                move_generation::relevant_bishop_bits(Square::from_square_index(square as u8));
             assert_eq!(bishop_bits.as_number(), value);
 
             offset_sum += BASE.pow(bishop_bits.as_number().count_ones());
@@ -666,7 +641,7 @@ mod tests {
         ];
 
         for (sq, expected) in EXPECTED_ATTACKS.iter().enumerate() {
-            let rook_attack_bb = attacks::rook(sq as u8, occupancy);
+            let rook_attack_bb = attacks::rook(Square::from_square_index(sq as u8), occupancy);
             // println!("{:#x},", rook_attack_bb.as_number())
             assert_eq!(rook_attack_bb.as_number(), *expected);
         }
@@ -677,7 +652,7 @@ mod tests {
         const BASE: u64 = 2_u64;
 
         for sq in 0..NumberOf::SQUARES {
-            let rook_bb = relevant_rook_bits(sq as u8);
+            let rook_bb = relevant_rook_bits(Square::from_square_index(sq as u8));
             let permutations = create_blocker_permutations(rook_bb);
             let total_permutations = BASE.pow(rook_bb.as_number().count_ones());
             assert_eq!(permutations.len(), total_permutations as usize);

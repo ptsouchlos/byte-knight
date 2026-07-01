@@ -11,6 +11,7 @@ use crate::{
     definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
     file::File,
     rank::Rank,
+    square::Square,
 };
 
 #[allow(long_running_const_eval)]
@@ -22,22 +23,33 @@ static RAYS_BETWEEN: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] = initia
 /// - A 2D array where each entry [from][to] contains a Bitboard representing the squares between `from` and `to`.
 const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] {
     let mut rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] =
-        [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SQUARES];
+        [[Bitboard::empty(); NumberOf::SQUARES]; NumberOf::SQUARES];
     let mut from = 0u8;
     let mut to = 0u8;
     while from < NumberOf::SQUARES as u8 {
         while to < NumberOf::SQUARES as u8 {
-            if attacks::rook(from, Bitboard::default()).intersects(Bitboard::from_square(to)) {
+            if attacks::rook(Square::from_square_index(from), Bitboard::empty())
+                .intersects(Bitboard::from_square(to))
+            {
                 rays_between[from as usize][to as usize] = Bitboard::new(
-                    attacks::rook(from, Bitboard::from_square(to)).as_number()
-                        & attacks::rook(to, Bitboard::from_square(from)).as_number(),
+                    attacks::rook(Square::from_square_index(from), Bitboard::from_square(to))
+                        .as_number()
+                        & attacks::rook(Square::from_square_index(to), Bitboard::from_square(from))
+                            .as_number(),
                 );
             }
 
-            if attacks::bishop(from, Bitboard::default()).intersects(Bitboard::from_square(to)) {
+            if attacks::bishop(Square::from_square_index(from), Bitboard::empty())
+                .intersects(Bitboard::from_square(to))
+            {
                 rays_between[from as usize][to as usize] = Bitboard::new(
-                    attacks::bishop(from, Bitboard::from_square(to)).as_number()
-                        & attacks::bishop(to, Bitboard::from_square(from)).as_number(),
+                    attacks::bishop(Square::from_square_index(from), Bitboard::from_square(to))
+                        .as_number()
+                        & attacks::bishop(
+                            Square::from_square_index(to),
+                            Bitboard::from_square(from),
+                        )
+                        .as_number(),
                 );
             }
 
@@ -58,8 +70,8 @@ const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the squares between `from` and `to`.
-pub fn between(from: u8, to: u8) -> Bitboard {
-    RAYS_BETWEEN[from as usize][to as usize]
+pub fn between(from: Square, to: Square) -> Bitboard {
+    RAYS_BETWEEN[from.index()][to.index()]
 }
 
 /// Returns a [`Bitboard`] representing the edge squares of the chessboard, excluding the specified file and rank.
@@ -70,9 +82,9 @@ pub fn between(from: u8, to: u8) -> Bitboard {
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the edge squares of the chessboard, excluding the specified
-pub fn edges(file: u8, rank: u8) -> Bitboard {
-    let file_bb = FILE_BITBOARDS[file as usize];
-    let rank_bb = RANK_BITBOARDS[rank as usize];
+pub fn edges(file: File, rank: Rank) -> Bitboard {
+    let file_bb = FILE_BITBOARDS[file];
+    let rank_bb = RANK_BITBOARDS[rank];
     (FILE_BITBOARDS[File::A as usize] & !file_bb)
         | (FILE_BITBOARDS[File::H as usize] & !file_bb)
         | (RANK_BITBOARDS[Rank::R1 as usize] & !rank_bb)
@@ -88,16 +100,16 @@ pub fn edges(file: u8, rank: u8) -> Bitboard {
 /// # Returns
 /// - A [`Bitboard`] representing the line that intersects both `from` and `to`. If `from` and `to` are not aligned,
 ///   this returns an empty `Bitboard`.
-pub fn line(from: u8, to: u8) -> Bitboard {
+pub fn line(from: Square, to: Square) -> Bitboard {
     let bishop_from = attacks::bishop(from, Bitboard::default());
     let bishop_to = attacks::bishop(to, Bitboard::default());
 
     let rook_from = attacks::rook(from, Bitboard::default());
     let rook_to = attacks::rook(to, Bitboard::default());
 
-    if bishop_from.intersects(Bitboard::from_square(to)) {
+    if bishop_from.intersects(Bitboard::from(to)) {
         (bishop_from & bishop_to) | from.into() | to.into()
-    } else if rook_from.intersects(Bitboard::from_square(to)) {
+    } else if rook_from.intersects(Bitboard::from(to)) {
         rook_from & rook_to | from.into() | to.into()
     } else {
         Bitboard::default()
@@ -106,16 +118,18 @@ pub fn line(from: u8, to: u8) -> Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use crate::{bitboard::Bitboard, definitions::Squares, pieces::SQUARE_NAME};
+    use crate::{bitboard::Bitboard, pieces::SQUARE_NAME, square::Square};
 
     #[test]
     fn validate_rays_between() {
-        for from in 0..64_u8 {
-            for to in 0..64_u8 {
+        for from in Square::iter() {
+            for to in Square::iter() {
                 let bb = super::between(from, to);
                 println!(
                     "{} -> {}\n{}",
-                    SQUARE_NAME[from as usize], SQUARE_NAME[to as usize], bb
+                    SQUARE_NAME[from.index()],
+                    SQUARE_NAME[to.index()],
+                    bb
                 );
                 // Verify symmetry: between(a, b) == between(b, a)
                 assert_eq!(bb, super::between(to, from));
@@ -126,22 +140,26 @@ mod tests {
     #[test]
     fn test_initialize_rays_between() {
         let rays_between = super::initialize_rays_between();
-        for from in 0..64_u8 {
-            for to in 0..64_u8 {
-                let bb = rays_between[from as usize][to as usize];
+        for from in Square::iter() {
+            for to in Square::iter() {
+                let bb = rays_between[from.index()][to.index()];
                 let expected_bb = super::between(from, to);
                 assert_eq!(
-                    bb, expected_bb,
+                    bb,
+                    expected_bb,
                     "Rays between {} and {} do not match.",
-                    SQUARE_NAME[from as usize], SQUARE_NAME[to as usize]
+                    SQUARE_NAME[from.index()],
+                    SQUARE_NAME[to.index()]
                 );
 
-                let bb_rev = rays_between[to as usize][from as usize];
+                let bb_rev = rays_between[to.index()][from.index()];
                 let expected_bb_rev = super::between(to, from);
                 assert_eq!(
-                    bb_rev, expected_bb_rev,
+                    bb_rev,
+                    expected_bb_rev,
                     "Rays between {} and {} do not match.",
-                    SQUARE_NAME[to as usize], SQUARE_NAME[from as usize]
+                    SQUARE_NAME[to.index()],
+                    SQUARE_NAME[from.index()]
                 );
             }
         }
@@ -1608,22 +1626,22 @@ mod tests {
 
     #[test]
     fn test_line() {
-        let from = Squares::C4;
-        let to = Squares::F7;
+        let from = Square::C4;
+        let to = Square::F7;
         let line_bb = super::line(from, to);
         let expected_line_bb =
-            super::between(Squares::A2, Squares::G8) | Squares::A2.into() | Squares::G8.into();
+            super::between(Square::A2, Square::G8) | Square::A2.into() | Square::G8.into();
 
         assert_eq!(
             line_bb, expected_line_bb,
             "Line between {} and {} does not match.",
-            SQUARE_NAME[from as usize], SQUARE_NAME[to as usize]
+            SQUARE_NAME[from], SQUARE_NAME[to]
         );
 
-        for sq1 in 0..64_u8 {
-            for sq2 in 0..64_u8 {
+        for sq1 in Bitboard::filled() {
+            for sq2 in Bitboard::filled() {
                 let line_bb = super::line(sq1, sq2);
-                let idx = sq1 as usize * 64 + sq2 as usize;
+                let idx = sq1.index() * 64 + sq2.index();
                 let expected_bb = EXPECTED_LINES
                     .iter()
                     .find(|(key, _)| (*key) as usize == idx)

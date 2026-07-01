@@ -25,6 +25,15 @@ impl Side {
         }
     }
 
+    /// Returns the rank delta of a single pawn push for this side: `+1` for
+    /// White (toward rank 8), `-1` for Black (toward rank 1).
+    pub const fn forward_delta(self) -> i8 {
+        match self {
+            Side::White => 1,
+            Side::Black => -1,
+        }
+    }
+
     /// Returns `true` if the side is [`White`].
     ///
     /// [`White`]: Side::White

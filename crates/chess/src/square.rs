@@ -3,37 +3,141 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
+
 use crate::{
-    bitboard::Bitboard,
-    bitboard_helpers,
-    color::Color,
-    definitions::{DARK_SQUARES, NumberOf},
-    file::File,
-    rank::Rank,
+    bitboard::Bitboard, bitboard_helpers, color::Color, file::File, rank::Rank, side::Side,
 };
 
 use anyhow::{Result, bail};
 
-/// Represents a square on the chess board.
+/// Represents a single square on an `8x8` chess board.
+///
+/// Internally encoded using the following bit pattern:
+/// ```ignore
+///      ---- ----- ------
+///     | -- | Rnk | File |
+///      ----------|------|
+///     | 0 0 0 0 0 0 0 0 |
+/// MSB  ----|-----|------  LSB
+/// ```
+///
+/// This pattern is also known as [Least Significant File Mapping](https://www.chessprogramming.org/Square_Mapping_Considerations#Deduction_on_Files_and_Ranks).
+/// The square index can be computed with `square = file + rank * 8`.
+/// The indices of each square on the board is given as follows:
+/// ```text
+/// 8| 56 57 58 59 59 61 62 63
+/// 7| 48 49 50 51 52 53 54 55
+/// 6| 40 41 42 43 44 45 46 47
+/// 5| 32 33 34 35 36 37 38 39
+/// 4| 24 25 26 27 28 29 30 31
+/// 3| 16 17 18 19 20 21 22 23
+/// 2|  8  9 10 11 12 13 14 15
+/// 1|  0  1  2  3  4  5  6  7
+///  +------------------------
+///    a  b  c  d  e  f  g  h
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Square {
-    pub file: File,
-    pub rank: Rank,
-}
+pub struct Square(u8);
 
 impl Square {
+    pub const A1: Self = Self::new(File::A, Rank::R1);
+    pub const A2: Self = Self::new(File::A, Rank::R2);
+    pub const A3: Self = Self::new(File::A, Rank::R3);
+    pub const A4: Self = Self::new(File::A, Rank::R4);
+    pub const A5: Self = Self::new(File::A, Rank::R5);
+    pub const A6: Self = Self::new(File::A, Rank::R6);
+    pub const A7: Self = Self::new(File::A, Rank::R7);
+    pub const A8: Self = Self::new(File::A, Rank::R8);
+
+    pub const B1: Self = Self::new(File::B, Rank::R1);
+    pub const B2: Self = Self::new(File::B, Rank::R2);
+    pub const B3: Self = Self::new(File::B, Rank::R3);
+    pub const B4: Self = Self::new(File::B, Rank::R4);
+    pub const B5: Self = Self::new(File::B, Rank::R5);
+    pub const B6: Self = Self::new(File::B, Rank::R6);
+    pub const B7: Self = Self::new(File::B, Rank::R7);
+    pub const B8: Self = Self::new(File::B, Rank::R8);
+
+    pub const C1: Self = Self::new(File::C, Rank::R1);
+    pub const C2: Self = Self::new(File::C, Rank::R2);
+    pub const C3: Self = Self::new(File::C, Rank::R3);
+    pub const C4: Self = Self::new(File::C, Rank::R4);
+    pub const C5: Self = Self::new(File::C, Rank::R5);
+    pub const C6: Self = Self::new(File::C, Rank::R6);
+    pub const C7: Self = Self::new(File::C, Rank::R7);
+    pub const C8: Self = Self::new(File::C, Rank::R8);
+
+    pub const D1: Self = Self::new(File::D, Rank::R1);
+    pub const D2: Self = Self::new(File::D, Rank::R2);
+    pub const D3: Self = Self::new(File::D, Rank::R3);
+    pub const D4: Self = Self::new(File::D, Rank::R4);
+    pub const D5: Self = Self::new(File::D, Rank::R5);
+    pub const D6: Self = Self::new(File::D, Rank::R6);
+    pub const D7: Self = Self::new(File::D, Rank::R7);
+    pub const D8: Self = Self::new(File::D, Rank::R8);
+
+    pub const E1: Self = Self::new(File::E, Rank::R1);
+    pub const E2: Self = Self::new(File::E, Rank::R2);
+    pub const E3: Self = Self::new(File::E, Rank::R3);
+    pub const E4: Self = Self::new(File::E, Rank::R4);
+    pub const E5: Self = Self::new(File::E, Rank::R5);
+    pub const E6: Self = Self::new(File::E, Rank::R6);
+    pub const E7: Self = Self::new(File::E, Rank::R7);
+    pub const E8: Self = Self::new(File::E, Rank::R8);
+
+    pub const F1: Self = Self::new(File::F, Rank::R1);
+    pub const F2: Self = Self::new(File::F, Rank::R2);
+    pub const F3: Self = Self::new(File::F, Rank::R3);
+    pub const F4: Self = Self::new(File::F, Rank::R4);
+    pub const F5: Self = Self::new(File::F, Rank::R5);
+    pub const F6: Self = Self::new(File::F, Rank::R6);
+    pub const F7: Self = Self::new(File::F, Rank::R7);
+    pub const F8: Self = Self::new(File::F, Rank::R8);
+
+    pub const G1: Self = Self::new(File::G, Rank::R1);
+    pub const G2: Self = Self::new(File::G, Rank::R2);
+    pub const G3: Self = Self::new(File::G, Rank::R3);
+    pub const G4: Self = Self::new(File::G, Rank::R4);
+    pub const G5: Self = Self::new(File::G, Rank::R5);
+    pub const G6: Self = Self::new(File::G, Rank::R6);
+    pub const G7: Self = Self::new(File::G, Rank::R7);
+    pub const G8: Self = Self::new(File::G, Rank::R8);
+
+    pub const H1: Self = Self::new(File::H, Rank::R1);
+    pub const H2: Self = Self::new(File::H, Rank::R2);
+    pub const H3: Self = Self::new(File::H, Rank::R3);
+    pub const H4: Self = Self::new(File::H, Rank::R4);
+    pub const H5: Self = Self::new(File::H, Rank::R5);
+    pub const H6: Self = Self::new(File::H, Rank::R6);
+    pub const H7: Self = Self::new(File::H, Rank::R7);
+    pub const H8: Self = Self::new(File::H, Rank::R8);
+
+    pub const MIN: u8 = 0;
+    pub const MAX: u8 = 63;
+    pub const COUNT: usize = 64;
+
+    pub const CORNERS: [Self; 4] = [Self::A1, Self::H1, Self::A8, Self::H8];
+
+    const DARK_SQUARES: u64 = 0xAA55AA55AA55AA55;
+    const RANK_SHIFT: u8 = 3;
+
+    /// Create a new square from a file and rank.
     pub const fn new(file: File, rank: Rank) -> Self {
-        Self { file, rank }
+        Self((file as u8) ^ ((rank as u8) << Self::RANK_SHIFT))
     }
 
     /// Creates a new square from a file character and rank number.
     pub fn from_file_rank(file: char, rank: u8) -> Result<Self> {
         let file = File::try_from(file)?;
         let rank = Rank::try_from(rank)?;
-        Ok(Self { file, rank })
+        Ok(Self::new(file, rank))
     }
 
-    /// Creates a new square from a bitboard.
+    /// Creates a new [`Square`] from a bitboard.
     ///
     /// This will get the first square from the bitboard and convert it to a [`Square`].
     pub fn from_bitboard(bitboard: &Bitboard) -> Self {
@@ -42,17 +146,32 @@ impl Square {
     }
 
     /// Convert to a raw square index (0-63).
-    pub const fn to_square_index(&self) -> u8 {
-        to_square(self.file as u8, self.rank as u8)
+    pub const fn inner(&self) -> u8 {
+        self.0
+    }
+
+    pub const fn index(&self) -> usize {
+        self.inner() as usize
+    }
+
+    pub const fn file(self) -> File {
+        File::of(self)
+    }
+
+    pub const fn rank(self) -> Rank {
+        Rank::of(self)
+    }
+
+    #[inline(always)]
+    pub fn iter() -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator<Item = Self> {
+        (Self::MIN..=Self::MAX).map(Self)
     }
 
     /// Convert a square index to a [`Square`] object.
     pub const fn from_square_index(square: u8) -> Self {
-        assert!(square < NumberOf::SQUARES as u8);
-        Self {
-            file: File::of(square),
-            rank: Rank::of(square),
-        }
+        assert!(square < Self::COUNT as u8);
+        let sq = Square(square);
+        Self::new(File::of(sq), Rank::of(sq))
     }
 
     /// Offset the square by the given file and rank deltas.
@@ -68,16 +187,16 @@ impl Square {
     ///
     /// let square = Square::try_from("e4").unwrap();
     /// let new_square = square.offset(1, 1).unwrap();
-    /// assert_eq!(new_square.file, File::F);
-    /// assert_eq!(new_square.rank, Rank::R5);
+    /// assert_eq!(new_square.file(), File::F);
+    /// assert_eq!(new_square.rank(), Rank::R5);
     ///
     /// let square = Square::try_from("a1").unwrap();
     /// let new_square = square.offset(-1, -1);
     /// assert!(new_square.is_none());
     /// ```
     pub const fn offset(&self, file_delta: i8, rank_delta: i8) -> Option<Self> {
-        let new_file = self.file.offset(file_delta);
-        let new_rank = self.rank.offset(rank_delta);
+        let new_file = self.file().offset(file_delta);
+        let new_rank = self.rank().offset(rank_delta);
         if new_file.is_none() || new_rank.is_none() {
             return None;
         }
@@ -86,14 +205,56 @@ impl Square {
         Some(Self::new(new_file, new_rank))
     }
 
+    /// Offset the square by the given file and rank deltas, assuming the result
+    /// stays on the board.
+    ///
+    /// This is the infallible counterpart to [`Square::offset`] for callers that
+    /// have already proven the destination is on the board (e.g. pawn pushes,
+    /// which can never originate from a promotion rank). In debug builds it
+    /// panics if the result leaves the board; in release builds the bounds check
+    /// is skipped and the caller is responsible for validity.
+    pub const fn offset_unchecked(&self, file_delta: i8, rank_delta: i8) -> Self {
+        debug_assert!(self.offset(file_delta, rank_delta).is_some());
+        // file + rank * 8 means a (file_delta, rank_delta) shift is exactly this
+        // additive offset on the raw index, provided we don't wrap a file edge.
+        let index = self.0 as i8 + rank_delta * 8 + file_delta;
+        Square(index as u8)
+    }
+
+    /// The square one rank toward `side`'s promotion rank ("forward" for `side`).
+    ///
+    /// Returns `None` if the result is off the board.
+    pub const fn forward(&self, side: Side) -> Option<Self> {
+        self.offset(0, side.forward_delta())
+    }
+
+    /// Infallible version of [`Square::forward`] with the precondition being that
+    /// it is known that the result is on the board.
+    pub const fn forward_unchecked(&self, side: Side) -> Self {
+        self.offset_unchecked(0, side.forward_delta())
+    }
+
+    /// The square one rank toward `side`'s own back rank ("backward" for `side`).
+    ///
+    /// Returns `None` if the result is off the board.
+    pub const fn backward(&self, side: Side) -> Option<Self> {
+        self.offset(0, -side.forward_delta())
+    }
+
+    /// Infallible version of [`Square::backward`] with the precondition being that
+    /// it is known that the result is on the board.
+    pub const fn backward_unchecked(&self, side: Side) -> Self {
+        self.offset_unchecked(0, -side.forward_delta())
+    }
+
     /// Get the bitboard representation of the square.
-    pub fn bitboard(&self) -> Bitboard {
-        Bitboard::from_square(self.to_square_index())
+    pub fn as_bitboard(&self) -> Bitboard {
+        Bitboard::from_square(self.inner())
     }
 
     /// Returns `true` if the square is a dark square.
     pub fn is_dark(&self) -> bool {
-        Bitboard::from(DARK_SQUARES) & self.bitboard() != Bitboard::EMPTY
+        Bitboard::from(Self::DARK_SQUARES) & self.as_bitboard() != Bitboard::default()
     }
 
     /// Returns `true` if the square is a light square.
@@ -112,9 +273,13 @@ impl Square {
 
     /// Flips the current square and returns a new instance at the flipped location.
     pub fn flip(&self) -> Self {
-        let sq = self.to_square_index();
+        let sq = self.inner();
         let flipped_sq = flip(sq);
         Self::from_square_index(flipped_sq)
+    }
+
+    pub fn to_uci(&self) -> String {
+        format!("{}{}", self.file(), self.rank())
     }
 }
 
@@ -137,11 +302,11 @@ impl Square {
 /// use chess::rank::Rank;
 ///
 /// let sq = Square::new(File::A, Rank::R1);
-/// let flipped_sq = flip(sq.to_square_index());
+/// let flipped_sq = flip(sq.inner());
 /// assert_eq!(flipped_sq, 56);
 /// let new_sq = Square::from_square_index(flipped_sq);
-/// assert_eq!(new_sq.file, File::A);
-/// assert_eq!(new_sq.rank, Rank::R8);
+/// assert_eq!(new_sq.file(), File::A);
+/// assert_eq!(new_sq.rank(), Rank::R8);
 pub const fn flip(sq: u8) -> u8 {
     sq ^ 56
 }
@@ -168,11 +333,11 @@ pub const fn flip(sq: u8) -> u8 {
 /// use chess::rank::Rank;
 ///
 /// let sq = Square::new(File::A, Rank::R1);
-/// let flipped_sq = flip_if(true, sq.to_square_index());
+/// let flipped_sq = flip_if(true, sq.inner());
 /// assert_eq!(flipped_sq, 56);
 /// let new_sq = Square::from_square_index(flipped_sq);
-/// assert_eq!(new_sq.file, File::A);
-/// assert_eq!(new_sq.rank, Rank::R8);
+/// assert_eq!(new_sq.file(), File::A);
+/// assert_eq!(new_sq.rank(), Rank::R8);
 pub fn flip_if(should_flip: bool, sq: u8) -> u8 {
     if should_flip { flip(sq) } else { sq }
 }
@@ -206,6 +371,27 @@ impl TryFrom<u8> for Square {
         }
 
         Ok(Self::from_square_index(sq_index))
+    }
+}
+
+impl<T> Index<Square> for [T; Square::COUNT] {
+    type Output = T;
+
+    #[inline(always)]
+    fn index(&self, index: Square) -> &Self::Output {
+        &self[index.index()]
+    }
+}
+
+impl<T> IndexMut<Square> for [T; Square::COUNT] {
+    fn index_mut(&mut self, index: Square) -> &mut Self::Output {
+        &mut self[index.index()]
+    }
+}
+
+impl Display for Square {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_uci().fmt(f)
     }
 }
 
@@ -253,15 +439,14 @@ pub const fn from_square(square: u8) -> (u8, u8) {
 }
 
 /// Checks if a given square is on a given rank.
-pub const fn is_square_on_rank(square: u8, rank: u8) -> bool {
-    let (_, rnk) = from_square(square);
-    rnk == rank
+pub fn is_square_on_rank(square: Square, rank: Rank) -> bool {
+    square.rank() == rank
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::{NumberOf, Squares},
+        definitions::NumberOf,
         file::File,
         rank::Rank,
         square::{Square, is_square_on_rank, to_square},
@@ -269,24 +454,24 @@ mod tests {
 
     #[test]
     fn check_square_on_rank() {
-        assert!(is_square_on_rank(Squares::A1, Rank::R1 as u8));
-        assert!(!is_square_on_rank(Squares::A1, Rank::R2 as u8));
-        assert!(is_square_on_rank(Squares::C5, Rank::R5 as u8));
+        assert!(is_square_on_rank(Square::A1, Rank::R1));
+        assert!(!is_square_on_rank(Square::A1, Rank::R2));
+        assert!(is_square_on_rank(Square::C5, Rank::R5));
     }
 
     #[test]
     fn parse_square_from_uci_str() {
         let square = Square::try_from("e4").unwrap();
-        assert_eq!(square.file, File::E);
-        assert_eq!(square.rank, Rank::R4);
+        assert_eq!(square.file(), File::E);
+        assert_eq!(square.rank(), Rank::R4);
     }
 
     #[test]
     fn offset() {
         let square = Square::try_from("e4").unwrap();
         let new_square = square.offset(1, 1).unwrap();
-        assert_eq!(new_square.file, File::F);
-        assert_eq!(new_square.rank, Rank::R5);
+        assert_eq!(new_square.file(), File::F);
+        assert_eq!(new_square.rank(), Rank::R5);
 
         let square = Square::try_from("a1").unwrap();
         let new_square = square.offset(-1, -1);
@@ -301,8 +486,8 @@ mod tests {
                 let square = Square::from_square_index(sq);
                 let flipped = square.flip();
                 assert_eq!(flipped.flip(), square);
-                assert_eq!(flipped.file, square.file);
-                assert_eq!(flipped.rank.as_number(), (Rank::R8 - square.rank) as u8);
+                assert_eq!(flipped.file(), square.file());
+                assert_eq!(flipped.rank().inner(), (Rank::R8 - square.rank()) as u8);
             }
         }
     }
