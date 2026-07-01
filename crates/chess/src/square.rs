@@ -8,7 +8,9 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::{bitboard::Bitboard, bitboard_helpers, color::Color, file::File, rank::Rank};
+use crate::{
+    bitboard::Bitboard, bitboard_helpers, color::Color, file::File, rank::Rank, side::Side,
+};
 
 use anyhow::{Result, bail};
 
@@ -135,7 +137,7 @@ impl Square {
         Ok(Self::new(file, rank))
     }
 
-    /// Creates a new square from a bitboard.
+    /// Creates a new [`Square`] from a bitboard.
     ///
     /// This will get the first square from the bitboard and convert it to a [`Square`].
     pub fn from_bitboard(bitboard: &Bitboard) -> Self {
@@ -201,6 +203,48 @@ impl Square {
         let new_file = new_file.unwrap();
         let new_rank = new_rank.unwrap();
         Some(Self::new(new_file, new_rank))
+    }
+
+    /// Offset the square by the given file and rank deltas, assuming the result
+    /// stays on the board.
+    ///
+    /// This is the infallible counterpart to [`Square::offset`] for callers that
+    /// have already proven the destination is on the board (e.g. pawn pushes,
+    /// which can never originate from a promotion rank). In debug builds it
+    /// panics if the result leaves the board; in release builds the bounds check
+    /// is skipped and the caller is responsible for validity.
+    pub const fn offset_unchecked(&self, file_delta: i8, rank_delta: i8) -> Self {
+        debug_assert!(self.offset(file_delta, rank_delta).is_some());
+        // file + rank * 8 means a (file_delta, rank_delta) shift is exactly this
+        // additive offset on the raw index, provided we don't wrap a file edge.
+        let index = self.0 as i8 + rank_delta * 8 + file_delta;
+        Square(index as u8)
+    }
+
+    /// The square one rank toward `side`'s promotion rank ("forward" for `side`).
+    ///
+    /// Returns `None` if the result is off the board.
+    pub const fn forward(&self, side: Side) -> Option<Self> {
+        self.offset(0, side.forward_delta())
+    }
+
+    /// Infallible version of [`Square::forward`] with the precondition being that
+    /// it is known that the result is on the board.
+    pub const fn forward_unchecked(&self, side: Side) -> Self {
+        self.offset_unchecked(0, side.forward_delta())
+    }
+
+    /// The square one rank toward `side`'s own back rank ("backward" for `side`).
+    ///
+    /// Returns `None` if the result is off the board.
+    pub const fn backward(&self, side: Side) -> Option<Self> {
+        self.offset(0, -side.forward_delta())
+    }
+
+    /// Infallible version of [`Square::backward`] with the precondition being that
+    /// it is known that the result is on the board.
+    pub const fn backward_unchecked(&self, side: Side) -> Self {
+        self.offset_unchecked(0, -side.forward_delta())
     }
 
     /// Get the bitboard representation of the square.
