@@ -163,15 +163,11 @@ impl Board {
     /// Set the en passant square and update the zobrist hash.
     pub(crate) fn set_en_passant_square(&mut self, square: Option<Square>) {
         self.state.hashes.update_hash(keys::ep_hash(
-            self.state
-                .en_passant_square
-                .map(Square::from_square_index),
+            self.state.en_passant_square.map(Square::from_square_index),
         ));
         self.state.en_passant_square = square.map(|sq| sq.inner());
         self.state.hashes.update_hash(keys::ep_hash(
-            self.state
-                .en_passant_square
-                .map(Square::from_square_index),
+            self.state.en_passant_square.map(Square::from_square_index),
         ));
     }
 
@@ -359,9 +355,7 @@ impl Board {
 
     /// Returns the en passant square of this [`Board`] (if it exists)
     pub fn en_passant_square(&self) -> Option<Square> {
-        self.state
-            .en_passant_square
-            .map(Square::from_square_index)
+        self.state.en_passant_square.map(Square::from_square_index)
     }
 
     /// Returns the half move clock of this [`Board`].

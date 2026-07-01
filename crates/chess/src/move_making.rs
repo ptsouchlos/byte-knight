@@ -179,12 +179,8 @@ impl Board {
                 } else {
                     to.inner() + 8u8
                 };
-                if ep_capture_is_legal(
-                    self,
-                    from,
-                    Square::from_square_index(en_passant_square),
-                    us,
-                ) {
+                if ep_capture_is_legal(self, from, Square::from_square_index(en_passant_square), us)
+                {
                     Some(en_passant_square)
                 } else {
                     None
