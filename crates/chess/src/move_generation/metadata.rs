@@ -32,6 +32,13 @@ pub struct CheckPinMetadata {
     pub orthogonal_pin_rays: Bitboard,
     /// Bitboard of diagonal pin rays (bishop/queen pins along diagonals).
     pub diagonal_pin_rays: Bitboard,
+    /// All occupied squares (both sides). Cached here so the per-piece legal
+    /// generators don't recompute it on every call.
+    pub occupancy: Bitboard,
+    /// Bitboard of the side-to-move's pieces.
+    pub our_pieces: Bitboard,
+    /// Bitboard of the enemy's pieces.
+    pub their_pieces: Bitboard,
 }
 
 impl CheckPinMetadata {
@@ -159,5 +166,8 @@ pub fn compute(board: &Board) -> CheckPinMetadata {
         pinned,
         orthogonal_pin_rays,
         diagonal_pin_rays,
+        occupancy,
+        our_pieces,
+        their_pieces,
     }
 }
