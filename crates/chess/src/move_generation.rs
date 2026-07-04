@@ -207,7 +207,7 @@ type ShiftFn = fn(Bitboard) -> Bitboard;
 ///
 /// - `targets`: The target "to" squares from the recovered origin
 /// - `origin`: A (file, rank) delta pair of how to get to the "from" square from any target in `targets`.
-/// For example, consider single pawn pushes - this would just be (0, -1) for white.
+///   For example, consider single pawn pushes - this would just be (0, -1) for white.
 /// - `quiet_flag`: The quiet flag to set for the move. Note that captures are determined separately.
 /// - `promotion_rank`: The promotion rank for the moving side.
 /// - `emit_promotions`: Flag to indicate if promotion moves should be included.
