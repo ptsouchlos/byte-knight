@@ -6,8 +6,6 @@
 use crate::attacks;
 use crate::definitions::RANK_BITBOARDS;
 use crate::move_generation;
-use crate::move_generation::NORTH;
-use crate::move_generation::SOUTH;
 use crate::move_generation::enumerate::enumerate_moves;
 use crate::move_generation::metadata::CheckPinMetadata;
 use crate::move_generation::move_filter::MoveFilter;
@@ -90,14 +88,9 @@ fn generate_legal_pawn_mobility(
 ) -> Bitboard {
     let is_pinned = meta.pinned.intersects(Bitboard::from(square));
     let us = board.side_to_move();
-    let their_pieces = meta.their_pieces;
+    let their_pieces = board.pieces(us.opposite());
     let from_square = square.inner();
-    let to_square = square.forward(us);
-
-    let mut pushes: Bitboard = match to_square {
-        Some(to) => Bitboard::from(to),
-        None => Bitboard::default(),
-    };
+    let mut pushes = Bitboard::from(square.forward_unchecked(us));
 
     let occupancy = meta.occupancy;
     let is_unobstructed = pushes & !occupancy == Bitboard::default();
@@ -108,27 +101,7 @@ fn generate_legal_pawn_mobility(
     };
 
     if can_double_push && !is_unobstructed {
-        let double_push_sq = match us {
-            Side::White => {
-                let (result, did_overflow) = from_square.overflowing_add(2 * NORTH as u8);
-                match did_overflow {
-                    true => None,
-                    false => Some(result),
-                }
-            }
-            Side::Black => {
-                let (result, did_overflow) = from_square.overflowing_sub(2 * SOUTH as u8);
-                match did_overflow {
-                    true => None,
-                    false => Some(result),
-                }
-            }
-        };
-
-        if let Some(to) = double_push_sq {
-            let bb = Bitboard::from_square(to);
-            pushes |= bb;
-        }
+        pushes |= Bitboard::from(square.offset_unchecked(0, 2 * us.forward_delta()));
     }
 
     // Only pay for the en-passant discovered-check computation when this pawn
@@ -189,7 +162,7 @@ fn generate_normal_piece_legal_mobility(
         .pinned
         .intersects(Bitboard::from_square(square.inner()));
     let us = board.side_to_move();
-    let their_pieces = meta.their_pieces;
+    let their_pieces = board.pieces(us.opposite());
     let occupancy = meta.occupancy;
     let pin_rays = meta.orthogonal_pin_rays | meta.diagonal_pin_rays;
 
@@ -243,8 +216,8 @@ fn generate_king_legal_mobility(
 ) -> Bitboard {
     let us = board.side_to_move();
     let them = us.opposite();
-    let our_pieces = meta.our_pieces;
-    let their_pieces = meta.their_pieces;
+    let our_pieces = board.pieces(us);
+    let their_pieces = board.pieces(them);
     let occupancy = meta.occupancy;
 
     let king_bb = board.piece_bitboard(Piece::King, us);
