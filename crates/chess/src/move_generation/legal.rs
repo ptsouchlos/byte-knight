@@ -6,8 +6,6 @@
 use crate::attacks;
 use crate::definitions::RANK_BITBOARDS;
 use crate::move_generation;
-use crate::move_generation::NORTH;
-use crate::move_generation::SOUTH;
 use crate::move_generation::enumerate::enumerate_moves;
 use crate::move_generation::metadata::CheckPinMetadata;
 use crate::move_generation::move_filter::MoveFilter;
@@ -83,48 +81,18 @@ fn calculate_en_passant_bitboard(
 /// A [`Bitboard`] with the legal moves for the pawn.
 ///
 /// These moves need to be enumerated to get the actual moves. See [`move_generation::enumerate_moves`]
-#[allow(clippy::too_many_arguments)]
 fn generate_legal_pawn_mobility(
     board: &Board,
     square: Square,
-    pinned_pieces: Bitboard,
-    capture_mask: Bitboard,
-    push_mask: Bitboard,
-    orthogonal_pin_rays: Bitboard,
-    diagonal_pin_rays: Bitboard,
-    checkers: Bitboard,
+    meta: &CheckPinMetadata,
 ) -> Bitboard {
-    let is_pinned = pinned_pieces.intersects(Bitboard::from_square(square.inner()));
+    let is_pinned = meta.pinned.intersects(Bitboard::from(square));
     let us = board.side_to_move();
     let their_pieces = board.pieces(us.opposite());
-    let direction = match us {
-        Side::White => NORTH as u8,
-        Side::Black => SOUTH as u8,
-    };
     let from_square = square.inner();
-    let to_square = match us {
-        Side::White => {
-            let (result, did_overflow) = from_square.overflowing_add(direction);
-            match did_overflow {
-                true => None,
-                false => Some(result),
-            }
-        }
-        Side::Black => {
-            let (result, did_overflow) = from_square.overflowing_sub(direction);
-            match did_overflow {
-                true => None,
-                false => Some(result),
-            }
-        }
-    };
+    let mut pushes = Bitboard::from(square.forward_unchecked(us));
 
-    let mut pushes: Bitboard = match to_square {
-        Some(to) => Bitboard::from_square(to),
-        None => Bitboard::default(),
-    };
-
-    let occupancy = board.all_pieces();
+    let occupancy = meta.occupancy;
     let is_unobstructed = pushes & !occupancy == Bitboard::default();
 
     let can_double_push = match us {
@@ -133,48 +101,36 @@ fn generate_legal_pawn_mobility(
     };
 
     if can_double_push && !is_unobstructed {
-        let double_push_sq = match us {
-            Side::White => {
-                let (result, did_overflow) = from_square.overflowing_add(2 * NORTH as u8);
-                match did_overflow {
-                    true => None,
-                    false => Some(result),
-                }
-            }
-            Side::Black => {
-                let (result, did_overflow) = from_square.overflowing_sub(2 * SOUTH as u8);
-                match did_overflow {
-                    true => None,
-                    false => Some(result),
-                }
-            }
-        };
-
-        if let Some(to) = double_push_sq {
-            let bb = Bitboard::from_square(to);
-            pushes |= bb;
-        }
+        pushes |= Bitboard::from(square.offset_unchecked(0, 2 * us.forward_delta()));
     }
 
-    let en_passant_bb: Bitboard =
-        calculate_en_passant_bitboard(from_square, board, push_mask, checkers);
+    // Only pay for the en-passant discovered-check computation when this pawn
+    // actually attacks the en-passant square; otherwise the EP bit would be masked
+    // away below anyway.
+    let pawn_attacks = attacks::pawn(square, us);
+    let en_passant_bb = match board.en_passant_square() {
+        Some(ep_sq) if pawn_attacks.is_square_occupied(ep_sq) => {
+            calculate_en_passant_bitboard(from_square, board, meta.push_mask, meta.checkers)
+        }
+        _ => Bitboard::default(),
+    };
 
     let hv_pin_ray_mask = if is_pinned {
-        orthogonal_pin_rays
+        meta.orthogonal_pin_rays
     } else {
         Bitboard::filled()
     };
 
     let diag_pin_ray_mask = if is_pinned {
-        diagonal_pin_rays
+        meta.diagonal_pin_rays
     } else {
         Bitboard::filled()
     };
 
     let legal_pushes = (pushes & !occupancy) & hv_pin_ray_mask;
-    let attacks = attacks::pawn(square, us) & (their_pieces | en_passant_bb) & diag_pin_ray_mask;
+    let attacks = pawn_attacks & (their_pieces | en_passant_bb) & diag_pin_ray_mask;
 
-    (legal_pushes | attacks) & (capture_mask | push_mask)
+    (legal_pushes | attacks) & (meta.capture_mask | meta.push_mask)
 }
 
 /// Generate the legal moves for a normal piece (not a pawn or king) from the given square.
@@ -196,29 +152,25 @@ fn generate_legal_pawn_mobility(
 /// A [`Bitboard`] with the legal moves for the piece.
 ///
 /// These moves need to be enumerated to get the actual moves. See [`move_generation::enumerate_moves`]
-#[allow(clippy::too_many_arguments)]
 fn generate_normal_piece_legal_mobility(
     piece: Piece,
     square: Square,
     board: &Board,
-    capture_mask: Bitboard,
-    pinned_mask: Bitboard,
-    push_mask: Bitboard,
-    orthogonal_pin_rays: Bitboard,
-    diagonal_pin_rays: Bitboard,
+    meta: &CheckPinMetadata,
 ) -> Bitboard {
-    let is_pinned = pinned_mask.intersects(Bitboard::from_square(square.inner()));
+    let is_pinned = meta
+        .pinned
+        .intersects(Bitboard::from_square(square.inner()));
     let us = board.side_to_move();
     let their_pieces = board.pieces(us.opposite());
-    let occupancy = board.all_pieces();
-    let pin_rays = orthogonal_pin_rays | diagonal_pin_rays;
+    let occupancy = meta.occupancy;
+    let pin_rays = meta.orthogonal_pin_rays | meta.diagonal_pin_rays;
 
     assert!(!piece.is_king() && !piece.is_pawn());
 
     let piece_attacks = attacks::for_piece_on_square(piece, square, occupancy, us);
 
-    let our_pieces = board.pieces(us);
-    let empty = !(their_pieces | our_pieces);
+    let empty = !occupancy;
 
     let pin_ray_mask = if is_pinned {
         let king_sq = board.king_square(us);
@@ -241,7 +193,7 @@ fn generate_normal_piece_legal_mobility(
         Bitboard::filled()
     };
 
-    ((piece_attacks & capture_mask & their_pieces) | (piece_attacks & empty & push_mask))
+    ((piece_attacks & meta.capture_mask & their_pieces) | (piece_attacks & empty & meta.push_mask))
         & pin_ray_mask
 }
 
@@ -260,14 +212,13 @@ fn generate_normal_piece_legal_mobility(
 fn generate_king_legal_mobility(
     square: Square,
     board: &Board,
-    capture_mask: Bitboard,
-    checkers: Bitboard,
+    meta: &CheckPinMetadata,
 ) -> Bitboard {
     let us = board.side_to_move();
     let them = us.opposite();
     let our_pieces = board.pieces(us);
     let their_pieces = board.pieces(them);
-    let occupancy = our_pieces | their_pieces;
+    let occupancy = meta.occupancy;
 
     let king_bb = board.piece_bitboard(Piece::King, us);
 
@@ -278,11 +229,12 @@ fn generate_king_legal_mobility(
         move_generation::get_attacked_squares(board, them, attacked_squares_occupancy);
     let king_pushes = king_moves_bb & !attacked_squares & !our_pieces & !their_pieces;
 
-    let castling_moves = move_generation::castling::legal_mobility(board, checkers);
+    let castling_moves = move_generation::castling::legal_mobility(board, meta.checkers);
 
-    let king_non_checker_attacks = (king_moves_bb & their_pieces & !checkers) & !attacked_squares;
+    let king_non_checker_attacks =
+        (king_moves_bb & their_pieces & !meta.checkers) & !attacked_squares;
 
-    let mut king_attacks = (king_moves_bb & capture_mask & their_pieces & !attacked_squares)
+    let mut king_attacks = (king_moves_bb & meta.capture_mask & their_pieces & !attacked_squares)
         | king_non_checker_attacks;
 
     let k_att = king_attacks;
@@ -303,15 +255,15 @@ fn generate_king_legal_mobility(
 ///
 /// # Arguments
 ///
-/// - `piece` - The piece to generate legal moves for
-/// - `square` - The square index of the piece
-/// - `board` - The board state
-/// - `pinned_mask` - The mask of pinned pieces
-/// - `capture_mask` - The mask of squares that can be captured
-/// - `push_mask` - The mask of squares that can be pushed to
-/// - `orthogonal_pin_rays` - The mask of orthogonal pin rays
-/// - `diagonal_pin_rays` - The mask of diagonal pin rays
-/// - `checkers` - The mask of squares that are checking the king
+/// - `piece` - The piece to generate legal moves for.
+/// - `square` - The square index of the piece.
+/// - `board` - The board state.
+/// - `pinned_mask` - The mask of pinned pieces.
+/// - `capture_mask` - The mask of squares that can be captured.
+/// - `push_mask` - The mask of squares that can be pushed to.
+/// - `orthogonal_pin_rays` - The mask of orthogonal pin rays.
+/// - `diagonal_pin_rays` - The mask of diagonal pin rays.
+/// - `checkers` - The mask of squares that are checking the king.
 ///
 /// # Returns
 ///
@@ -324,29 +276,9 @@ fn generate_legal_mobility(
     metadata: &CheckPinMetadata,
 ) -> Bitboard {
     match piece {
-        Piece::Pawn => generate_legal_pawn_mobility(
-            board,
-            square,
-            metadata.pinned,
-            metadata.capture_mask,
-            metadata.push_mask,
-            metadata.orthogonal_pin_rays,
-            metadata.diagonal_pin_rays,
-            metadata.checkers,
-        ),
-        Piece::King => {
-            generate_king_legal_mobility(square, board, metadata.capture_mask, metadata.checkers)
-        }
-        _ => generate_normal_piece_legal_mobility(
-            piece,
-            square,
-            board,
-            metadata.capture_mask,
-            metadata.pinned,
-            metadata.push_mask,
-            metadata.orthogonal_pin_rays,
-            metadata.diagonal_pin_rays,
-        ),
+        Piece::Pawn => generate_legal_pawn_mobility(board, square, metadata),
+        Piece::King => generate_king_legal_mobility(square, board, metadata),
+        _ => generate_normal_piece_legal_mobility(piece, square, board, metadata),
     }
 }
 
@@ -397,8 +329,7 @@ pub fn generate_moves_with_metadata(
     let mut move_list = MoveList::new();
 
     // King moves first
-    let king_moves =
-        generate_king_legal_mobility(king_sq, board, meta.capture_mask, meta.checkers) & filter;
+    let king_moves = generate_king_legal_mobility(king_sq, board, meta) & filter;
 
     enumerate_moves(
         &king_moves,
@@ -418,8 +349,10 @@ pub fn generate_moves_with_metadata(
     let moveable_pieces = our_pieces & !king_bb;
 
     for from_sq in moveable_pieces {
-        let piece = match board.piece_on_square(from_sq) {
-            Some((piece, _)) => piece,
+        // The square is one of our pieces, so the side is already known; only the
+        // piece type is needed here.
+        let piece = match board.piece_type_on_square(from_sq) {
+            Some(piece) => piece,
             None => continue,
         };
 

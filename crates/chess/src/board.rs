@@ -348,6 +348,16 @@ impl Board {
         Some((piece.unwrap(), side))
     }
 
+    /// Returns the type of piece on a given square, if any, without determining
+    /// its side.
+    ///
+    /// Cheaper than [`Board::piece_on_square`] when the side is already known
+    /// (e.g. iterating one side's pieces): it skips the side lookup and just
+    /// reads the piece mailbox.
+    pub fn piece_type_on_square(&self, square: Square) -> Option<Piece> {
+        self.pieces[square]
+    }
+
     /// Returns the side to move of this [`Board`].
     pub fn side_to_move(&self) -> Side {
         self.state.side_to_move
