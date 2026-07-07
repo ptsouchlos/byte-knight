@@ -6,15 +6,14 @@
 use crate::attacks;
 use crate::definitions::RANK_BITBOARDS;
 use crate::move_generation;
+use crate::move_generation::emit_pawn_targets;
 use crate::move_generation::enumerate::enumerate_moves;
 use crate::move_generation::metadata::CheckPinMetadata;
 use crate::move_generation::move_filter::MoveFilter;
 use crate::move_list::MoveList;
+use crate::moves::{Move, MoveFlag};
 use crate::rays;
-use crate::square;
-use crate::{
-    bitboard::Bitboard, board::Board, pieces::Piece, rank::Rank, side::Side, square::Square,
-};
+use crate::{bitboard::Bitboard, board::Board, pieces::Piece, rank::Rank, square::Square};
 
 /// Calculate the en passant bitboard for the current position.
 /// This will return a bitboard with the en passant square set if it is a valid move.
@@ -64,73 +63,145 @@ fn calculate_en_passant_bitboard(
     }
 }
 
-/// Generate the legal pawn moves from the given square with the given board state.
+/// Generate all legal pawn moves setwise and push them into the given [`MoveList`].
+///
+/// Pawns are advanced together with directional shifts (mirroring the pseudo-legal [`move_generation::get_pawn_moves`])
+/// and the legality masks are applied to the shifted target sets. This works because every mask the per-pawn path applied
+/// is shared across pawns: check evasion uses `capture_mask | push_mask`, and pinned pawns are restricted by the union of
+/// pin rays. En passant stays per-pawn since its discovered-check test depends on the capturing pawn's square.
 ///
 /// # Arguments
-///
-/// - board - The current board state
-/// - square - The square to generate moves for
-/// - pinned_pieces - The pinned pieces on the board
-/// - capture_mask - The mask of squares that can be captured. Will be all squares if king is not in check.
-/// - push_mask - The mask of squares that can be pushed to. Will be all squares if king is not in check.
-/// - orthogonal_pin_rays - The rays of orthogonal pins
-/// - diagonal_pin_rays - The rays of diagonal pins
-/// - checkers - The squares that are attacking the king
-///
-/// # Returns
-/// A [`Bitboard`] with the legal moves for the pawn.
-///
-/// These moves need to be enumerated to get the actual moves. See [`move_generation::enumerate_moves`]
-fn generate_legal_pawn_mobility(
+/// - `board`: The current board to generate legal pawn moves for.
+/// - `move_filter`: [`MoveFilter`] for the mvoes to be generated.
+/// - `metadata`: Metadata of the current position structure (pins, checkers and so on).
+/// - `move_list`: The [`MoveList`] to push moves into.
+fn generate_legal_pawn_moves(
     board: &Board,
-    square: Square,
-    meta: &CheckPinMetadata,
-) -> Bitboard {
-    let is_pinned = meta.pinned.intersects(Bitboard::from(square));
+    move_filter: MoveFilter,
+    metadata: &CheckPinMetadata,
+    move_list: &mut MoveList,
+) {
     let us = board.side_to_move();
-    let their_pieces = board.pieces(us.opposite());
-    let from_square = square.inner();
-    let mut pushes = Bitboard::from(square.forward_unchecked(us));
-
-    let occupancy = meta.occupancy;
-    let is_unobstructed = pushes & !occupancy == Bitboard::default();
-
-    let can_double_push = match us {
-        Side::White => square::is_square_on_rank(square, Rank::R2),
-        Side::Black => square::is_square_on_rank(square, Rank::R7),
-    };
-
-    if can_double_push && !is_unobstructed {
-        pushes |= Bitboard::from(square.offset_unchecked(0, 2 * us.forward_delta()));
+    let them = us.opposite();
+    let pawns = board.piece_bitboard(Piece::Pawn, us);
+    if pawns.is_empty() {
+        return;
     }
 
-    // Only pay for the en-passant discovered-check computation when this pawn
-    // actually attacks the en-passant square; otherwise the EP bit would be masked
-    // away below anyway.
-    let pawn_attacks = attacks::pawn(square, us);
-    let en_passant_bb = match board.en_passant_square() {
-        Some(ep_sq) if pawn_attacks.is_square_occupied(ep_sq) => {
-            calculate_en_passant_bitboard(from_square, board, meta.push_mask, meta.checkers)
+    let enemies = board.pieces(them);
+    let empty = !metadata.occupancy;
+    let promotion_rank = Rank::promotion_rank(us);
+    // Check-evasion mask; all squares when the king is not in check.
+    let evasions = metadata.capture_mask | metadata.push_mask;
+
+    // Non-promotion pushes, promotion pushes, and captures are gated independently
+    // so each `MoveFilter` selects exactly the same set the per-pawn generator did:
+    // Quiets = non-promo pushes; Captures = all captures/EP; Tacticals = promo
+    // pushes + all captures; All = everything.
+    let want_quiet_pushes = matches!(move_filter, MoveFilter::All | MoveFilter::Quiets);
+    let want_promo_pushes = matches!(move_filter, MoveFilter::All | MoveFilter::Tacticals);
+    let want_captures = matches!(
+        move_filter,
+        MoveFilter::All | MoveFilter::Captures | MoveFilter::Tacticals
+    );
+
+    let (push, capture_left, capture_right, third_rank) = move_generation::pawn_shifts(us);
+    // Inverse rank delta of one forward push (used to recover a move's origin).
+    let back = -us.forward_delta();
+
+    // A pinned pawn may only move along the union of pin rays: pushes along
+    // orthogonal rays, captures along diagonal rays. The pin masks apply to
+    // destination squares only.
+    let unpinned = pawns & !metadata.pinned;
+    let pinned = pawns & metadata.pinned;
+
+    if want_quiet_pushes || want_promo_pushes {
+        let single_unpinned = push(unpinned) & empty;
+        let single_pinned = push(pinned) & empty;
+        let single = (single_unpinned | (single_pinned & metadata.orthogonal_pin_rays)) & evasions;
+        emit_pawn_targets(
+            move_list,
+            single,
+            (0, back),
+            MoveFlag::Standard,
+            promotion_rank,
+            want_promo_pushes,
+            want_quiet_pushes,
+        );
+
+        // A double push exists only where the intermediate single-push square is
+        // empty and the pawn started on its home rank. Pin and evasion masks
+        // apply to the destination only, not the intermediate square.
+        if want_quiet_pushes {
+            let double = (push(single_unpinned & third_rank) & empty
+                | (push(single_pinned & third_rank) & empty & metadata.orthogonal_pin_rays))
+                & evasions;
+            emit_pawn_targets(
+                move_list,
+                double,
+                (0, 2 * back),
+                MoveFlag::DoublePush,
+                promotion_rank,
+                false,
+                true,
+            );
         }
-        _ => Bitboard::default(),
-    };
+    }
 
-    let hv_pin_ray_mask = if is_pinned {
-        meta.orthogonal_pin_rays
-    } else {
-        Bitboard::filled()
-    };
+    // Captures (including capture-promotions) and en passant.
+    if want_captures {
+        let left = (capture_left(unpinned) | (capture_left(pinned) & metadata.diagonal_pin_rays))
+            & enemies
+            & evasions;
+        emit_pawn_targets(
+            move_list,
+            left,
+            (1, back),
+            MoveFlag::Standard,
+            promotion_rank,
+            true,
+            true,
+        );
+        let right = (capture_right(unpinned)
+            | (capture_right(pinned) & metadata.diagonal_pin_rays))
+            & enemies
+            & evasions;
+        emit_pawn_targets(
+            move_list,
+            right,
+            (-1, back),
+            MoveFlag::Standard,
+            promotion_rank,
+            true,
+            true,
+        );
 
-    let diag_pin_ray_mask = if is_pinned {
-        meta.diagonal_pin_rays
-    } else {
-        Bitboard::filled()
-    };
-
-    let legal_pushes = (pushes & !occupancy) & hv_pin_ray_mask;
-    let attacks = pawn_attacks & (their_pieces | en_passant_bb) & diag_pin_ray_mask;
-
-    (legal_pushes | attacks) & (meta.capture_mask | meta.push_mask)
+        // En passant is rare; legality (discovered check along the king's rank)
+        // depends on the capturing pawn's square, so handle the at most two
+        // attackers individually.
+        if let Some(ep_square) = board.en_passant_square() {
+            // Our pawns that attack the EP square are exactly those a `them` pawn
+            // on the EP square would attack.
+            let ep_attackers = pawns & attacks::pawn(ep_square, them);
+            for from in ep_attackers {
+                let pin_mask = if metadata.pinned.intersects(Bitboard::from(from)) {
+                    metadata.diagonal_pin_rays
+                } else {
+                    Bitboard::filled()
+                };
+                let ep_bb = calculate_en_passant_bitboard(
+                    from.inner(),
+                    board,
+                    metadata.push_mask,
+                    metadata.checkers,
+                ) & pin_mask
+                    & evasions;
+                if !ep_bb.is_empty() {
+                    move_list.push(Move::new(from, ep_square, MoveFlag::EnPassant));
+                }
+            }
+        }
+    }
 }
 
 /// Generate the legal moves for a normal piece (not a pawn or king) from the given square.
@@ -250,38 +321,6 @@ fn generate_king_legal_mobility(
     king_pushes | king_attacks | castling_moves
 }
 
-/// Generate legal moves for the given piece. This is a delegating function
-/// that calls the appropriate function to generate legal moves for the piece.
-///
-/// # Arguments
-///
-/// - `piece` - The piece to generate legal moves for.
-/// - `square` - The square index of the piece.
-/// - `board` - The board state.
-/// - `pinned_mask` - The mask of pinned pieces.
-/// - `capture_mask` - The mask of squares that can be captured.
-/// - `push_mask` - The mask of squares that can be pushed to.
-/// - `orthogonal_pin_rays` - The mask of orthogonal pin rays.
-/// - `diagonal_pin_rays` - The mask of diagonal pin rays.
-/// - `checkers` - The mask of squares that are checking the king.
-///
-/// # Returns
-///
-/// A [`Bitboard`] of legal moves for the piece that can them be enumerated.
-#[allow(clippy::too_many_arguments)]
-fn generate_legal_mobility(
-    piece: Piece,
-    square: Square,
-    board: &Board,
-    metadata: &CheckPinMetadata,
-) -> Bitboard {
-    match piece {
-        Piece::Pawn => generate_legal_pawn_mobility(board, square, metadata),
-        Piece::King => generate_king_legal_mobility(square, board, metadata),
-        _ => generate_normal_piece_legal_mobility(piece, square, board, metadata),
-    }
-}
-
 /// Generate legal moves for the current [`Board`] state using pre-computed metadata.
 ///
 /// This is the core implementation. It accepts pre-computed [`CheckPinMetadata`] to
@@ -306,22 +345,6 @@ pub fn generate_moves_with_metadata(
         MoveFilter::Captures | MoveFilter::Tacticals => their_pieces,
         MoveFilter::Quiets => !their_pieces,
     };
-    let ep_bb = match board.en_passant_square() {
-        Some(sq) => Bitboard::from(sq),
-        None => Bitboard::default(),
-    };
-    // Promotion bb for pawn moves
-    let pawn_promos_bb = !their_pieces & Rank::promotion_rank(us).to_bitboard();
-    let pawn_filter = match move_filter {
-        MoveFilter::All => Bitboard::filled(),
-        MoveFilter::Captures => their_pieces | ep_bb,
-        MoveFilter::Tacticals => {
-            // Include captures, which will include capture promotions, but also include quiet promotions since
-            // Queen promotions are considered tactical.
-            their_pieces | pawn_promos_bb | ep_bb
-        }
-        MoveFilter::Quiets => !(their_pieces | pawn_promos_bb | ep_bb),
-    };
 
     let king_sq = board.king_square(us);
     let king_bb = king_sq.as_bitboard();
@@ -345,8 +368,12 @@ pub fn generate_moves_with_metadata(
         return move_list;
     }
 
-    // Proceed with non-king pieces
-    let moveable_pieces = our_pieces & !king_bb;
+    // All pawn moves are generated setwise; the function does its own filtering.
+    generate_legal_pawn_moves(board, move_filter, meta, &mut move_list);
+
+    // The remaining pieces (knights and sliders) are generated per-square.
+    let pawns = board.piece_bitboard(Piece::Pawn, us);
+    let moveable_pieces = our_pieces & !king_bb & !pawns;
 
     for from_sq in moveable_pieces {
         // The square is one of our pieces, so the side is already known; only the
@@ -356,11 +383,7 @@ pub fn generate_moves_with_metadata(
             None => continue,
         };
 
-        let use_filter = match piece {
-            Piece::Pawn => pawn_filter,
-            _ => filter,
-        };
-        let moves = generate_legal_mobility(piece, from_sq, board, meta) & use_filter;
+        let moves = generate_normal_piece_legal_mobility(piece, from_sq, board, meta) & filter;
 
         enumerate_moves(&moves, from_sq, piece, board, move_filter, &mut move_list);
     }
