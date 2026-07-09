@@ -771,7 +771,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     fn pruned_score<Node: NodeType>(
         &mut self,
         tt_entry: Option<TranspositionTableEntry>,
-        board: &Board,
+        board: &mut Board,
         td: &mut ThreadData,
         depth: ScoreType,
         ply: ScoreType,
@@ -793,16 +793,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // ------------------------------------------------------------------------------------------------------------
         let razoring_margin = razoring_offset() + razoring_scaling() * depth as i32;
         if static_eval.as_i32() + razoring_margin < alpha.as_i32() {
-            let mut brd_cpy = board.clone();
             let mut razor_pv = PrincipleVariation::new();
-            let score = self.quiescence::<NonPvNode>(
-                &mut brd_cpy,
-                td,
-                ply,
-                alpha,
-                alpha + 1,
-                &mut razor_pv,
-            );
+            let score =
+                self.quiescence::<NonPvNode>(board, td, ply, alpha, alpha + 1, &mut razor_pv);
             if score < alpha && !score.is_mate() {
                 return Some(score);
             }
@@ -844,12 +837,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
             let null_move_depth = depth - params::nmp_reduction(depth as i32, improving) as i16 - 1;
-            let mut null_board = board.clone();
-            null_board.null_move();
-            td.transposition_table.prefetch(null_board.zobrist_hash());
+            board.null_move();
+            td.transposition_table.prefetch(board.zobrist_hash());
             let mut nmp_pv = PrincipleVariation::new();
             let null_score = -self.negamax::<NonPvNode>(
-                &mut null_board,
+                board,
                 td,
                 null_move_depth,
                 ply + 1,
@@ -857,6 +849,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 -beta + 1,
                 &mut nmp_pv,
             );
+            board.unmake_move().unwrap();
 
             if null_score >= beta {
                 return if null_score.is_mate() {
