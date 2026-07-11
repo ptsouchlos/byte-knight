@@ -16,6 +16,10 @@ use crate::{
     score::ScoreType, search::limits::SearchLimits, ttable::TranspositionTable,
 };
 
+/// Number of nodes searched between wall-clock polls for the hard time limit.
+/// Node and depth limits are still enforced exactly on every check.
+const NODES_BETWEEN_TIME_CHECKS: u64 = 2048;
+
 pub struct ThreadData {
     pub(crate) transposition_table: TranspositionTable,
     pub(crate) history_table: HistoryTable,
@@ -27,6 +31,8 @@ pub struct ThreadData {
     pub(crate) depth: i32,
     pub(crate) seldepth: ScoreType,
     pub(crate) nodes: u64,
+    nodes_until_time_check: u64,
+    stopped: bool,
     pub(crate) stack: NodeStack,
 }
 
@@ -48,6 +54,8 @@ impl Default for ThreadData {
             depth: 1,
             seldepth: 0,
             nodes: 0,
+            nodes_until_time_check: 0,
+            stopped: false,
             stack: NodeStack::default(),
         }
     }
@@ -69,6 +77,8 @@ impl ThreadData {
     pub fn reset(&mut self) {
         self.depth = 1;
         self.nodes = 0;
+        self.nodes_until_time_check = 0;
+        self.stopped = false;
         self.seldepth = 0;
         self.bestmove_stability = 0;
         self.prev_best_move = None;
@@ -104,7 +114,7 @@ impl ThreadData {
         self.prev_best_move = new_best;
     }
 
-    pub fn should_stop(&self, limit_type: LimitType) -> bool {
+    pub fn should_stop(&mut self, limit_type: LimitType) -> bool {
         match limit_type {
             LimitType::Soft => self.soft_limit_reached(),
             LimitType::Hard => self.hard_limit_reached(),
@@ -113,6 +123,11 @@ impl ThreadData {
 
     /// Check if the soft limit has been reached.
     fn soft_limit_reached(&self) -> bool {
+        // A hard stop already triggered mid-iteration; don't start another one.
+        if self.stopped {
+            return true;
+        }
+
         let best_move_stability = self.bestmove_stability_for_scaling();
         if let Some(soft_time) = self.limits.scaled_soft_limit(best_move_stability)
             && self.start_time.elapsed() >= soft_time
@@ -131,17 +146,32 @@ impl ThreadData {
 
     /// Check if the hard limit has been reached.
     /// This includes time and nodes.
-    fn hard_limit_reached(&self) -> bool {
-        if self.start_time.elapsed() >= self.limits.hard_timeout {
+    fn hard_limit_reached(&mut self) -> bool {
+        // Something previously stopped the search.
+        // This flag is reset in [`ThreadData::reset`]
+        if self.stopped {
             return true;
         }
 
+        // Have we exceeded the max nodes
         if self.nodes >= self.limits.max_nodes {
+            self.stopped = true;
             return true;
         }
 
         if self.depth > self.limits.max_depth as i32 {
             return true;
+        }
+
+        // Reading the wall clock on every node is expensive, so only poll it
+        // once the node count crosses the next check threshold.
+        if self.nodes >= self.nodes_until_time_check {
+            // Update for the next time check
+            self.nodes_until_time_check = self.nodes + NODES_BETWEEN_TIME_CHECKS;
+            if self.start_time.elapsed() >= self.limits.hard_timeout {
+                self.stopped = true;
+                return true;
+            }
         }
 
         false
