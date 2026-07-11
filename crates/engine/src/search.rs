@@ -226,6 +226,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let _unused = writeln!(self.output, "{message}");
     }
 
+    /// Returns true if an external stop was requested via the stop flag.
+    fn stop_requested(&self) -> bool {
+        self.stop_flag
+            .as_ref()
+            .is_some_and(|f| f.load(Ordering::Relaxed))
+    }
+
     /// Verify that a given [PrincipleVariation] is valid. This is expensive and should only be used for debugging.
     #[allow(clippy::expect_used)]
     fn verify_pv_moves(&self, pv: &PrincipleVariation, board: &Board) -> Result<()> {
@@ -256,12 +263,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         'deepening: loop {
-            if td.should_stop(LimitType::Soft)
-                || self
-                    .stop_flag
-                    .as_ref()
-                    .is_some_and(|f| f.load(Ordering::Relaxed))
-            {
+            if td.should_stop(LimitType::Soft) || self.stop_requested() {
                 break 'deepening;
             }
 
@@ -286,6 +288,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     &mut pv,
                 );
 
+                // If the search aborted mid-tree, `score` is truncated — discard
+                // the whole iteration and keep the last completed result.
+                if td.is_stopped() || self.stop_requested() {
+                    break 'deepening;
+                }
+
                 if aspiration_window.failed_low(score) {
                     // fail low, widen the window
                     aspiration_window.widen_down(score, td.depth as ScoreType);
@@ -295,18 +303,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 } else {
                     // we have a valid score, break the loop
                     break 'aspiration_window;
-                }
-
-                // check stop conditions
-                if td.should_stop(LimitType::Hard)
-                    || self
-                        .stop_flag
-                        .as_ref()
-                        .is_some_and(|f| f.load(Ordering::Relaxed))
-                {
-                    // we have to stop searching now, use the best result we have
-                    // no score update
-                    break 'deepening;
                 }
             }
 
@@ -674,6 +670,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             board.unmake_move().unwrap();
             moves_seen += 1;
 
+            // If the search aborted while this move was being searched, its score
+            // is truncated so we return without letting it touch other tables like
+            // history or TT. Ancestors discard the result the same way, so the
+            // partial score never propagates.
+            if td.should_stop(LimitType::Hard) || self.stop_requested() {
+                return best_score;
+            }
+
             // check the results
             if score > best_score {
                 // we improved, so update the score and best move
@@ -718,16 +722,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     }
                     break;
                 }
-            }
-
-            // do we need to stop searching?
-            if td.should_stop(LimitType::Hard)
-                || self
-                    .stop_flag
-                    .as_ref()
-                    .is_some_and(|f| f.load(Ordering::Relaxed))
-            {
-                break;
             }
         }
 
@@ -1007,6 +1001,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             board.unmake_move().unwrap();
 
+            // If the search aborted while this move was being searched, its score
+            // is truncated — return without letting it touch best/alpha or the
+            // TT store below.
+            if td.should_stop(LimitType::Hard) || self.stop_requested() {
+                return best;
+            }
+
             if score > best {
                 best = score;
                 best_move = Some(mv);
@@ -1023,15 +1024,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if score > alpha_use {
                     alpha_use = score;
                 }
-            }
-
-            if td.should_stop(LimitType::Hard)
-                || self
-                    .stop_flag
-                    .as_ref()
-                    .is_some_and(|f| f.load(Ordering::Relaxed))
-            {
-                break;
             }
         }
 
