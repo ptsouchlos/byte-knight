@@ -971,7 +971,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             //
             // Captures yielded past the TT stage already passed the picker's
             // `see(mv, 0)` classification, which implies `see(mv, t)` for any
-            // t <= 0 — re-checking them is redundant. Only the TT move
+            // t <= 0 — rechecking them is redundant. Only the TT move
             // (yielded unclassified) and promotions (classified good without
             // SEE) still need the check, unless the threshold is tuned
             // positive, in which case classification no longer covers it.
