@@ -114,6 +114,13 @@ impl ThreadData {
         self.prev_best_move = new_best;
     }
 
+    /// Returns true if a hard limit already stopped the search. Unlike
+    /// [`Self::should_stop`], this never polls the clock.
+    pub fn is_stopped(&self) -> bool {
+        self.stopped
+    }
+
+    /// Check if the current search should stop for the given [`LimitType`].
     pub fn should_stop(&mut self, limit_type: LimitType) -> bool {
         match limit_type {
             LimitType::Soft => self.soft_limit_reached(),
