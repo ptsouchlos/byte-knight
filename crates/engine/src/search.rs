@@ -967,9 +967,18 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // Quiescence SEE pruning
             // https://www.chessprogramming.org/Static_Exchange_Evaluation
             // https://talkchess.com/viewtopic.php?t=41217
-            // Skip moves that lose material if we're not in check
+            // Skip moves that lose material if we're not in check.
+            //
+            // Captures yielded past the TT stage already passed the picker's
+            // `see(mv, 0)` classification, which implies `see(mv, t)` for any
+            // t <= 0 — re-checking them is redundant. Only the TT move
+            // (yielded unclassified) and promotions (classified good without
+            // SEE) still need the check, unless the threshold is tuned
+            // positive, in which case classification no longer covers it.
             // ------------------------------------------------------------
-            if !in_check && !see::see(board, mv, qs_see_threshold()) {
+            let see_checked_by_picker =
+                Some(mv) != tt_move && !mv.is_promotion() && qs_see_threshold() <= 0;
+            if !in_check && !see_checked_by_picker && !see::see(board, mv, qs_see_threshold()) {
                 continue;
             }
 
