@@ -392,7 +392,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // increment node count
         td.nodes += 1;
         td.seldepth = td.seldepth.max(ply);
-        let in_check = move_generation::is_in_check(board);
 
         // Ply guard: prevent unbounded recursion
         if ply >= MAX_PLY {
@@ -448,6 +447,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         let tt_move = tt_entry.map(|entry| entry.board_move);
 
+        // Compute check/pin metadata once for this node. It provides `in_check` here
+        // and is reused by the move picker for legal move generation. Computed after
+        // the TT probe so cutoffs don't pay for it.
+        let metadata = move_generation::metadata::compute(board);
+        let in_check = metadata.in_check();
+
         // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move: Option<Move> = None;
@@ -483,7 +488,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         // Build move picker. Move generation is lazy (deferred to stage machine).
-        let mut picker = move_picker::MovePicker::new(tt_move, &td.killers_table, ply as usize);
+        let mut picker =
+            move_picker::MovePicker::new(tt_move, &td.killers_table, ply as usize, metadata);
 
         // How much to extend the depth.
         let mut extension = 0;
@@ -508,7 +514,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
             let is_mated = best_score.mated();
-            let is_in_check = picker.in_check();
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
             let is_quiet = board.captured(&mv).is_none() && !mv.is_promotion();
@@ -519,7 +524,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // SEE prune bad tacticals at shallow depth
             if !is_root
                 && !is_pv
-                && !is_in_check
+                && !in_check
                 && !is_mated
                 && is_bad_tactical
                 && (depth as i32) <= see_tacticals_max_depth()
@@ -536,7 +541,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // ------------------------------------------------------------------------------------------
             if !is_root
                 && !is_pv
-                && !is_in_check
+                && !in_check
                 && !is_mated
                 && is_quiet
                 && moves_seen > 0
@@ -556,7 +561,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // ---------------------------------------------------------------------------------
             if !is_root
                 && !is_pv
-                && !is_in_check
+                && !in_check
                 && !is_mated
                 && is_quiet
                 && depth <= lmp_max_depth() as i16
@@ -728,7 +733,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // No moves were yielded: checkmate or stalemate.
         if picker.moves_yielded() == 0 {
-            return if picker.in_check() {
+            return if in_check {
                 -Score::MATE + ply
             } else {
                 Score::DRAW
