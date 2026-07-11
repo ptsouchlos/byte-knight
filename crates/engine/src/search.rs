@@ -982,6 +982,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 continue;
             }
 
+            // When skipping, verify the picker actually guaranteed `see(mv, 0)`.
+            debug_assert!(
+                in_check || !see_checked_by_picker || see::see(board, mv, 0),
+                "qsearch picker yielded a SEE-losing capture: {}",
+                mv.to_long_algebraic()
+            );
+
             // local PV is for each node below this one is different when we call negamax recursively
             // so we have to clear it
             local_pv.clear();
