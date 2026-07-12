@@ -226,6 +226,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let _unused = writeln!(self.output, "{message}");
     }
 
+    /// Returns true if an external stop was requested via the stop flag.
+    fn stop_requested(&self) -> bool {
+        self.stop_flag
+            .as_ref()
+            .is_some_and(|f| f.load(Ordering::Relaxed))
+    }
+
     /// Verify that a given [PrincipleVariation] is valid. This is expensive and should only be used for debugging.
     #[allow(clippy::expect_used)]
     fn verify_pv_moves(&self, pv: &PrincipleVariation, board: &Board) -> Result<()> {
@@ -256,12 +263,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         'deepening: loop {
-            if td.should_stop(LimitType::Soft)
-                || self
-                    .stop_flag
-                    .as_ref()
-                    .is_some_and(|f| f.load(Ordering::Relaxed))
-            {
+            if td.should_stop(LimitType::Soft) || self.stop_requested() {
                 break 'deepening;
             }
 
@@ -286,6 +288,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     &mut pv,
                 );
 
+                // If the search aborted mid-tree, `score` is truncated — discard
+                // the whole iteration and keep the last completed result.
+                if td.is_stopped() || self.stop_requested() {
+                    break 'deepening;
+                }
+
                 if aspiration_window.failed_low(score) {
                     // fail low, widen the window
                     aspiration_window.widen_down(score, td.depth as ScoreType);
@@ -295,18 +303,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 } else {
                     // we have a valid score, break the loop
                     break 'aspiration_window;
-                }
-
-                // check stop conditions
-                if td.should_stop(LimitType::Hard)
-                    || self
-                        .stop_flag
-                        .as_ref()
-                        .is_some_and(|f| f.load(Ordering::Relaxed))
-                {
-                    // we have to stop searching now, use the best result we have
-                    // no score update
-                    break 'deepening;
                 }
             }
 
@@ -392,7 +388,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // increment node count
         td.nodes += 1;
         td.seldepth = td.seldepth.max(ply);
-        let in_check = move_generation::is_in_check(board);
 
         // Ply guard: prevent unbounded recursion
         if ply >= MAX_PLY {
@@ -448,6 +443,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         let tt_move = tt_entry.map(|entry| entry.board_move);
 
+        // Compute check/pin metadata once for this node. It provides `in_check` here
+        // and is reused by the move picker for legal move generation. Computed after
+        // the TT probe so cutoffs don't pay for it.
+        let metadata = move_generation::metadata::compute(board);
+        let in_check = metadata.in_check();
+
         // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move: Option<Move> = None;
@@ -483,7 +484,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         }
 
         // Build move picker. Move generation is lazy (deferred to stage machine).
-        let mut picker = move_picker::MovePicker::new(tt_move, &td.killers_table, ply as usize);
+        let mut picker =
+            move_picker::MovePicker::new(tt_move, &td.killers_table, ply as usize, metadata);
 
         // How much to extend the depth.
         let mut extension = 0;
@@ -508,7 +510,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
             let is_mated = best_score.mated();
-            let is_in_check = picker.in_check();
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
             let is_quiet = board.captured(&mv).is_none() && !mv.is_promotion();
@@ -519,7 +520,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // SEE prune bad tacticals at shallow depth
             if !is_root
                 && !is_pv
-                && !is_in_check
+                && !in_check
                 && !is_mated
                 && is_bad_tactical
                 && (depth as i32) <= see_tacticals_max_depth()
@@ -536,7 +537,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // ------------------------------------------------------------------------------------------
             if !is_root
                 && !is_pv
-                && !is_in_check
+                && !in_check
                 && !is_mated
                 && is_quiet
                 && moves_seen > 0
@@ -556,7 +557,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // ---------------------------------------------------------------------------------
             if !is_root
                 && !is_pv
-                && !is_in_check
+                && !in_check
                 && !is_mated
                 && is_quiet
                 && depth <= lmp_max_depth() as i16
@@ -669,6 +670,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             board.unmake_move().unwrap();
             moves_seen += 1;
 
+            // If the search aborted while this move was being searched, its score
+            // is truncated so we return without letting it touch other tables like
+            // history or TT. Ancestors discard the result the same way, so the
+            // partial score never propagates.
+            if td.should_stop(LimitType::Hard) || self.stop_requested() {
+                return best_score;
+            }
+
             // check the results
             if score > best_score {
                 // we improved, so update the score and best move
@@ -714,21 +723,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     break;
                 }
             }
-
-            // do we need to stop searching?
-            if td.should_stop(LimitType::Hard)
-                || self
-                    .stop_flag
-                    .as_ref()
-                    .is_some_and(|f| f.load(Ordering::Relaxed))
-            {
-                break;
-            }
         }
 
         // No moves were yielded: checkmate or stalemate.
         if picker.moves_yielded() == 0 {
-            return if picker.in_check() {
+            return if in_check {
                 -Score::MATE + ply
             } else {
                 Score::DRAW
@@ -771,7 +770,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
     fn pruned_score<Node: NodeType>(
         &mut self,
         tt_entry: Option<TranspositionTableEntry>,
-        board: &Board,
+        board: &mut Board,
         td: &mut ThreadData,
         depth: ScoreType,
         ply: ScoreType,
@@ -793,16 +792,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // ------------------------------------------------------------------------------------------------------------
         let razoring_margin = razoring_offset() + razoring_scaling() * depth as i32;
         if static_eval.as_i32() + razoring_margin < alpha.as_i32() {
-            let mut brd_cpy = board.clone();
             let mut razor_pv = PrincipleVariation::new();
-            let score = self.quiescence::<NonPvNode>(
-                &mut brd_cpy,
-                td,
-                ply,
-                alpha,
-                alpha + 1,
-                &mut razor_pv,
-            );
+            let score =
+                self.quiescence::<NonPvNode>(board, td, ply, alpha, alpha + 1, &mut razor_pv);
             if score < alpha && !score.is_mate() {
                 return Some(score);
             }
@@ -844,12 +836,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
             let null_move_depth = depth - params::nmp_reduction(depth as i32, improving) as i16 - 1;
-            let mut null_board = board.clone();
-            null_board.null_move();
-            td.transposition_table.prefetch(null_board.zobrist_hash());
+            board.null_move();
+            td.transposition_table.prefetch(board.zobrist_hash());
             let mut nmp_pv = PrincipleVariation::new();
             let null_score = -self.negamax::<NonPvNode>(
-                &mut null_board,
+                board,
                 td,
                 null_move_depth,
                 ply + 1,
@@ -857,6 +848,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 -beta + 1,
                 &mut nmp_pv,
             );
+            board.unmake_move().unwrap();
 
             if null_score >= beta {
                 return if null_score.is_mate() {
@@ -969,11 +961,27 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // Quiescence SEE pruning
             // https://www.chessprogramming.org/Static_Exchange_Evaluation
             // https://talkchess.com/viewtopic.php?t=41217
-            // Skip moves that lose material if we're not in check
+            // Skip moves that lose material if we're not in check.
+            //
+            // Captures yielded past the TT stage already passed the picker's
+            // `see(mv, 0)` classification, which implies `see(mv, t)` for any
+            // t <= 0 — rechecking them is redundant. Only the TT move
+            // (yielded unclassified) and promotions (classified good without
+            // SEE) still need the check, unless the threshold is tuned
+            // positive, in which case classification no longer covers it.
             // ------------------------------------------------------------
-            if !in_check && !see::see(board, mv, qs_see_threshold()) {
+            let see_checked_by_picker =
+                Some(mv) != tt_move && !mv.is_promotion() && qs_see_threshold() <= 0;
+            if !in_check && !see_checked_by_picker && !see::see(board, mv, qs_see_threshold()) {
                 continue;
             }
+
+            // When skipping, verify the picker actually guaranteed `see(mv, 0)`.
+            debug_assert!(
+                in_check || !see_checked_by_picker || see::see(board, mv, 0),
+                "qsearch picker yielded a SEE-losing capture: {}",
+                mv.to_long_algebraic()
+            );
 
             // local PV is for each node below this one is different when we call negamax recursively
             // so we have to clear it
@@ -993,6 +1001,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             board.unmake_move().unwrap();
 
+            // If the search aborted while this move was being searched, its score
+            // is truncated — return without letting it touch best/alpha or the
+            // TT store below.
+            if td.should_stop(LimitType::Hard) || self.stop_requested() {
+                return best;
+            }
+
             if score > best {
                 best = score;
                 best_move = Some(mv);
@@ -1009,15 +1024,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if score > alpha_use {
                     alpha_use = score;
                 }
-            }
-
-            if td.should_stop(LimitType::Hard)
-                || self
-                    .stop_flag
-                    .as_ref()
-                    .is_some_and(|f| f.load(Ordering::Relaxed))
-            {
-                break;
             }
         }
 
