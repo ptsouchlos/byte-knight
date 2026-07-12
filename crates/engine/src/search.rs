@@ -820,10 +820,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // Give the opponent a free move. If they cannot improve their position (beat beta)
         // then prune the tree as our advantage is too great to bother searching further.
         // --------------------------------------------------------------------------------
-        // Are we left with more than just kings and pawns?
-        let sufficient_material = (board.all_pieces()
-            ^ board.piece_kind_bitboard(Piece::King)
-            ^ board.piece_kind_bitboard(Piece::Pawn))
+        // Zugzwang guard: the side to move must have at least one non-king,
+        // non-pawn piece. Counting the opponent's pieces doesn't help — it's
+        // *our* lack of tempo moves that makes the null move unsound.
+        let stm = board.side_to_move();
+        let sufficient_material = (board.pieces(stm)
+            ^ board.piece_bitboard(Piece::King, stm)
+            ^ board.piece_bitboard(Piece::Pawn, stm))
         .number_of_occupied_squares()
             > 0;
         // was the last move null?
