@@ -89,9 +89,15 @@ impl Display for SearchResult {
 
 /// Helper to calculate the improvement of the static evaluation from our previous move.
 fn calculate_improvement(td: &ThreadData, ply: i16, static_eval: Score, in_check: bool) -> i32 {
+    if in_check {
+        return 0;
+    }
+
     let ply_idx = ply as usize;
-    if ply >= 2 && score::is_valid(td.stack[ply_idx - 2].static_eval) && !in_check {
+    if ply >= 2 && score::is_valid(td.stack[ply_idx - 2].static_eval) {
         (static_eval.0 as i32) - td.stack[ply_idx - 2].static_eval
+    } else if ply >= 4 && score::is_valid(td.stack[ply_idx - 4].static_eval) {
+        (static_eval.0 as i32) - td.stack[ply_idx - 4].static_eval
     } else {
         0
     }
