@@ -13,3 +13,10 @@ itertools = { workspace = true }
 uci-parser = { workspace = true, features = ["parse-go-perft", "parse-position-kiwipete", "types", "clamp-negatives"] }
 rand = { workspace = true }
 arrayvec = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true, features = ["html_reports"] }
+
+[[bench]]
+name = "eval"
+harness = false
