@@ -907,7 +907,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // When in check we are forced to move, so stand-pat does not apply.
         let mut alpha_use: Score = if !in_check {
             if standing_eval >= beta {
-                return beta;
+                // Fail-soft: return the eval itself, not beta, for tighter bounds.
+                return standing_eval;
             }
             alpha.max(standing_eval)
         } else {
