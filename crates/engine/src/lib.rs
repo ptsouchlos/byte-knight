@@ -12,6 +12,7 @@
 )]
 
 pub mod aspiration_window;
+pub mod bench_positions;
 pub mod defs;
 pub mod engine;
 pub mod evaluation;
