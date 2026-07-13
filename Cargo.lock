@@ -471,6 +471,7 @@ dependencies = [
  "anyhow",
  "arrayvec",
  "chess",
+ "criterion",
  "itertools 0.15.0",
  "rand",
  "uci-parser",
