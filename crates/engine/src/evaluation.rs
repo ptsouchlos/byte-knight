@@ -346,7 +346,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         }
 
         // Score both sides for king safety
-        for us in [Side::White, Side::Black] {
+        for us in Side::iter() {
             let them = us.opposite();
             // Get our king ring
             let king_ring = attacks::king(board.king_square(us));
