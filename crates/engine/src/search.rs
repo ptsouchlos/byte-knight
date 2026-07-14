@@ -41,9 +41,9 @@ use crate::{
     ttable::{self, TranspositionTableEntry},
     tuneable::{
         fp_base, fp_max_depth, fp_scale, iir_depth_reduction, iir_min_depth, lmp_max_depth,
-        lmr_min_depth, lmr_min_moves_seen, nmp_min_depth, qs_delta_margin, qs_see_threshold,
-        razoring_offset, razoring_scaling, rfp_improving_margin, rfp_margin, rfp_max_depth,
-        see_tacticals_margin, see_tacticals_max_depth,
+        lmr_improving, lmr_min_depth, lmr_min_moves_seen, nmp_min_depth, qs_delta_margin,
+        qs_see_threshold, razoring_offset, razoring_scaling, rfp_improving_margin, rfp_margin,
+        rfp_max_depth, see_tacticals_margin, see_tacticals_max_depth,
     },
 };
 
@@ -514,7 +514,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 1f64
             };
 
-            let lmr_reduction = (1f64 + base_reduction).floor() as i16;
+            // Reduce an extra ply when the static eval isn't improving.
+            let lmr_reduction = (1f64 + base_reduction).floor() as i16
+                + lmr_improving() as i16 * (!improving) as i16;
             let is_mated = best_score.mated();
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
