@@ -39,6 +39,7 @@ tunable_params!(
     razoring_offset         = 511, 250, 1000, 10,    true;
     lmr_min_depth           = 3, 1, 6, 1,            false;
     lmr_min_moves_seen      = 3, 1, 6, 1,            false;
+    lmr_improving           = 1, 0, 2, 1,            false;
 );
 
 pub(crate) const LMR_OFFSET: f64 = 0.2;
