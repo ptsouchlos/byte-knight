@@ -23,6 +23,7 @@ tunable_params!(
     see_tacticals_margin    = 61, 0, 100, 1,         true;
     fp_base                 = 94, 50, 150, 1,        true;
     fp_scale                = 74, 40, 120, 1,        true;
+    fp_improving_margin     = 26, 10, 70, 1,         true;
     fp_max_depth            = 3, 1, 8, 1,            false;
     rfp_max_depth           = 4, 1, 10, 1,           false;
     rfp_margin              = 75, 40, 120, 1,        true;
