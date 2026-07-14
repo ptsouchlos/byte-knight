@@ -51,7 +51,7 @@ impl Side {
     }
 
     pub fn iter() -> impl Iterator<Item = Side> {
-        Side::ALL_SIDES.iter().copied()
+        Side::ALL_SIDES.into_iter()
     }
 }
 
