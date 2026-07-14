@@ -514,9 +514,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 1f64
             };
 
-            // Reduce an extra ply when the static eval isn't improving.
-            let lmr_reduction = (1f64 + base_reduction).floor() as i16
-                + lmr_improving() as i16 * (!improving) as i16;
+            // Reduce one ply less when the static eval is improving.
+            // Clamp to 1 so an improving node can't produce a
+            // zero/negative reduction (which `saturating_sub` would
+            // turn into an extension).
+            let lmr_reduction = ((1f64 + base_reduction).floor() as i16
+                - lmr_improving() as i16 * improving as i16)
+                .max(1);
             let is_mated = best_score.mated();
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
