@@ -590,17 +590,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     .iter()
                     .any(|entry| entry.is_some_and(|k| k.matches(mv, piece)));
 
-                // Compute LMR reduction
+                // Compute LMR reduction. Reduce one ply less for killer moves
+                // and one ply less in PV nodes.
                 let reduction = if is_quiet
                     && depth as i32 >= lmr_min_depth()
                     && moves_seen >= lmr_min_moves_seen()
                 {
-                    // Apply less LMR reduction for killer moves.
-                    if is_killer {
-                        (lmr_reduction - 1).max(1)
-                    } else {
-                        lmr_reduction
-                    }
+                    (lmr_reduction - is_killer as i16 - is_pv as i16).max(1)
                 } else {
                     // No LMR reduction, so just the normal step.
                     1
