@@ -1,10 +1,13 @@
 use std::ops::{Index, IndexMut};
 
+use chess::bitboard::Bitboard;
+
 use crate::{defs::MAX_PLY, score::Score};
 
 #[derive(Copy, Clone)]
 pub struct Node {
     pub static_eval: i32,
+    pub threats: Bitboard,
 }
 
 /// Represents the variation in the search tree currently being searched. Is updated every time the
@@ -18,6 +21,7 @@ impl Default for NodeStack {
         NodeStack {
             data: [Node {
                 static_eval: -Score::INF.0 as i32,
+                threats: Bitboard::default(),
             }; (MAX_PLY + 8) as usize],
         }
     }

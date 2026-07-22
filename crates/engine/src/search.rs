@@ -15,6 +15,7 @@ use std::{
 
 use anyhow::{Result, bail};
 use chess::{
+    attacks,
     board::Board,
     definitions::MAX_MOVE_LIST_SIZE,
     move_generation::{self, move_filter::MoveFilter},
@@ -465,7 +466,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             -Score::INF
         };
 
+        // Cache eval in node stack.
         td.stack[ply as usize].static_eval = static_eval.0 as i32;
+        // Cache threats in node stack.
+        td.stack[ply as usize].threats = attacks::threats(board, board.side_to_move().opposite());
 
         // Check if we are "improving". Improvement affects multiple heuristics.
         // This is just a simple check to see if the static evaluation is trending up
