@@ -588,6 +588,25 @@ pub fn blockers_for_king(board: &Board, side: Side) -> Bitboard {
     blockers
 }
 
+/// Calculate threats of the current board from the attacking side.
+///
+/// # Arguments
+/// - `board`: The current [`Board`].
+/// - `attacking_side`: The side that is attacking.
+///
+/// # Returns
+/// - A [`Bitboard`] representing all threatened squares from the attacking side.
+pub fn threats(board: &Board, attacking_side: Side) -> Bitboard {
+    let mut threats = Bitboard::default();
+    let occ = board.all_pieces();
+
+    for piece in Piece::iter() {
+        threats |= attacks::for_piece(piece, board, occ, attacking_side);
+    }
+
+    threats
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
