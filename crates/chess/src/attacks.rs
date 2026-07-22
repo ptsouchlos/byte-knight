@@ -615,7 +615,7 @@ mod tests {
         board::Board,
         definitions::NumberOf,
         magics::{BISHOP_MAGICS, ROOK_MAGICS},
-        move_generation,
+        move_generation::{self, square_state::is_square_attacked},
         pieces::Piece,
         side::Side,
         square::Square,
@@ -977,13 +977,6 @@ mod tests {
                 let idx = magic.index(blockers);
                 let table_attack = ROOK_ATTACKS[idx];
                 let expected_attack = super::orthogonal_ray_attacks(sq, blockers.as_number());
-                println!(
-                    "Square: {}, Blockers: {:064b}\nTable Attack:\n{}\nExpected Attack:\n{}",
-                    sq,
-                    blockers.as_number(),
-                    table_attack,
-                    expected_attack
-                );
                 assert_eq!(
                     table_attack,
                     expected_attack,
@@ -1007,13 +1000,6 @@ mod tests {
                 let idx = magic.index(blockers);
                 let table_attack = BISHOP_ATTACKS[idx];
                 let expected_attack = super::diagonal_ray_attacks(sq, blockers.as_number());
-                println!(
-                    "Square: {}, Blockers: {:064b}\nTable Attack:\n{}\nExpected Attack:\n{}",
-                    sq,
-                    blockers.as_number(),
-                    table_attack,
-                    expected_attack
-                );
                 assert_eq!(
                     table_attack,
                     expected_attack,
@@ -1166,10 +1152,6 @@ mod tests {
         for sq in Bitboard::filled() {
             let white_attacks = attacks::pawn(sq, crate::side::Side::White);
             let black_attacks = attacks::pawn(sq, crate::side::Side::Black);
-            println!(
-                "Square: {}\nWhite Pawn Attacks:\n{}\nBlack Pawn Attacks:\n{}",
-                sq, white_attacks, black_attacks
-            );
             assert_ne!(white_attacks, black_attacks);
             assert_eq!(black_attacks.as_number(), expected_black_pawn_attacks[sq]);
             assert_eq!(white_attacks.as_number(), expected_white_pawn_attacks[sq]);
@@ -1243,5 +1225,75 @@ mod tests {
         let b2_blockers = attacks::blockers_for_king(&board_2, Side::White);
         let expected_b2_blockers = Bitboard::from(Square::F7);
         assert_eq!(b2_blockers, expected_b2_blockers);
+    }
+
+    /// `threats()` should agree with `is_square_attacked` for every square, for both sides —
+    /// that function is already the trusted source of truth for move legality. Checking
+    /// against it exercises all six piece types and their interactions (blockers, defended
+    /// squares) at once, without hand-deriving an expected bitboard per position.
+    fn assert_matches_is_square_attacked(fen: &str) {
+        let board = Board::from_fen(fen).unwrap();
+        for side in [Side::White, Side::Black] {
+            let threat_bb = super::threats(&board, side);
+            for sq in Square::iter() {
+                let expected = is_square_attacked(&board, sq, side);
+                let actual = threat_bb.is_square_occupied(sq);
+                assert_eq!(
+                    actual, expected,
+                    "fen `{fen}`: square {sq} attacked-by-{side:?} mismatch (threats={actual}, is_square_attacked={expected})"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn threats_matches_is_square_attacked_start_position() {
+        assert_matches_is_square_attacked(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        );
+    }
+
+    #[test]
+    fn threats_matches_is_square_attacked_open_middlegame() {
+        // Kiwipete: all six piece types active, mix of open lines and blockers.
+        assert_matches_is_square_attacked(
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        );
+    }
+
+    #[test]
+    fn threats_matches_is_square_attacked_in_check() {
+        assert_matches_is_square_attacked("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2");
+    }
+
+    #[test]
+    fn threats_respects_slider_blockers() {
+        // Rook on a1 blocked by its own pawn on a2; open along rank 1 up to its own king.
+        let board = Board::from_fen("4k3/8/8/8/8/8/P7/R3K3 w - - 0 1").unwrap();
+        let white_threats = super::threats(&board, Side::White);
+
+        assert!(white_threats.is_square_occupied(Square::try_from("a2").unwrap()));
+        assert!(!white_threats.is_square_occupied(Square::try_from("a3").unwrap()));
+        // Attack bitboards include defended (own-occupied) squares, not just empty/enemy ones.
+        assert!(white_threats.is_square_occupied(Square::try_from("e1").unwrap()));
+    }
+
+    #[test]
+    fn threats_pawn_attacks_are_diagonal_only() {
+        let board = Board::from_fen("4k3/8/8/8/8/8/4P3/4K3 w - - 0 1").unwrap();
+        let white_threats = super::threats(&board, Side::White);
+
+        assert!(white_threats.is_square_occupied(Square::try_from("d3").unwrap()));
+        assert!(white_threats.is_square_occupied(Square::try_from("f3").unwrap()));
+        // A pawn does not attack its own push square.
+        assert!(!white_threats.is_square_occupied(Square::try_from("e3").unwrap()));
+    }
+
+    #[test]
+    fn threats_lone_king_covers_only_its_neighbours() {
+        let board = Board::from_fen("4k3/8/8/8/8/8/8/4K3 w - - 0 1").unwrap();
+        let white_threats = super::threats(&board, Side::White);
+        // e1 is on the back rank: 5 edge-clipped neighbours (d1, f1, d2, e2, f2).
+        assert_eq!(white_threats.number_of_occupied_squares(), 5);
     }
 }
