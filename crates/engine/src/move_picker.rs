@@ -423,7 +423,11 @@ impl MovePicker {
 mod tests {
     use chess::{
         board::Board,
-        move_generation::{self, move_filter::MoveFilter},
+        move_generation::{
+            self,
+            metadata::{self, CheckPinMetadata},
+            move_filter::MoveFilter,
+        },
         moves::Move,
     };
 
@@ -461,8 +465,12 @@ mod tests {
         out
     }
 
-    fn make_move_picker(tt_move: Option<Move>, ply: usize) -> MovePicker {
-        MovePicker::new(tt_move, &KILLERS_TABLE, ply)
+    fn make_move_picker(
+        tt_move: Option<Move>,
+        ply: usize,
+        metadata: CheckPinMetadata,
+    ) -> MovePicker {
+        MovePicker::new(tt_move, &KILLERS_TABLE, ply, metadata)
     }
 
     /// FEN with multiple captures available:
@@ -483,6 +491,7 @@ mod tests {
     #[test]
     fn tt_move_comes_first() {
         let board = Board::from_fen(STARTING_FEN).unwrap();
+        let metadata = metadata::compute(&board);
         let mut tt = TranspositionTable::from_capacity(16);
         let histories = Histories::default();
 
@@ -500,7 +509,7 @@ mod tests {
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = Some(tt_entry.board_move);
 
-        let mut picker = make_move_picker(tt_move, 0);
+        let mut picker = make_move_picker(tt_move, 0, metadata);
         let first = picker.next(&board, &histories).expect("must have a move");
         assert_eq!(first, chosen, "TT move must be yielded first");
     }
@@ -509,7 +518,7 @@ mod tests {
     fn tacticals_before_quiets() {
         let board = Board::from_fen(CAPTURES_FEN).unwrap();
         let histories = Histories::default();
-        let mut picker = make_move_picker(None, 0);
+        let mut picker = make_move_picker(None, 0, meta(&board));
 
         let mut seen_quiet = false;
         while let Some(mv) = picker.next(&board, &histories) {
@@ -541,7 +550,7 @@ mod tests {
         //   PxP (victim=pawn, attacker=pawn):  25*1 - 1 = 24
         let board = Board::from_fen(MULTI_CAPTURE_FEN).unwrap();
         let histories = Histories::default();
-        let mut picker = make_move_picker(None, 0);
+        let mut picker = make_move_picker(None, 0, meta(&board));
 
         let mut captures: Vec<chess::moves::Move> = Vec::new();
         while let Some(mv) = picker.next(&board, &histories) {
@@ -614,7 +623,7 @@ mod tests {
             Score::MAX_HISTORY,
         );
 
-        let mut picker = MovePicker::new(None, &killers, 0);
+        let mut picker = MovePicker::new(None, &killers, 0, meta(&board));
         let moves = collect_all(&mut picker, &board, &histories);
 
         // The favored move should be yielded first (highest history score).
@@ -650,7 +659,7 @@ mod tests {
 
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = Some(tt_entry.board_move);
-        let mut picker = MovePicker::new(tt_move, &killers, 0);
+        let mut picker = MovePicker::new(tt_move, &killers, 0, meta(&board));
         let moves = collect_all(&mut picker, &board, &histories);
 
         let count = moves.iter().filter(|&&m| m == capture_mv).count();
@@ -719,7 +728,7 @@ mod tests {
         let board = Board::from_fen("8/P3k3/8/8/8/8/8/4K3 w - - 0 1").unwrap();
         let histories = Histories::default();
         let killers = KillerMovesTable::new();
-        let mut picker = MovePicker::new(None, &killers, 0);
+        let mut picker = MovePicker::new(None, &killers, 0, meta(&board));
         let moves = collect_all(&mut picker, &board, &histories);
 
         let queen_push_promos: Vec<_> = moves
@@ -765,7 +774,7 @@ mod tests {
                     .collect();
 
             // Lazy: collect via picker
-            let mut picker = MovePicker::new(None, &killers, 0);
+            let mut picker = MovePicker::new(None, &killers, 0, meta(&board));
             let lazy_moves = collect_all(&mut picker, &board, &histories);
             assert_eq!(
                 lazy_moves.len(),
@@ -795,18 +804,20 @@ mod tests {
     fn in_check_returns_correct_value() {
         // Position where white king is in check
         let board_in_check = Board::from_fen("4k3/8/8/8/8/8/4r3/4K3 w - - 0 1").unwrap();
+        let meta_in_check = meta(&board_in_check);
         let histories = Histories::default();
         let killers = KillerMovesTable::new();
-        let mut picker = MovePicker::new(None, &killers, 0);
+        let mut picker = MovePicker::new(None, &killers, 0, meta_in_check.clone());
         // Drive past TtMove stage by calling next() once
         let _ = picker.next(&board_in_check, &histories);
-        assert!(picker.in_check(), "in_check() should return true");
+        assert!(meta_in_check.in_check(), "in_check() should return true");
 
         // Position where white king is NOT in check
         let board_safe = Board::from_fen(STARTING_FEN).unwrap();
-        let mut picker2 = MovePicker::new(None, &killers, 0);
+        let meta_safe = meta(&board_safe);
+        let mut picker2 = MovePicker::new(None, &killers, 0, meta_safe.clone());
         let _ = picker2.next(&board_safe, &histories);
-        assert!(!picker2.in_check(), "in_check() should return false");
+        assert!(!meta_safe.in_check(), "in_check() should return false");
     }
 
     #[test]
