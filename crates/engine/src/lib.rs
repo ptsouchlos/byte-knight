@@ -17,7 +17,7 @@ pub mod defs;
 pub mod engine;
 pub mod evaluation;
 pub mod hce_values;
-pub mod history_table;
+pub mod history;
 pub mod killers_table;
 mod lmr;
 pub mod log_level;

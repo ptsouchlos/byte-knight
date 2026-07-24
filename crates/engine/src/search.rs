@@ -15,6 +15,7 @@ use std::{
 
 use anyhow::{Result, bail};
 use chess::{
+    attacks,
     board::Board,
     definitions::MAX_MOVE_LIST_SIZE,
     move_generation::{self, move_filter::MoveFilter},
@@ -27,7 +28,7 @@ use crate::{
     aspiration_window::AspirationWindow,
     defs::{MAX_DEPTH, MAX_PLY},
     evaluation::ByteKnightEvaluation,
-    history_table::{self},
+    history::quiet_history,
     lmr,
     log_level::LogLevel,
     move_picker,
@@ -465,6 +466,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             -Score::INF
         };
 
+        // Cache eval in node stack.
         td.stack[ply as usize].static_eval = static_eval.0 as i32;
 
         // Check if we are "improving". Improvement affects multiple heuristics.
@@ -489,9 +491,20 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return score;
         }
 
+        // Cache threats in node stack. Computed here (after pruning, right before move
+        // generation) rather than alongside static_eval above, since nothing before this point
+        // consumes it — nodes that get pruned by RFP/NMP/razoring/FP above never pay for it.
+        let threats = attacks::threats(board, board.side_to_move().opposite());
+        td.stack[ply as usize].threats = threats;
+
         // Build move picker. Move generation is lazy (deferred to stage machine).
-        let mut picker =
-            move_picker::MovePicker::new(tt_move, &td.killers_table, ply as usize, metadata);
+        let mut picker = move_picker::MovePicker::new(
+            tt_move,
+            &td.killers_table,
+            ply as usize,
+            metadata,
+            threats,
+        );
 
         // How much to extend the depth.
         let mut extension = 0;
@@ -503,7 +516,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let fp_margin = fp_base() + depth as i32 * fp_scale();
 
         // Loop through all moves in best-first order.
-        while let Some(mv) = picker.next(board, &td.history_table) {
+        while let Some(mv) = picker.next(board, &td.histories) {
             let loop_counter = picker.moves_yielded() - 1;
 
             // Calculate the LMR reduction and depth which will be used later in FP
@@ -699,25 +712,27 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         td.killers_table.update(ply as usize, mv, piece);
 
                         // calculate history bonus
-                        let bonus = history_table::calculate_bonus_for_depth(depth);
-                        td.history_table.update(
+                        let bonus = quiet_history::calculate_bonus_for_depth(depth);
+                        td.histories.quiet_history.update(
                             board.side_to_move(),
-                            piece,
                             mv,
+                            threats,
+                            bonus as LargeScoreType,
                             bonus as LargeScoreType,
                         );
 
                         // Apply a penalty to all quiets searched so far.
                         // The board is already in the parent state (we already unmade the move)
                         // so it's safe to look up the piece on the board using mv.from().
-                        for &(prev_mv, prev_piece) in picker.searched_quiets() {
+                        for &(prev_mv, _) in picker.searched_quiets() {
                             if prev_mv == mv {
                                 continue;
                             }
-                            td.history_table.update(
+                            td.histories.quiet_history.update(
                                 board.side_to_move(),
-                                prev_piece,
                                 prev_mv,
+                                threats,
+                                -bonus as LargeScoreType,
                                 -bonus as LargeScoreType,
                             );
                         }
@@ -951,7 +966,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_move: Option<Move> = None;
         let original_alpha = alpha_use;
 
-        while let Some(mv) = picker.next(board, &td.history_table) {
+        while let Some(mv) = picker.next(board, &td.histories) {
             // ------------------------------------------------------------
             // Delta pruning
             // ------------------------------------------------------------
@@ -1092,6 +1107,7 @@ mod tests {
     use std::{io, time::Duration};
 
     use chess::{
+        bitboard::Bitboard,
         board::Board,
         moves::{Move, MoveFlag},
         pieces::ALL_PIECES,
@@ -1330,16 +1346,23 @@ mod tests {
 
             let side = board.side_to_move();
             let mut max_history = LargeScoreType::MIN;
-            for piece in ALL_PIECES {
-                for square in 0..64 {
-                    let mv = Move::new(
-                        Square::from_square_index(square),
-                        Square::from_square_index(square),
-                        MoveFlag::Standard,
-                    );
-                    let score = td.history_table.get(side, piece, mv);
-                    if score > max_history {
-                        max_history = score;
+            for from_square in 0..64 {
+                for to_square in 0..64 {
+                    let from = Square::from_square_index(from_square);
+                    let to = Square::from_square_index(to_square);
+                    let mv = Move::new(from, to, MoveFlag::Standard);
+                    // Check both diagonal buckets and, when from != to, both off-diagonal
+                    // buckets too, so every threat-bucket cell this move can reach is covered.
+                    for threats in [
+                        Bitboard::default(),
+                        Bitboard::from(from),
+                        Bitboard::from(to),
+                        Bitboard::from(from) | Bitboard::from(to),
+                    ] {
+                        let score = td.histories.get(side, mv, threats);
+                        if score > max_history {
+                            max_history = score;
+                        }
                     }
                 }
             }

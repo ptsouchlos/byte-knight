@@ -69,6 +69,17 @@ impl Score {
     /// Max/min score for history heuristic
     /// Must be lower then the minimum score for captures in MVV_LVA
     pub const MAX_HISTORY: LargeScoreType = 16_384;
+    /// Max/min value for the threat-agnostic factoriser in [`crate::history::quiet_history::QuietHistory`].
+    /// Kept smaller than [`Score::BUCKET_MAX`] since the factorizer
+    /// updates on every touch (dense) while a given bucket cell only updates for its specific
+    /// threat configuration (sparse). The more-frequently-touched signal should saturate at a
+    /// lower ceiling so the sparser, more specific bucket signal can carry more of the magnitude.
+    /// `FACTORISER_MAX + BUCKET_MAX` must not exceed [`Score::MAX_HISTORY`], so that a fully
+    /// saturated quiet history entry can never sort above a killer move.
+    pub const FACTORIZER_MAX: LargeScoreType = 4_096;
+    /// Max/min value for a single threat bucket cell in [`crate::history::quiet_history::QuietHistory`].
+    /// See [`Score::FACTORISER_MAX`] for the invariant and reasoning this must preserve.
+    pub const BUCKET_MAX: LargeScoreType = 12_288;
 
     pub fn new(score: ScoreType) -> Score {
         Score(score)

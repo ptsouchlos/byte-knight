@@ -18,7 +18,6 @@ use uci_parser::UciCommand;
 #[derive(Debug)]
 pub(crate) enum EngineCommand {
     HashInfo,
-    History,
     Perft(u16),
     #[cfg(feature = "tuning")]
     Params,
@@ -46,7 +45,6 @@ impl FromStr for EngineCommand {
         };
         match cmd {
             "hash" => Ok(EngineCommand::HashInfo),
-            "history" => Ok(EngineCommand::History),
             "perft" => Ok(EngineCommand::Perft(depth)),
             #[cfg(feature = "tuning")]
             "params" => Ok(EngineCommand::Params),
