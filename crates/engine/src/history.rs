@@ -5,11 +5,13 @@
 
 //! This module contains all history tables and consolidates them into a Histories object.
 
-use chess::{moves::Move, pieces::Piece, side::Side};
+use chess::{bitboard::Bitboard, moves::Move, pieces::Piece, side::Side};
 
 use crate::{history::quiet_history::QuietHistory, score::LargeScoreType};
 
 pub mod quiet_history;
+pub mod threat_bucket;
+mod types;
 
 /// Holds all history tables for the engine.
 /// Credit to the author of [hobbes](https://github.com/kelseyde/hobbes-chess-engine) for this setup (kelseyde)
@@ -19,12 +21,14 @@ pub struct Histories {
 }
 
 impl Histories {
-    pub(crate) fn get(&self, side: Side, piece: Piece, mv: Move) -> LargeScoreType {
-        self.quiet_history.get(side, piece, mv)
-    }
-
-    pub(crate) fn update(&mut self, side: Side, piece: Piece, mv: Move, bonus: LargeScoreType) {
-        self.quiet_history.update(side, piece, mv, bonus)
+    pub(crate) fn get(
+        &self,
+        side: Side,
+        piece: Piece,
+        mv: Move,
+        threats: Bitboard,
+    ) -> LargeScoreType {
+        self.quiet_history.get(side, piece, mv, threats)
     }
 
     pub fn clear(&mut self) {

@@ -3,20 +3,57 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::io::{self, Write};
+use chess::{bitboard::Bitboard, definitions::NumberOf, moves::Move, pieces::Piece, side::Side};
 
-use chess::{
-    definitions::NumberOf,
-    moves::Move,
-    pieces::{PIECE_NAMES, Piece},
-    side::Side,
+use crate::{
+    history::{
+        threat_bucket::{ThreatBucket, ThreatIndex},
+        types::{self, FromToHistory},
+    },
+    score::{LargeScoreType, Score},
 };
 
-use crate::score::{LargeScoreType, Score};
+/// A single quiet-history cell, split into a threat-agnostic `factoriser` and a `bucket` indexed
+/// by whether the move's `from`/`to` squares are currently attacked by the opponent.
+///
+/// The factorizer is updated on every touch regardless of threat state, carrying a dense
+/// threat-agnostic baseline; each bucket cell only has to learn the *delta* for its specific
+/// threat configuration. A bare `[2][2]` split without this baseline would update each cell a
+/// quarter as often, producing a sparse/noisy table.
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
+struct QuietHistoryEntry {
+    factorizer: LargeScoreType,
+    bucket: ThreatBucket<i32>,
+}
 
-/// History table for all quiet moves. This is currently indexed only by piece -> per side.
+impl QuietHistoryEntry {
+    fn score(&self, threat_index: ThreatIndex) -> LargeScoreType {
+        self.factorizer + self.bucket[threat_index.from()][threat_index.to()]
+    }
+
+    fn update(
+        &mut self,
+        threat_index: ThreatIndex,
+        bonus: LargeScoreType,
+        factorizer_bonus: LargeScoreType,
+    ) {
+        self.factorizer = gravity(self.factorizer, factorizer_bonus, Score::FACTORISER_MAX);
+
+        let cell = &mut self.bucket[threat_index.from()][threat_index.to()];
+        *cell = gravity(*cell, bonus, Score::BUCKET_MAX);
+    }
+}
+
+/// Applies the standard history "gravity" formula: moves `current` toward `bonus`, weighted by
+/// how close `current` already is to `max`, so repeated updates saturate instead of overflowing.
+fn gravity(current: LargeScoreType, bonus: LargeScoreType, max: LargeScoreType) -> LargeScoreType {
+    current + bonus - current * bonus.abs() / max
+}
+
+/// History table for all quiet moves, indexed by piece -> to-square -> per side, with each entry
+/// further split into threat buckets (see [`QuietHistoryEntry`]).
 pub struct QuietHistory {
-    table: [[[LargeScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+    from_to_entries: [FromToHistory<QuietHistoryEntry>; NumberOf::SIDES],
 }
 
 /// Safe calculation of the bonus applied to quiet moves that are inserted into the history table.
@@ -35,52 +72,46 @@ pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
 
 impl QuietHistory {
     pub(crate) fn new() -> Self {
-        let table =
-            [[[Default::default(); NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES];
-        Self { table }
+        let from_to_entries = [types::default_from_to_history(); NumberOf::SIDES];
+        Self { from_to_entries }
     }
 
-    pub(crate) fn get(&self, side: Side, piece: Piece, mv: Move) -> LargeScoreType {
-        self.table[side as usize][piece as usize][mv.to()]
+    pub(crate) fn get(
+        &self,
+        side: Side,
+        piece: Piece,
+        mv: Move,
+        threats: Bitboard,
+    ) -> LargeScoreType {
+        let idx = ThreatIndex::new(&mv, threats);
+        self.from_to_entries[side as usize][piece as usize][mv.to()].score(idx)
     }
 
-    pub(crate) fn update(&mut self, side: Side, piece: Piece, mv: Move, bonus: LargeScoreType) {
-        let current_value = self.table[side as usize][piece as usize][mv.to()];
-        let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
-        let new_value = current_value + clamped_bonus
-            - current_value * clamped_bonus.abs() / Score::MAX_HISTORY;
-        self.table[side as usize][piece as usize][mv.to()] = new_value;
+    pub(crate) fn update(
+        &mut self,
+        side: Side,
+        piece: Piece,
+        mv: Move,
+        threats: Bitboard,
+        bonus: LargeScoreType,
+        factorizer_bonus: LargeScoreType,
+    ) {
+        let idx = ThreatIndex::new(&mv, threats);
+        self.from_to_entries[side as usize][piece as usize][mv.to()].update(
+            idx,
+            bonus,
+            factorizer_bonus,
+        );
     }
 
     pub(crate) fn clear(&mut self) {
         for side in 0..NumberOf::SIDES {
             for piece_type in 0..NumberOf::PIECE_TYPES {
                 for square in 0..NumberOf::SQUARES {
-                    self.table[side][piece_type][square] = Default::default();
+                    self.from_to_entries[side][piece_type][square] = Default::default();
                 }
             }
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn print_for_side(&self, side: Side, output: &mut impl Write) -> io::Result<()> {
-        for (piece_type, piece_name) in PIECE_NAMES.iter().enumerate() {
-            writeln!(output, "{piece_name} - {side}")?;
-            // print from white's perspective
-            for rank in (0..NumberOf::RANKS).rev() {
-                write!(output, "|")?;
-                for file in 0..NumberOf::FILES {
-                    let square = file + rank * NumberOf::FILES;
-                    write!(
-                        output,
-                        "{:6} ",
-                        self.table[side as usize][piece_type][square]
-                    )?;
-                }
-                writeln!(output, "|")?;
-            }
-        }
-        Ok(())
     }
 }
 
@@ -92,10 +123,10 @@ impl Default for QuietHistory {
 
 #[cfg(test)]
 mod tests {
-    use crate::defs::MAX_DEPTH;
+    use crate::{defs::MAX_DEPTH, score::Score};
 
     use super::{QuietHistory, calculate_bonus_for_depth};
-    use chess::{moves::Move, pieces::Piece, side::Side, square::Square};
+    use chess::{bitboard::Bitboard, moves::Move, pieces::Piece, side::Side, square::Square};
 
     #[test]
     fn initialize_history_table() {
@@ -105,7 +136,7 @@ mod tests {
             for piece_type in 0..6 {
                 for square in 0..64 {
                     assert_eq!(
-                        history_table.table[side][piece_type][square],
+                        history_table.from_to_entries[side][piece_type][square],
                         Default::default()
                     );
                 }
@@ -115,15 +146,85 @@ mod tests {
 
     #[test]
     fn store_and_read() {
+        // Values are the sum of a factoriser and a bucket cell (see `QuietHistoryEntry`), so
+        // repeated positive updates must strictly increase the read-back score - but the exact
+        // magnitude is an internal accounting detail (bonus split, gravity truncation), not
+        // something worth hardcoding here.
         let mut history_table = QuietHistory::new();
         let mv = Move::new(Square::B1, Square::A1, chess::moves::MoveFlag::Standard);
         let side = Side::Black;
         let piece = Piece::Pawn;
         let score = 37;
-        history_table.update(side, piece, mv, score);
-        assert_eq!(history_table.get(side, piece, mv), score);
-        history_table.update(side, piece, mv, score);
-        assert_eq!(history_table.get(side, piece, mv), score + score);
+        let no_threats = Bitboard::default();
+
+        assert_eq!(history_table.get(side, piece, mv, no_threats), 0);
+        history_table.update(side, piece, mv, no_threats, score, score);
+        let after_first = history_table.get(side, piece, mv, no_threats);
+        assert!(
+            after_first > 0,
+            "a positive bonus must raise the score above zero"
+        );
+
+        history_table.update(side, piece, mv, no_threats, score, score);
+        let after_second = history_table.get(side, piece, mv, no_threats);
+        assert!(
+            after_second > after_first,
+            "a second positive bonus must raise the score further"
+        );
+    }
+
+    #[test]
+    fn threat_buckets_are_independent_of_untouched_buckets() {
+        let mut history_table = QuietHistory::new();
+        let mv = Move::new(Square::B1, Square::A1, chess::moves::MoveFlag::Standard);
+        let side = Side::Black;
+        let piece = Piece::Pawn;
+
+        let no_threats = Bitboard::default();
+        let from_only_threatened = Bitboard::from(Square::B1);
+        let both_threatened = Bitboard::from(Square::B1) | Bitboard::from(Square::A1);
+
+        // Only ever update the "both squares threatened" bucket.
+        history_table.update(side, piece, mv, both_threatened, 1000, 1000);
+
+        let untouched = history_table.get(side, piece, mv, no_threats);
+        let touched = history_table.get(side, piece, mv, both_threatened);
+        assert!(
+            untouched > 0,
+            "the factoriser baseline should move on every update, regardless of threat state"
+        );
+        assert!(
+            touched > untouched,
+            "the touched bucket should score higher than a bucket that never saw the bonus"
+        );
+
+        let from_only = history_table.get(side, piece, mv, from_only_threatened);
+        assert_eq!(
+            from_only, untouched,
+            "a bucket that was never updated should equal the other untouched buckets"
+        );
+    }
+
+    #[test]
+    fn combined_score_never_exceeds_max_history() {
+        let mut history_table = QuietHistory::new();
+        let mv = Move::new(Square::B1, Square::A1, chess::moves::MoveFlag::Standard);
+        let side = Side::Black;
+        let piece = Piece::Pawn;
+        let threats = Bitboard::from(Square::B1) | Bitboard::from(Square::A1);
+
+        // Hammer the same cell with maximal bonuses to try to force it past MAX_HISTORY -
+        // a saturated entry must never be able to sort above KILLER_BONUS in the move picker.
+        for _ in 0..10_000 {
+            history_table.update(side, piece, mv, threats, i32::MAX, i32::MAX);
+        }
+
+        let score = history_table.get(side, piece, mv, threats);
+        assert!(
+            score <= Score::MAX_HISTORY,
+            "saturated quiet history entry ({score}) must not exceed MAX_HISTORY ({})",
+            Score::MAX_HISTORY
+        );
     }
 
     #[test]
