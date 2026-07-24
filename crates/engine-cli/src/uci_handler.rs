@@ -171,14 +171,6 @@ impl<W: Write> UciHandler<W> {
                             self.engine.tt_size(),
                         )?;
                     }
-                    EngineCommand::History => {
-                        // Make a copy of the side before passing to printing history table
-                        let side = self.engine.board().side_to_move();
-                        self.engine
-                            .history_tables()
-                            .quiet_history
-                            .print_for_side(side, &mut self.output)?;
-                    }
                     EngineCommand::Perft(depth) => {
                         let nodes = self.engine.perft(depth);
                         writeln!(self.output, "info nodes {}", nodes)?;
