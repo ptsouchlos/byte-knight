@@ -5,6 +5,8 @@
 
 use arrayvec::ArrayVec;
 use chess::{
+    attacks,
+    bitboard::Bitboard,
     board::Board,
     definitions::MAX_MOVE_LIST_SIZE,
     move_generation::{
@@ -80,6 +82,11 @@ pub(crate) struct MovePicker {
     /// Check/pin metadata shared across staged move generation. Provided at
     /// construction by the main search; computed lazily on first generation in qsearch.
     metadata: Option<CheckPinMetadata>,
+    /// Enemy-attacked-squares bitboard used for threat-bucketed quiet history. Provided at
+    /// construction by the main search (already cached per node); computed lazily on first
+    /// quiet generation in qsearch, since the node stack's cached value belongs to whatever
+    /// position last wrote that ply slot, not necessarily this qsearch position.
+    threats: Option<Bitboard>,
     /// Monotonically increasing selection-sort cursor (absolute index).
     pick_index: usize,
     /// Total moves yielded so far. Caller uses `moves_yielded() - 1` as the loop counter.
@@ -108,6 +115,7 @@ impl MovePicker {
         killers_table: &KillerMovesTable,
         ply: usize,
         metadata: CheckPinMetadata,
+        threats: Bitboard,
     ) -> Self {
         let killer_slice = killers_table.get(ply);
         let killers = [
@@ -127,6 +135,7 @@ impl MovePicker {
             tt_move_yielded: false,
             killers,
             metadata: Some(metadata),
+            threats: Some(threats),
             pick_index: 0,
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
@@ -153,6 +162,7 @@ impl MovePicker {
             tt_move_yielded: false,
             killers: [None; 2],
             metadata: None,
+            threats: None,
             pick_index: 0,
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
@@ -181,7 +191,13 @@ impl MovePicker {
     }
 
     #[allow(clippy::expect_used)]
-    fn score_move(&self, board: &Board, mv: &Move, histories: &Histories) -> LargeScoreType {
+    fn score_move(
+        &self,
+        board: &Board,
+        mv: &Move,
+        histories: &Histories,
+        threats: Bitboard,
+    ) -> LargeScoreType {
         let maybe_victim = board.captured(mv);
         if let Some(victim) = maybe_victim {
             let piece = board
@@ -214,7 +230,7 @@ impl MovePicker {
             if is_killer {
                 KILLER_BONUS
             } else {
-                histories.get(board.side_to_move(), piece, *mv)
+                histories.get(board.side_to_move(), piece, *mv, threats)
             }
         }
     }
@@ -240,13 +256,17 @@ impl MovePicker {
             .metadata
             .get_or_insert_with(|| move_generation::metadata::compute(board))
             .clone();
+        // Reuse threats cached by the caller; computed lazily in qsearch (see `threats` field docs).
+        let threats = *self
+            .threats
+            .get_or_insert_with(|| attacks::threats(board, board.side_to_move().opposite()));
 
         let moves = generate_moves_with_metadata(board, MoveFilter::Tacticals, &meta);
         for mv in moves.iter() {
             // Score move, then push it to the correct list depending on SEE
             let scored_mv = ScoredMove {
                 mv: *mv,
-                score: self.score_move(board, mv, histories),
+                score: self.score_move(board, mv, histories, threats),
             };
             // Defer move classification to yield stage.
             self.moves.push(scored_mv);
@@ -261,12 +281,16 @@ impl MovePicker {
             .metadata
             .as_ref()
             .expect("metadata must be set after GenerateTacticals");
+        // GenerateTacticals always runs first in the stage machine and resolves this.
+        let threats = self
+            .threats
+            .expect("threats must be set after GenerateTacticals");
         let moves = generate_moves_with_metadata(board, MoveFilter::Quiets, meta);
 
         for mv in moves.iter() {
             self.moves.push(ScoredMove {
                 mv: *mv,
-                score: self.score_move(board, mv, histories),
+                score: self.score_move(board, mv, histories, threats),
             });
         }
     }
@@ -422,6 +446,7 @@ impl MovePicker {
 #[allow(clippy::expect_used)]
 mod tests {
     use chess::{
+        bitboard::Bitboard,
         board::Board,
         move_generation::{
             self,
@@ -470,7 +495,7 @@ mod tests {
         ply: usize,
         metadata: CheckPinMetadata,
     ) -> MovePicker {
-        MovePicker::new(tt_move, &KILLERS_TABLE, ply, metadata)
+        MovePicker::new(tt_move, &KILLERS_TABLE, ply, metadata, Bitboard::default())
     }
 
     /// FEN with multiple captures available:
@@ -595,7 +620,7 @@ mod tests {
         let killer_piece = piece_for_move(&board, &killer_mv);
         killers.update(0, killer_mv, killer_piece);
 
-        let mut picker = MovePicker::new(None, &killers, 0, meta(&board));
+        let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
         // Starting position has no captures; all moves are quiet.
         let moves = collect_all(&mut picker, &board, &histories);
 
@@ -616,14 +641,16 @@ mod tests {
         // Give a high history score to the move at index 3
         let favored_mv = *all_moves.at(3).unwrap();
         let favored_piece = piece_for_move(&board, &favored_mv);
-        histories.update(
+        histories.quiet_history.update(
             board.side_to_move(),
             favored_piece,
             favored_mv,
+            Bitboard::default(),
+            Score::MAX_HISTORY,
             Score::MAX_HISTORY,
         );
 
-        let mut picker = MovePicker::new(None, &killers, 0, meta(&board));
+        let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
         let moves = collect_all(&mut picker, &board, &histories);
 
         // The favored move should be yielded first (highest history score).
@@ -659,7 +686,7 @@ mod tests {
 
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = Some(tt_entry.board_move);
-        let mut picker = MovePicker::new(tt_move, &killers, 0, meta(&board));
+        let mut picker = MovePicker::new(tt_move, &killers, 0, meta(&board), Bitboard::default());
         let moves = collect_all(&mut picker, &board, &histories);
 
         let count = moves.iter().filter(|&&m| m == capture_mv).count();
@@ -710,7 +737,7 @@ mod tests {
         let board = Board::from_fen(STARTING_FEN).unwrap();
         let histories = Histories::default();
         let killers = KillerMovesTable::new();
-        let mut picker = MovePicker::new(None, &killers, 0, meta(&board));
+        let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
 
         let mut expected_counter = 0usize;
         while let Some(_mv) = picker.next(&board, &histories) {
@@ -728,7 +755,7 @@ mod tests {
         let board = Board::from_fen("8/P3k3/8/8/8/8/8/4K3 w - - 0 1").unwrap();
         let histories = Histories::default();
         let killers = KillerMovesTable::new();
-        let mut picker = MovePicker::new(None, &killers, 0, meta(&board));
+        let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
         let moves = collect_all(&mut picker, &board, &histories);
 
         let queen_push_promos: Vec<_> = moves
@@ -774,7 +801,7 @@ mod tests {
                     .collect();
 
             // Lazy: collect via picker
-            let mut picker = MovePicker::new(None, &killers, 0, meta(&board));
+            let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
             let lazy_moves = collect_all(&mut picker, &board, &histories);
             assert_eq!(
                 lazy_moves.len(),
@@ -807,7 +834,13 @@ mod tests {
         let meta_in_check = meta(&board_in_check);
         let histories = Histories::default();
         let killers = KillerMovesTable::new();
-        let mut picker = MovePicker::new(None, &killers, 0, meta_in_check.clone());
+        let mut picker = MovePicker::new(
+            None,
+            &killers,
+            0,
+            meta_in_check.clone(),
+            Bitboard::default(),
+        );
         // Drive past TtMove stage by calling next() once
         let _ = picker.next(&board_in_check, &histories);
         assert!(meta_in_check.in_check(), "in_check() should return true");
@@ -815,7 +848,8 @@ mod tests {
         // Position where white king is NOT in check
         let board_safe = Board::from_fen(STARTING_FEN).unwrap();
         let meta_safe = meta(&board_safe);
-        let mut picker2 = MovePicker::new(None, &killers, 0, meta_safe.clone());
+        let mut picker2 =
+            MovePicker::new(None, &killers, 0, meta_safe.clone(), Bitboard::default());
         let _ = picker2.next(&board_safe, &histories);
         assert!(!meta_safe.in_check(), "in_check() should return false");
     }

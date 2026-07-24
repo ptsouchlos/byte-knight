@@ -468,8 +468,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         // Cache eval in node stack.
         td.stack[ply as usize].static_eval = static_eval.0 as i32;
-        // Cache threats in node stack.
-        td.stack[ply as usize].threats = attacks::threats(board, board.side_to_move().opposite());
 
         // Check if we are "improving". Improvement affects multiple heuristics.
         // This is just a simple check to see if the static evaluation is trending up
@@ -493,9 +491,20 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return score;
         }
 
+        // Cache threats in node stack. Computed here (after pruning, right before move
+        // generation) rather than alongside static_eval above, since nothing before this point
+        // consumes it — nodes that get pruned by RFP/NMP/razoring/FP above never pay for it.
+        let threats = attacks::threats(board, board.side_to_move().opposite());
+        td.stack[ply as usize].threats = threats;
+
         // Build move picker. Move generation is lazy (deferred to stage machine).
-        let mut picker =
-            move_picker::MovePicker::new(tt_move, &td.killers_table, ply as usize, metadata);
+        let mut picker = move_picker::MovePicker::new(
+            tt_move,
+            &td.killers_table,
+            ply as usize,
+            metadata,
+            threats,
+        );
 
         // How much to extend the depth.
         let mut extension = 0;
@@ -704,10 +713,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                         // calculate history bonus
                         let bonus = quiet_history::calculate_bonus_for_depth(depth);
-                        td.histories.update(
+                        td.histories.quiet_history.update(
                             board.side_to_move(),
                             piece,
                             mv,
+                            threats,
+                            bonus as LargeScoreType,
                             bonus as LargeScoreType,
                         );
 
@@ -718,10 +729,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             if prev_mv == mv {
                                 continue;
                             }
-                            td.histories.update(
+                            td.histories.quiet_history.update(
                                 board.side_to_move(),
                                 prev_piece,
                                 prev_mv,
+                                threats,
+                                -bonus as LargeScoreType,
                                 -bonus as LargeScoreType,
                             );
                         }
@@ -1096,6 +1109,7 @@ mod tests {
     use std::{io, time::Duration};
 
     use chess::{
+        bitboard::Bitboard,
         board::Board,
         moves::{Move, MoveFlag},
         pieces::ALL_PIECES,
@@ -1336,14 +1350,15 @@ mod tests {
             let mut max_history = LargeScoreType::MIN;
             for piece in ALL_PIECES {
                 for square in 0..64 {
-                    let mv = Move::new(
-                        Square::from_square_index(square),
-                        Square::from_square_index(square),
-                        MoveFlag::Standard,
-                    );
-                    let score = td.histories.get(side, piece, mv);
-                    if score > max_history {
-                        max_history = score;
+                    let sq = Square::from_square_index(square);
+                    let mv = Move::new(sq, sq, MoveFlag::Standard);
+                    // `mv` has from == to, so only the diagonal buckets (both attacked or
+                    // neither attacked) are reachable through this probe; check both.
+                    for threats in [Bitboard::default(), Bitboard::from(sq)] {
+                        let score = td.histories.get(side, piece, mv, threats);
+                        if score > max_history {
+                            max_history = score;
+                        }
                     }
                 }
             }
