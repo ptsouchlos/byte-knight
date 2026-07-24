@@ -5,7 +5,7 @@
 
 //! This module contains all history tables and consolidates them into a Histories object.
 
-use chess::{bitboard::Bitboard, moves::Move, pieces::Piece, side::Side};
+use chess::{bitboard::Bitboard, moves::Move, side::Side};
 
 use crate::{history::quiet_history::QuietHistory, score::LargeScoreType};
 
@@ -21,14 +21,8 @@ pub struct Histories {
 }
 
 impl Histories {
-    pub(crate) fn get(
-        &self,
-        side: Side,
-        piece: Piece,
-        mv: Move,
-        threats: Bitboard,
-    ) -> LargeScoreType {
-        self.quiet_history.get(side, piece, mv, threats)
+    pub(crate) fn get(&self, side: Side, mv: Move, threats: Bitboard) -> LargeScoreType {
+        self.quiet_history.get(side, mv, threats)
     }
 
     pub fn clear(&mut self) {
