@@ -715,7 +715,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         let bonus = quiet_history::calculate_bonus_for_depth(depth);
                         td.histories.quiet_history.update(
                             board.side_to_move(),
-                            piece,
                             mv,
                             threats,
                             bonus as LargeScoreType,
@@ -725,13 +724,12 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         // Apply a penalty to all quiets searched so far.
                         // The board is already in the parent state (we already unmade the move)
                         // so it's safe to look up the piece on the board using mv.from().
-                        for &(prev_mv, prev_piece) in picker.searched_quiets() {
+                        for &(prev_mv, _) in picker.searched_quiets() {
                             if prev_mv == mv {
                                 continue;
                             }
                             td.histories.quiet_history.update(
                                 board.side_to_move(),
-                                prev_piece,
                                 prev_mv,
                                 threats,
                                 -bonus as LargeScoreType,
@@ -1348,14 +1346,20 @@ mod tests {
 
             let side = board.side_to_move();
             let mut max_history = LargeScoreType::MIN;
-            for piece in ALL_PIECES {
-                for square in 0..64 {
-                    let sq = Square::from_square_index(square);
-                    let mv = Move::new(sq, sq, MoveFlag::Standard);
-                    // `mv` has from == to, so only the diagonal buckets (both attacked or
-                    // neither attacked) are reachable through this probe; check both.
-                    for threats in [Bitboard::default(), Bitboard::from(sq)] {
-                        let score = td.histories.get(side, piece, mv, threats);
+            for from_square in 0..64 {
+                for to_square in 0..64 {
+                    let from = Square::from_square_index(from_square);
+                    let to = Square::from_square_index(to_square);
+                    let mv = Move::new(from, to, MoveFlag::Standard);
+                    // Check both diagonal buckets and, when from != to, both off-diagonal
+                    // buckets too, so every threat-bucket cell this move can reach is covered.
+                    for threats in [
+                        Bitboard::default(),
+                        Bitboard::from(from),
+                        Bitboard::from(to),
+                        Bitboard::from(from) | Bitboard::from(to),
+                    ] {
+                        let score = td.histories.get(side, mv, threats);
                         if score > max_history {
                             max_history = score;
                         }
