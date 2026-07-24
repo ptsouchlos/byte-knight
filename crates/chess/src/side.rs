@@ -3,7 +3,10 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::{fmt::Display, ops::Not};
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut, Not},
+};
 
 /// Represents a side to play in chess.
 #[repr(usize)]
@@ -93,6 +96,20 @@ impl Not for Side {
 
     fn not(self) -> Self::Output {
         self.opposite()
+    }
+}
+
+impl<T, const N: usize> Index<Side> for [T; N] {
+    type Output = T;
+
+    fn index(&self, stm: Side) -> &Self::Output {
+        &self[stm as usize]
+    }
+}
+
+impl<T, const N: usize> IndexMut<Side> for [T; N] {
+    fn index_mut(&mut self, stm: Side) -> &mut Self::Output {
+        &mut self[stm as usize]
     }
 }
 
