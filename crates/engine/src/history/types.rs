@@ -9,6 +9,12 @@ use chess::definitions::NumberOf;
 /// Also known as 'butterfly' history.
 pub(crate) type FromToHistory<T> = [[T; NumberOf::SQUARES]; NumberOf::SQUARES];
 
+pub(crate) type PieceToHistory<T> = [[T; NumberOf::SQUARES]; NumberOf::PIECE_TYPES];
+
 pub(crate) fn default_from_to_history<T: Default + Copy>() -> FromToHistory<T> {
     [[Default::default(); NumberOf::SQUARES]; NumberOf::SQUARES]
+}
+
+pub(crate) fn default_piece_to_history<T: Default + Copy>() -> PieceToHistory<T> {
+    [[Default::default(); NumberOf::SQUARES]; NumberOf::PIECE_TYPES]
 }
