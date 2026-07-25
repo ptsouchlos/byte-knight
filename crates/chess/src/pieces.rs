@@ -3,7 +3,10 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
 use crate::definitions::NumberOf;
 
@@ -165,6 +168,20 @@ impl TryFrom<char> for Piece {
             'P' => Ok(Piece::Pawn),
             _ => Err(()),
         }
+    }
+}
+
+impl<T, const N: usize> Index<Piece> for [T; N] {
+    type Output = T;
+
+    fn index(&self, piece: Piece) -> &Self::Output {
+        &self[piece as usize]
+    }
+}
+
+impl<T, const N: usize> IndexMut<Piece> for [T; N] {
+    fn index_mut(&mut self, piece: Piece) -> &mut Self::Output {
+        &mut self[piece as usize]
     }
 }
 
