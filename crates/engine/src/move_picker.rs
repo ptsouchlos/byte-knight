@@ -230,7 +230,7 @@ impl MovePicker {
             if is_killer {
                 KILLER_BONUS
             } else {
-                histories.get(board.side_to_move(), *mv, threats)
+                histories.get(board.side_to_move(), *mv, piece, threats)
             }
         }
     }
@@ -640,9 +640,13 @@ mod tests {
         let all_moves = move_generation::legal::generate_all_moves(&board);
         // Give a high history score to the move at index 3
         let favored_mv = *all_moves.at(3).unwrap();
+        let piece = board
+            .piece_type_on_square(favored_mv.from())
+            .expect("Expected piece on board for move {mv}");
         histories.quiet_history.update(
             board.side_to_move(),
             favored_mv,
+            piece,
             Bitboard::default(),
             Score::MAX_HISTORY,
             Score::MAX_HISTORY,

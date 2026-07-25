@@ -716,6 +716,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         td.histories.quiet_history.update(
                             board.side_to_move(),
                             mv,
+                            piece,
                             threats,
                             bonus as LargeScoreType,
                             bonus as LargeScoreType,
@@ -724,13 +725,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         // Apply a penalty to all quiets searched so far.
                         // The board is already in the parent state (we already unmade the move)
                         // so it's safe to look up the piece on the board using mv.from().
-                        for &(prev_mv, _) in picker.searched_quiets() {
+                        for &(prev_mv, prev_pc) in picker.searched_quiets() {
                             if prev_mv == mv {
                                 continue;
                             }
                             td.histories.quiet_history.update(
                                 board.side_to_move(),
                                 prev_mv,
+                                prev_pc,
                                 threats,
                                 -bonus as LargeScoreType,
                                 -bonus as LargeScoreType,
@@ -1110,7 +1112,7 @@ mod tests {
         bitboard::Bitboard,
         board::Board,
         moves::{Move, MoveFlag},
-        pieces::ALL_PIECES,
+        pieces::{ALL_PIECES, Piece},
         square::Square,
     };
 
@@ -1359,9 +1361,11 @@ mod tests {
                         Bitboard::from(to),
                         Bitboard::from(from) | Bitboard::from(to),
                     ] {
-                        let score = td.histories.get(side, mv, threats);
-                        if score > max_history {
-                            max_history = score;
+                        for piece in Piece::iter() {
+                            let score = td.histories.get(side, mv,piece, threats);
+                            if score > max_history {
+                                max_history = score;
+                            }
                         }
                     }
                 }
