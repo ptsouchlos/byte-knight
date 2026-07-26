@@ -12,6 +12,7 @@ use crate::{
     },
     math,
     score::{LargeScoreType, Score},
+    tuneable::quiet_history_factor,
 };
 
 /// A single quiet-history cell, split into a threat-agnostic `factoriser` and a `bucket` indexed
@@ -92,8 +93,7 @@ impl QuietHistory {
         let from_to_score = self.from_to_entries[side][mv.from()][mv.to()].score(&idx);
         let piece_to_score = self.piece_to_entries[side][pc][mv.to()].score(&idx);
 
-        // TODO: lerp between the scores with a tunable parameter
-        math::lerp(from_to_score, piece_to_score, 50)
+        math::lerp(from_to_score, piece_to_score, quiet_history_factor())
     }
 
     pub(crate) fn update(
