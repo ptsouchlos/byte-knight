@@ -10,6 +10,7 @@ use crate::{
         threat_bucket::{ThreatBucket, ThreatIndex},
         types::{self, FromToHistory, PieceToHistory},
     },
+    math,
     score::{LargeScoreType, Score},
 };
 
@@ -92,7 +93,7 @@ impl QuietHistory {
         let piece_to_score = self.piece_to_entries[side][pc][mv.to()].score(&idx);
 
         // TODO: lerp between the scores with a tunable parameter
-        from_to_score + piece_to_score
+        math::lerp(from_to_score, piece_to_score, 50)
     }
 
     pub(crate) fn update(
