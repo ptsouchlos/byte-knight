@@ -1362,7 +1362,7 @@ mod tests {
                         Bitboard::from(from) | Bitboard::from(to),
                     ] {
                         for piece in Piece::iter() {
-                            let score = td.histories.get(side, mv,piece, threats);
+                            let score = td.histories.get(side, mv, piece, threats);
                             if score > max_history {
                                 max_history = score;
                             }
