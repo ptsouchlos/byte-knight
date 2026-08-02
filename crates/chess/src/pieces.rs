@@ -3,9 +3,12 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
-use crate::definitions::NumberOf;
+use crate::{definitions::NumberOf, square::Square};
 
 /// Names of squares on the board. The index of the square name corresponds to the square index as represented by the bitboard.
 /// See the [crate::bitboard::Bitboard] for more information.
@@ -57,6 +60,7 @@ pub enum Piece {
 
 impl Piece {
     pub const NONE: u32 = 6;
+    pub const COUNT: usize = 6;
 
     /// Returns `true` if the piece is [`King`].
     ///
@@ -116,12 +120,16 @@ impl Piece {
 
     /// Returns the short name of the piece as a lowercase character.
     pub fn as_char(&self) -> char {
-        PIECE_SHORT_NAMES[*self as usize].to_ascii_lowercase()
+        PIECE_SHORT_NAMES[self.index()].to_ascii_lowercase()
     }
 
     /// Returns an iterator over all the pieces.
     pub fn iter() -> impl Iterator<Item = Piece> {
         ALL_PIECES.iter().copied()
+    }
+
+    pub fn index(self) -> usize {
+        self as usize
     }
 }
 
@@ -165,6 +173,21 @@ impl TryFrom<char> for Piece {
             'P' => Ok(Piece::Pawn),
             _ => Err(()),
         }
+    }
+}
+
+impl<T> Index<Piece> for [T; Square::COUNT] {
+    type Output = T;
+
+    #[inline(always)]
+    fn index(&self, pc: Piece) -> &Self::Output {
+        &self[pc as usize]
+    }
+}
+
+impl<T> IndexMut<Piece> for [T; Square::COUNT] {
+    fn index_mut(&mut self, pc: Piece) -> &mut Self::Output {
+        &mut self[pc as usize]
     }
 }
 
