@@ -7,8 +7,12 @@
 
 use chess::{bitboard::Bitboard, moves::Move, side::Side};
 
-use crate::{history::quiet_history::QuietHistory, score::LargeScoreType};
+use crate::{
+    history::{continuation_history::ContinuationHistory, quiet_history::QuietHistory},
+    score::LargeScoreType,
+};
 
+pub mod continuation_history;
 pub mod quiet_history;
 pub mod threat_bucket;
 mod types;
@@ -18,6 +22,7 @@ mod types;
 #[derive(Default)]
 pub struct Histories {
     pub quiet_history: QuietHistory,
+    pub continuation_history: ContinuationHistory,
 }
 
 impl Histories {
@@ -27,5 +32,6 @@ impl Histories {
 
     pub fn clear(&mut self) {
         self.quiet_history.clear();
+        self.continuation_history.clear();
     }
 }
