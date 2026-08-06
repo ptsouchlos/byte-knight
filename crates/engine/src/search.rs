@@ -593,6 +593,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // make the move
             board.make_move_unchecked(&mv).unwrap();
             td.transposition_table.prefetch(board.zobrist_hash());
+            td.stack[ply as usize].mv = Some(mv);
+            td.stack[ply as usize].piece = Some(piece);
+
             let mut score = Score::DRAW;
 
             // Don't bother searching drawn positions
