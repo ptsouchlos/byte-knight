@@ -18,6 +18,32 @@ pub struct NodeStack {
     data: [Node; (MAX_PLY + 8) as usize],
 }
 
+impl NodeStack {
+    /// The (move, piece) played to reach the node at `ply`, if any.
+    pub(crate) fn prev_move(&self, ply: usize) -> Option<(Move, Piece)> {
+        if ply == 0 {
+            return None;
+        }
+        let prev = self[ply - 1];
+        match (prev.mv, prev.piece) {
+            (Some(mv), Some(pc)) => Some((mv, pc)),
+            _ => None,
+        }
+    }
+
+    /// Record a move/piece pair for the given ply.
+    pub(crate) fn record_move(&mut self, mv: Move, pc: Piece, ply: usize) {
+        self.data[ply].mv = Some(mv);
+        self.data[ply].piece = Some(pc);
+    }
+
+    /// Clear the move/piece pair for the given ply.
+    pub(crate) fn clear_move(&mut self, ply: usize) {
+        self.data[ply].mv = None;
+        self.data[ply].piece = None;
+    }
+}
+
 impl Default for NodeStack {
     fn default() -> Self {
         NodeStack {
