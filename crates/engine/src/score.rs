@@ -71,8 +71,6 @@ impl Score {
     /// updates on every touch (dense) while a given bucket cell only updates for its specific
     /// threat configuration (sparse). The more-frequently-touched signal should saturate at a
     /// lower ceiling so the sparser, more specific bucket signal can carry more of the magnitude.
-    /// `FACTORIZER_MAX + BUCKET_MAX` must not exceed [`Score::MAX_HISTORY`], so that a fully
-    /// saturated quiet history entry can never sort above a killer move.
     pub const FACTORIZER_MAX: LargeScoreType = 4_096;
     /// Max/min value for a single threat bucket cell in [`crate::history::quiet_history::QuietHistory`].
     /// See [`Score::FACTORIZER_MAX`] for the invariant and reasoning this must preserve.
