@@ -727,7 +727,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                         // Update continuation history.
                         // Check that we're not at the root ply first (no previous node).
-                        if let Some((p_mv, p_pc)) = td.stack.prev_move(ply as usize) {
+                        let prev_move = td.stack.prev_move(ply as usize);
+                        if let Some((p_mv, p_pc)) = prev_move {
                             td.histories.continuation_history.update(
                                 p_mv,
                                 p_pc,
@@ -752,13 +753,17 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                                 -bonus as LargeScoreType,
                             );
 
-                            td.histories.continuation_history.update(
-                                prev_mv,
-                                prev_pc,
-                                mv,
-                                piece,
-                                -bonus as i32,
-                            );
+                            // Same (prev_mv, prev_pc) predecessor context as the bonus above -
+                            // penalize the rejected quiet in that same continuation slot.
+                            if let Some((p_mv, p_pc)) = prev_move {
+                                td.histories.continuation_history.update(
+                                    p_mv,
+                                    p_pc,
+                                    prev_mv,
+                                    prev_pc,
+                                    -bonus as i32,
+                                );
+                            }
                         }
                     }
                     break;
