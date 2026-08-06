@@ -3,27 +3,21 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use chess::{moves::Move, pieces::Piece, square::Square};
+use chess::{moves::Move, pieces::Piece};
 
 use crate::{
     history::{types::PieceToHistory, util::gravity},
     score::LargeScoreType,
+    utils::{self},
 };
 
 pub struct ContinuationHistory {
-    single_ply_entries: PieceToHistory<PieceToHistory<i32>>,
+    single_ply_entries: Box<PieceToHistory<PieceToHistory<i32>>>,
 }
 
 impl ContinuationHistory {
     const MAX: i32 = 16384;
     const BONUS_MAX: i32 = Self::MAX / 4;
-
-    pub(crate) fn new() -> Self {
-        let single_ply_entries: PieceToHistory<PieceToHistory<i32>> =
-            [[[[0; Square::COUNT]; Piece::COUNT]; Square::COUNT]; Piece::COUNT];
-
-        ContinuationHistory { single_ply_entries }
-    }
 
     pub(crate) fn get(&self, prev_mv: Move, prev_pc: Piece, mv: Move, pc: Piece) -> i32 {
         self.single_ply_entries[prev_pc.index()][prev_mv.to().index()][pc.index()][mv.to().index()]
@@ -44,13 +38,14 @@ impl ContinuationHistory {
     }
 
     pub(crate) fn clear(&mut self) {
-        self.single_ply_entries =
-            [[[[0; Square::COUNT]; Piece::COUNT]; Square::COUNT]; Piece::COUNT];
+        self.single_ply_entries = unsafe { utils::boxed_and_zeroed() };
     }
 }
 
 impl Default for ContinuationHistory {
     fn default() -> Self {
-        Self::new()
+        Self {
+            single_ply_entries: unsafe { utils::boxed_and_zeroed() },
+        }
     }
 }
