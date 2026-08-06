@@ -80,4 +80,38 @@ mod tests {
         let score = cont_hist.get(prev_mv, pc, mv, pc);
         assert!(score == 0);
     }
+
+    #[test]
+    fn score_never_exceeds_max() {
+        let mut cont_hist = ContinuationHistory::default();
+        let prev_mv = Move::new(Square::B2, Square::B4, MoveFlag::DoublePush);
+        let mv = Move::new(Square::B4, Square::B5, MoveFlag::Standard);
+        let pc = Piece::Pawn;
+
+        // Hammer the same cell with maximal bonuses to try to force it past MAX -
+        // a saturated entry must never be able to sort above KILLER_BONUS in the move picker
+        // once combined with quiet history (see move_picker::tests::combined_history_score_never_exceeds_killer_bonus).
+        for _ in 0..10_000 {
+            cont_hist.update(prev_mv, pc, mv, pc, i32::MAX);
+        }
+
+        let score = cont_hist.get(prev_mv, pc, mv, pc);
+        assert!(
+            score <= ContinuationHistory::MAX,
+            "saturated continuation history entry ({score}) must not exceed MAX ({})",
+            ContinuationHistory::MAX
+        );
+
+        // Same check in the negative direction.
+        for _ in 0..10_000 {
+            cont_hist.update(prev_mv, pc, mv, pc, i32::MIN);
+        }
+
+        let score = cont_hist.get(prev_mv, pc, mv, pc);
+        assert!(
+            score >= -ContinuationHistory::MAX,
+            "saturated continuation history entry ({score}) must not exceed -MAX ({})",
+            -ContinuationHistory::MAX
+        );
+    }
 }
