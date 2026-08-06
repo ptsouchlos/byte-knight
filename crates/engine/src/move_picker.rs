@@ -463,12 +463,14 @@ mod tests {
             metadata::{self, CheckPinMetadata},
             move_filter::MoveFilter,
         },
-        moves::Move,
+        moves::{Move, MoveFlag},
+        pieces::Piece,
+        square::Square,
     };
 
     use crate::{
         killers_table::KillerMovesTable,
-        move_picker::{MovePicker, Stage},
+        move_picker::{KILLER_BONUS, MovePicker, Stage},
         score::Score,
         see,
         thread_data::ThreadData,
@@ -665,6 +667,46 @@ mod tests {
         assert_eq!(
             moves[0], favored_mv,
             "Highest-history move must come first among quiets"
+        );
+    }
+
+    #[test]
+    fn combined_history_score_never_exceeds_killer_bonus() {
+        // Quiet history and continuation history are summed when scoring a quiet move (see
+        // Histories::get). Saturating both for the same move must never let their combined
+        // score sort above KILLER_BONUS - killers must always be tried before history-scored
+        // quiets, no matter how "hot" a move's history entries are.
+        let board = Board::from_fen(STARTING_FEN).unwrap();
+        let mut td = ThreadData::default();
+
+        let all_moves = move_generation::legal::generate_all_moves(&board);
+        let mv = *all_moves.at(3).unwrap();
+        let side = board.side_to_move();
+        let threats = Bitboard::default();
+        let piece = board.piece_type_on_square(mv.from()).unwrap();
+
+        // Saturate quiet history for this move.
+        for _ in 0..10_000 {
+            td.histories
+                .quiet_history
+                .update(side, mv, threats, i32::MAX, i32::MAX);
+        }
+
+        // Saturate continuation history for this move behind an arbitrary previous move, and
+        // record that previous move so `Histories::get` picks it up as the ply-1 predecessor.
+        let prev_mv = Move::new(Square::B2, Square::B4, MoveFlag::DoublePush);
+        let prev_pc = Piece::Pawn;
+        for _ in 0..10_000 {
+            td.histories
+                .continuation_history
+                .update(prev_mv, prev_pc, mv, piece, i32::MAX);
+        }
+        td.stack.record_move(prev_mv, prev_pc, 0);
+
+        let combined = td.histories.get(&board, &td.stack, side, mv, threats, 1);
+        assert!(
+            combined < KILLER_BONUS,
+            "combined saturated history score ({combined}) must stay below KILLER_BONUS ({KILLER_BONUS})"
         );
     }
 
