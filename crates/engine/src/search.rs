@@ -722,16 +722,19 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             bonus as LargeScoreType,
                         );
 
-                        // Update continuation history
-                        let prev_node = td.stack[(ply as usize) - 1];
-                        if let (Some(p_mv), Some(p_pc)) = (prev_node.mv, prev_node.piece) {
-                            td.histories.continuation_history.update(
-                                p_mv,
-                                p_pc,
-                                mv,
-                                piece,
-                                bonus as i32,
-                            );
+                        // Update continuation history.
+                        // Check that we're not at the root ply first (no previous node).
+                        if ply > 0 {
+                            let prev_node = td.stack[(ply as usize) - 1];
+                            if let (Some(p_mv), Some(p_pc)) = (prev_node.mv, prev_node.piece) {
+                                td.histories.continuation_history.update(
+                                    p_mv,
+                                    p_pc,
+                                    mv,
+                                    piece,
+                                    bonus as i32,
+                                );
+                            }
                         }
 
                         // Apply a penalty to all quiets searched so far.
