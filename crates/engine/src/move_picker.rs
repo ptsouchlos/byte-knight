@@ -276,7 +276,7 @@ impl MovePicker {
             // Score move, then push it to the correct list depending on SEE
             let scored_mv = ScoredMove {
                 mv: *mv,
-                score: self.score_move(board, mv, &thread_data, threats),
+                score: self.score_move(board, mv, thread_data, threats),
             };
             // Defer move classification to yield stage.
             self.moves.push(scored_mv);

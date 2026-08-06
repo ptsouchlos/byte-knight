@@ -516,7 +516,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let fp_margin = fp_base() + depth as i32 * fp_scale();
 
         // Loop through all moves in best-first order.
-        while let Some(mv) = picker.next(board, &td) {
+        while let Some(mv) = picker.next(board, td) {
             let loop_counter = picker.moves_yielded() - 1;
 
             // Calculate the LMR reduction and depth which will be used later in FP
@@ -979,7 +979,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_move: Option<Move> = None;
         let original_alpha = alpha_use;
 
-        while let Some(mv) = picker.next(board, &td) {
+        while let Some(mv) = picker.next(board, td) {
             // ------------------------------------------------------------
             // Delta pruning
             // ------------------------------------------------------------

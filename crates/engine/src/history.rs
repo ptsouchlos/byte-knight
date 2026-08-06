@@ -49,9 +49,7 @@ impl Histories {
         ply: usize,
     ) -> i32 {
         let prev_node = node_stack[ply - 1];
-        let piece = board
-            .piece_type_on_square(mv.from())
-            .expect("No piece on from square");
+        let piece = board.piece_type_on_square(mv.from()).unwrap();
         match (prev_node.mv, prev_node.piece) {
             (Some(prev_mv), Some(prev_pc)) => {
                 self.continuation_history.get(prev_mv, prev_pc, *mv, piece)
