@@ -48,11 +48,12 @@ impl Histories {
         mv: &Move,
         ply: usize,
     ) -> i32 {
-        let Some((prev_mv, prev_pc)) = node_stack.prev_move(ply) else {
+        if let Some((prev_mv, prev_pc)) = node_stack.prev_move(ply) {
+            let piece = board.piece_type_on_square(mv.from()).unwrap();
+            self.continuation_history.get(prev_mv, prev_pc, *mv, piece)
+        } else {
             return 0;
-        };
-        let piece = board.piece_type_on_square(mv.from()).unwrap();
-        self.continuation_history.get(prev_mv, prev_pc, *mv, piece)
+        }
     }
 
     pub fn clear(&mut self) {
