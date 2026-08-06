@@ -5,13 +5,19 @@
 
 use chess::{moves::Move, pieces::Piece, square::Square};
 
-use crate::{history::types::PieceToHistory, score::LargeScoreType};
+use crate::{
+    history::{types::PieceToHistory, util::gravity},
+    score::LargeScoreType,
+};
 
 pub struct ContinuationHistory {
     single_ply_entries: PieceToHistory<PieceToHistory<i32>>,
 }
 
 impl ContinuationHistory {
+    const MAX: i32 = 16384;
+    const BONUS_MAX: i32 = Self::MAX / 4;
+
     pub(crate) fn new() -> Self {
         let single_ply_entries: PieceToHistory<PieceToHistory<i32>> =
             [[[[0; Square::COUNT]; Piece::COUNT]; Square::COUNT]; Piece::COUNT];
@@ -19,7 +25,7 @@ impl ContinuationHistory {
         ContinuationHistory { single_ply_entries }
     }
 
-    pub(crate) fn get(self, prev_mv: Move, prev_pc: Piece, mv: Move, pc: Piece) -> i32 {
+    pub(crate) fn get(&self, prev_mv: Move, prev_pc: Piece, mv: Move, pc: Piece) -> i32 {
         self.single_ply_entries[prev_pc.index()][prev_mv.to().index()][pc.index()][mv.to().index()]
     }
 
@@ -31,8 +37,10 @@ impl ContinuationHistory {
         pc: Piece,
         bonus: LargeScoreType,
     ) {
-        self.single_ply_entries[prev_pc.index()][prev_mv.to().index()][pc.index()]
-            [mv.to().index()] = bonus;
+        let bonus = bonus.clamp(-Self::BONUS_MAX, Self::BONUS_MAX);
+        let entry = &mut self.single_ply_entries[prev_pc.index()][prev_mv.to().index()][pc.index()]
+            [mv.to().index()];
+        *entry = gravity(*entry, bonus, Self::MAX);
     }
 
     pub(crate) fn clear(&mut self) {

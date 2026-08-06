@@ -66,9 +66,6 @@ impl Score {
     pub const HISTORY_MULT: ScoreType = 300;
     /// Offset for the history bonus calculation.
     pub const HISTORY_OFFSET: ScoreType = 250;
-    /// Max/min score for history heuristic
-    /// Must be lower then the minimum score for captures in MVV_LVA
-    pub const MAX_HISTORY: LargeScoreType = 16_384;
     /// Max/min value for the threat-agnostic factoriser in [`crate::history::quiet_history::QuietHistory`].
     /// Kept smaller than [`Score::BUCKET_MAX`] since the factorizer
     /// updates on every touch (dense) while a given bucket cell only updates for its specific

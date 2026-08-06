@@ -5,10 +5,11 @@
 
 //! This module contains all history tables and consolidates them into a Histories object.
 
-use chess::{bitboard::Bitboard, moves::Move, side::Side};
+use chess::{bitboard::Bitboard, board::Board, moves::Move, side::Side};
 
 use crate::{
     history::{continuation_history::ContinuationHistory, quiet_history::QuietHistory},
+    node::NodeStack,
     score::LargeScoreType,
 };
 
@@ -16,6 +17,7 @@ pub mod continuation_history;
 pub mod quiet_history;
 pub mod threat_bucket;
 mod types;
+mod util;
 
 /// Holds all history tables for the engine.
 /// Credit to the author of [hobbes](https://github.com/kelseyde/hobbes-chess-engine) for this setup (kelseyde)
@@ -26,8 +28,36 @@ pub struct Histories {
 }
 
 impl Histories {
-    pub(crate) fn get(&self, side: Side, mv: Move, threats: Bitboard) -> LargeScoreType {
+    pub(crate) fn get(
+        &self,
+        board: &Board,
+        node_stack: &NodeStack,
+        side: Side,
+        mv: Move,
+        threats: Bitboard,
+        ply: usize,
+    ) -> LargeScoreType {
         self.quiet_history.get(side, mv, threats)
+            + self.continuation_history_score(board, node_stack, &mv, ply)
+    }
+
+    pub(crate) fn continuation_history_score(
+        &self,
+        board: &Board,
+        node_stack: &NodeStack,
+        mv: &Move,
+        ply: usize,
+    ) -> i32 {
+        let prev_node = node_stack[ply - 1];
+        let piece = board
+            .piece_type_on_square(mv.from())
+            .expect("No piece on from square");
+        match (prev_node.mv, prev_node.piece) {
+            (Some(prev_mv), Some(prev_pc)) => {
+                self.continuation_history.get(prev_mv, prev_pc, *mv, piece)
+            }
+            _ => 0,
+        }
     }
 
     pub fn clear(&mut self) {

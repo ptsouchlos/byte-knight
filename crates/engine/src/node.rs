@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use chess::bitboard::Bitboard;
+use chess::{bitboard::Bitboard, moves::Move, pieces::Piece};
 
 use crate::{defs::MAX_PLY, score::Score};
 
@@ -8,6 +8,8 @@ use crate::{defs::MAX_PLY, score::Score};
 pub struct Node {
     pub static_eval: i32,
     pub threats: Bitboard,
+    pub mv: Option<Move>,
+    pub piece: Option<Piece>,
 }
 
 /// Represents the variation in the search tree currently being searched. Is updated every time the
@@ -22,6 +24,8 @@ impl Default for NodeStack {
             data: [Node {
                 static_eval: -Score::INF.0 as i32,
                 threats: Bitboard::default(),
+                mv: None,
+                piece: None,
             }; (MAX_PLY + 8) as usize],
         }
     }

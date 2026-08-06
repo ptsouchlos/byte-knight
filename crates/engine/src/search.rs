@@ -516,7 +516,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let fp_margin = fp_base() + depth as i32 * fp_scale();
 
         // Loop through all moves in best-first order.
-        while let Some(mv) = picker.next(board, &td.histories) {
+        while let Some(mv) = picker.next(board, &td) {
             let loop_counter = picker.moves_yielded() - 1;
 
             // Calculate the LMR reduction and depth which will be used later in FP
@@ -713,6 +713,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                         // calculate history bonus
                         let bonus = quiet_history::calculate_bonus_for_depth(depth);
+                        // Update quiet history
                         td.histories.quiet_history.update(
                             board.side_to_move(),
                             mv,
@@ -720,6 +721,18 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             bonus as LargeScoreType,
                             bonus as LargeScoreType,
                         );
+
+                        // Update continuation history
+                        let prev_node = td.stack[(ply as usize) - 1];
+                        if let (Some(p_mv), Some(p_pc)) = (prev_node.mv, prev_node.piece) {
+                            td.histories.continuation_history.update(
+                                p_mv,
+                                p_pc,
+                                mv,
+                                piece,
+                                bonus as i32,
+                            );
+                        }
 
                         // Apply a penalty to all quiets searched so far.
                         // The board is already in the parent state (we already unmade the move)
@@ -955,7 +968,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         };
 
         // When in check we must consider all moves; otherwise tacticals only.
-        let mut picker = move_picker::MovePicker::new_qsearch(tt_move, in_check);
+        let mut picker = move_picker::MovePicker::new_qsearch(tt_move, ply as usize, in_check);
 
         let mut local_pv = PrincipleVariation::new();
         // clear the current PV because this is a new position
@@ -966,7 +979,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_move: Option<Move> = None;
         let original_alpha = alpha_use;
 
-        while let Some(mv) = picker.next(board, &td.histories) {
+        while let Some(mv) = picker.next(board, &td) {
             // ------------------------------------------------------------
             // Delta pruning
             // ------------------------------------------------------------
@@ -1359,7 +1372,7 @@ mod tests {
                         Bitboard::from(to),
                         Bitboard::from(from) | Bitboard::from(to),
                     ] {
-                        let score = td.histories.get(side, mv, threats);
+                        let score = td.histories.get(&board, &td.stack, side, mv, threats, 0);
                         if score > max_history {
                             max_history = score;
                         }
