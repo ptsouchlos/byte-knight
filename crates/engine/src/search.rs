@@ -1027,9 +1027,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // local PV is for each node below this one is different when we call negamax recursively
             // so we have to clear it
             local_pv.clear();
-
+            let piece = board.piece_type_on_square(mv.from()).unwrap();
             board.make_move_unchecked(&mv).unwrap();
             td.transposition_table.prefetch(board.zobrist_hash());
+            // Record the move in the stack.
+            td.stack.record_move(mv, piece, ply as usize);
 
             let score = if board.is_draw() {
                 Score::DRAW
