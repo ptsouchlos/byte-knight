@@ -8,7 +8,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::{definitions::NumberOf, square::Square};
+use crate::definitions::NumberOf;
 
 /// Names of squares on the board. The index of the square name corresponds to the square index as represented by the bitboard.
 /// See the [crate::bitboard::Bitboard] for more information.
@@ -176,7 +176,7 @@ impl TryFrom<char> for Piece {
     }
 }
 
-impl<T> Index<Piece> for [T; Square::COUNT] {
+impl<T> Index<Piece> for [T; Piece::COUNT] {
     type Output = T;
 
     #[inline(always)]
@@ -185,7 +185,7 @@ impl<T> Index<Piece> for [T; Square::COUNT] {
     }
 }
 
-impl<T> IndexMut<Piece> for [T; Square::COUNT] {
+impl<T> IndexMut<Piece> for [T; Piece::COUNT] {
     fn index_mut(&mut self, pc: Piece) -> &mut Self::Output {
         &mut self[pc as usize]
     }
@@ -289,5 +289,18 @@ mod tests {
         assert!(!Piece::Pawn.is_rook());
         assert!(!Piece::Pawn.is_bishop());
         assert!(!Piece::Pawn.is_knight());
+    }
+
+    #[test]
+    fn indexing() {
+        for pc in Piece::iter() {
+            assert_eq!(ALL_PIECES[pc], pc);
+        }
+
+        let mut data = ALL_PIECES;
+        for pc in Piece::iter() {
+            data[pc] = Piece::try_from((pc as u8 + 2) % Piece::COUNT as u8).unwrap();
+            assert_ne!(data[pc], pc);
+        }
     }
 }
