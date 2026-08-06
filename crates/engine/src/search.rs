@@ -740,7 +740,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         // Apply a penalty to all quiets searched so far.
                         // The board is already in the parent state (we already unmade the move)
                         // so it's safe to look up the piece on the board using mv.from().
-                        for &(prev_mv, _) in picker.searched_quiets() {
+                        for &(prev_mv, prev_pc) in picker.searched_quiets() {
                             if prev_mv == mv {
                                 continue;
                             }
@@ -750,6 +750,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                                 threats,
                                 -bonus as LargeScoreType,
                                 -bonus as LargeScoreType,
+                            );
+
+                            td.histories.continuation_history.update(
+                                prev_mv,
+                                prev_pc,
+                                mv,
+                                piece,
+                                -bonus as i32,
                             );
                         }
                     }
