@@ -593,8 +593,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // make the move
             board.make_move_unchecked(&mv).unwrap();
             td.transposition_table.prefetch(board.zobrist_hash());
-            td.stack[ply as usize].mv = Some(mv);
-            td.stack[ply as usize].piece = Some(piece);
+            // Record the current move/piece in the stack
+            td.stack.record_move(mv, piece, ply as usize);
 
             let mut score = Score::DRAW;
 
@@ -727,17 +727,14 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                         // Update continuation history.
                         // Check that we're not at the root ply first (no previous node).
-                        if ply > 0 {
-                            let prev_node = td.stack[(ply as usize) - 1];
-                            if let (Some(p_mv), Some(p_pc)) = (prev_node.mv, prev_node.piece) {
-                                td.histories.continuation_history.update(
-                                    p_mv,
-                                    p_pc,
-                                    mv,
-                                    piece,
-                                    bonus as i32,
-                                );
-                            }
+                        if let Some((p_mv, p_pc)) = td.stack.prev_move(ply as usize) {
+                            td.histories.continuation_history.update(
+                                p_mv,
+                                p_pc,
+                                mv,
+                                piece,
+                                bonus as i32,
+                            );
                         }
 
                         // Apply a penalty to all quiets searched so far.
@@ -875,6 +872,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
             debug_assert!(td.stack[ply as usize - 1].mv.is_some_and(|m| m.is_valid()));
+
+            // Clear the current ply's move/piece before making a nullmove and recursing.
+            td.stack.clear_move(ply as usize);
 
             let null_move_depth = depth - params::nmp_reduction(depth as i32, improving) as i16 - 1;
             board.null_move();
