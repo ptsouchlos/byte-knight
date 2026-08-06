@@ -29,7 +29,7 @@ use crate::{
 };
 
 /// Bonus applied to killer moves in the quiet scoring stage so they sort
-/// above all history-scored quiets (history is clamped to MAX_HISTORY).
+/// above all history-scored quiets.
 const KILLER_BONUS: LargeScoreType = 10_000_000;
 
 /// Score tier for queen capture-promotions — above queen push-promos.
