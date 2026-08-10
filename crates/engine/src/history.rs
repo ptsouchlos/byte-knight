@@ -52,7 +52,7 @@ impl Histories {
             let piece = board.piece_type_on_square(mv.from()).unwrap();
             self.continuation_history.get(prev_mv, prev_pc, *mv, piece)
         } else {
-            return 0;
+            0
         }
     }
 
