@@ -3,7 +3,10 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
 use crate::definitions::NumberOf;
 
@@ -57,6 +60,7 @@ pub enum Piece {
 
 impl Piece {
     pub const NONE: u32 = 6;
+    pub const COUNT: usize = 6;
 
     /// Returns `true` if the piece is [`King`].
     ///
@@ -116,12 +120,16 @@ impl Piece {
 
     /// Returns the short name of the piece as a lowercase character.
     pub fn as_char(&self) -> char {
-        PIECE_SHORT_NAMES[*self as usize].to_ascii_lowercase()
+        PIECE_SHORT_NAMES[self.index()].to_ascii_lowercase()
     }
 
     /// Returns an iterator over all the pieces.
     pub fn iter() -> impl Iterator<Item = Piece> {
         ALL_PIECES.iter().copied()
+    }
+
+    pub fn index(self) -> usize {
+        self as usize
     }
 }
 
@@ -165,6 +173,21 @@ impl TryFrom<char> for Piece {
             'P' => Ok(Piece::Pawn),
             _ => Err(()),
         }
+    }
+}
+
+impl<T> Index<Piece> for [T; Piece::COUNT] {
+    type Output = T;
+
+    #[inline(always)]
+    fn index(&self, pc: Piece) -> &Self::Output {
+        &self[pc as usize]
+    }
+}
+
+impl<T> IndexMut<Piece> for [T; Piece::COUNT] {
+    fn index_mut(&mut self, pc: Piece) -> &mut Self::Output {
+        &mut self[pc as usize]
     }
 }
 
@@ -266,5 +289,18 @@ mod tests {
         assert!(!Piece::Pawn.is_rook());
         assert!(!Piece::Pawn.is_bishop());
         assert!(!Piece::Pawn.is_knight());
+    }
+
+    #[test]
+    fn indexing() {
+        for pc in Piece::iter() {
+            assert_eq!(ALL_PIECES[pc], pc);
+        }
+
+        let mut data = ALL_PIECES;
+        for pc in Piece::iter() {
+            data[pc] = Piece::try_from((pc as u8 + 2) % Piece::COUNT as u8).unwrap();
+            assert_ne!(data[pc], pc);
+        }
     }
 }

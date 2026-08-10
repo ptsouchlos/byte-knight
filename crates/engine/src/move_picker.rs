@@ -20,17 +20,17 @@ use chess::{
 use crate::{
     evaluation::Evaluation,
     hce_values::ByteKnightValues,
-    history::Histories,
     killers_table::{KillerEntry, KillerMovesTable},
-    score::{LargeScoreType, Score},
+    score::LargeScoreType,
     scored_move::ScoredMove,
     scored_move_list::ScoredMoveList,
     see,
+    thread_data::ThreadData,
 };
 
 /// Bonus applied to killer moves in the quiet scoring stage so they sort
-/// above all history-scored quiets (history is clamped to MAX_HISTORY).
-const KILLER_BONUS: LargeScoreType = Score::MAX_HISTORY + 1;
+/// above all history-scored quiets.
+const KILLER_BONUS: LargeScoreType = 10_000_000;
 
 /// Score tier for queen capture-promotions — above queen push-promos.
 const QUEEN_CAPTURE_PROMO_BONUS: LargeScoreType = 30_000;
@@ -102,6 +102,7 @@ pub(crate) struct MovePicker {
     /// When true (all qsearch), the BadTacticals stage is skipped entirely — underpromotions
     /// and SEE-losing captures are never yielded.
     skip_bad_tacticals: bool,
+    ply: usize,
 }
 
 impl MovePicker {
@@ -142,6 +143,7 @@ impl MovePicker {
             skip_quiets: false,
             split_tacticals: true,
             skip_bad_tacticals: false,
+            ply,
         }
     }
 
@@ -149,7 +151,7 @@ impl MovePicker {
     ///
     /// When not in check, quiet generation is skipped entirely. When in check,
     /// all moves including quiets are generated (king evasions may be quiet).
-    pub(crate) fn new_qsearch(tt_move: Option<Move>, in_check: bool) -> Self {
+    pub(crate) fn new_qsearch(tt_move: Option<Move>, ply: usize, in_check: bool) -> Self {
         Self {
             stage: if tt_move.is_some() {
                 Stage::TtMove
@@ -171,6 +173,7 @@ impl MovePicker {
             // When not in check, SEE pruning applies (only winning captures are good).
             split_tacticals: !in_check,
             skip_bad_tacticals: true,
+            ply,
         }
     }
 
@@ -195,7 +198,7 @@ impl MovePicker {
         &self,
         board: &Board,
         mv: &Move,
-        histories: &Histories,
+        thread_data: &ThreadData,
         threats: Bitboard,
     ) -> LargeScoreType {
         let maybe_victim = board.captured(mv);
@@ -230,7 +233,14 @@ impl MovePicker {
             if is_killer {
                 KILLER_BONUS
             } else {
-                histories.get(board.side_to_move(), *mv, threats)
+                thread_data.histories.get(
+                    board,
+                    &thread_data.stack,
+                    board.side_to_move(),
+                    *mv,
+                    threats,
+                    self.ply,
+                )
             }
         }
     }
@@ -250,7 +260,7 @@ impl MovePicker {
     }
 
     /// Helper to generate tactical moves in the move picker.
-    fn generate_tactical_moves(&mut self, board: &Board, histories: &Histories) {
+    fn generate_tactical_moves(&mut self, board: &Board, thread_data: &ThreadData) {
         // Reuse metadata computed in TtMove stage if available.
         let meta = self
             .metadata
@@ -266,7 +276,7 @@ impl MovePicker {
             // Score move, then push it to the correct list depending on SEE
             let scored_mv = ScoredMove {
                 mv: *mv,
-                score: self.score_move(board, mv, histories, threats),
+                score: self.score_move(board, mv, thread_data, threats),
             };
             // Defer move classification to yield stage.
             self.moves.push(scored_mv);
@@ -275,7 +285,7 @@ impl MovePicker {
 
     /// Helper to generate quiet moves.
     #[allow(clippy::expect_used)]
-    fn generate_quiet_moves(&mut self, board: &Board, histories: &Histories) {
+    fn generate_quiet_moves(&mut self, board: &Board, thread_data: &ThreadData) {
         // Reuse cached metadata to avoid recomputing.
         let meta = self
             .metadata
@@ -290,14 +300,14 @@ impl MovePicker {
         for mv in moves.iter() {
             self.moves.push(ScoredMove {
                 mv: *mv,
-                score: self.score_move(board, mv, histories, threats),
+                score: self.score_move(board, mv, thread_data, threats),
             });
         }
     }
 
     /// Returns the next best move in staged order, or `None` when exhausted.
     #[allow(clippy::expect_used, clippy::panic)]
-    pub(crate) fn next(&mut self, board: &Board, histories: &Histories) -> Option<Move> {
+    pub(crate) fn next(&mut self, board: &Board, thread_data: &ThreadData) -> Option<Move> {
         if self.stage == Stage::TtMove {
             self.stage = Stage::GenerateTacticals;
             // Compute metadata now so it can be reused by GenerateTacticals/GenerateQuiets.
@@ -328,7 +338,7 @@ impl MovePicker {
             self.pick_index = 0;
             self.moves.clear();
             self.bad_tacticals.clear();
-            self.generate_tactical_moves(board, histories);
+            self.generate_tactical_moves(board, thread_data);
             self.stage = Stage::Tacticals;
         }
 
@@ -359,7 +369,7 @@ impl MovePicker {
             if self.skip_quiets {
                 self.stage = Stage::BadTacticals;
             } else {
-                self.generate_quiet_moves(board, histories);
+                self.generate_quiet_moves(board, thread_data);
                 self.stage = Stage::Quiets;
             }
         }
@@ -453,15 +463,17 @@ mod tests {
             metadata::{self, CheckPinMetadata},
             move_filter::MoveFilter,
         },
-        moves::Move,
+        moves::{Move, MoveFlag},
+        pieces::Piece,
+        square::Square,
     };
 
     use crate::{
-        history::Histories,
         killers_table::KillerMovesTable,
-        move_picker::{MovePicker, Stage},
+        move_picker::{KILLER_BONUS, MovePicker, Stage},
         score::Score,
         see,
+        thread_data::ThreadData,
         ttable::{EntryFlag, TranspositionTable},
     };
 
@@ -481,10 +493,10 @@ mod tests {
     fn collect_all(
         picker: &mut MovePicker,
         board: &Board,
-        history: &Histories,
+        thread_data: &ThreadData,
     ) -> Vec<chess::moves::Move> {
         let mut out = Vec::new();
-        while let Some(mv) = picker.next(board, history) {
+        while let Some(mv) = picker.next(board, thread_data) {
             out.push(mv);
         }
         out
@@ -518,7 +530,7 @@ mod tests {
         let board = Board::from_fen(STARTING_FEN).unwrap();
         let metadata = metadata::compute(&board);
         let mut tt = TranspositionTable::from_capacity(16);
-        let histories = Histories::default();
+        let td = ThreadData::default();
 
         let all_moves = move_generation::legal::generate_all_moves(&board);
         let chosen = *all_moves.at(5).unwrap();
@@ -535,18 +547,18 @@ mod tests {
         let tt_move = Some(tt_entry.board_move);
 
         let mut picker = make_move_picker(tt_move, 0, metadata);
-        let first = picker.next(&board, &histories).expect("must have a move");
+        let first = picker.next(&board, &td).expect("must have a move");
         assert_eq!(first, chosen, "TT move must be yielded first");
     }
 
     #[test]
     fn tacticals_before_quiets() {
         let board = Board::from_fen(CAPTURES_FEN).unwrap();
-        let histories = Histories::default();
+        let td = ThreadData::default();
         let mut picker = make_move_picker(None, 0, meta(&board));
 
         let mut seen_quiet = false;
-        while let Some(mv) = picker.next(&board, &histories) {
+        while let Some(mv) = picker.next(&board, &td) {
             let is_capture = board.captured(&mv).is_some();
             let is_tactical = is_capture || mv.is_promotion();
             let is_good_tactical = mv.is_promote_to_queen()
@@ -574,11 +586,11 @@ mod tests {
         //   RxQ (victim=queen, attacker=rook): 25*5 - 4 = 121
         //   PxP (victim=pawn, attacker=pawn):  25*1 - 1 = 24
         let board = Board::from_fen(MULTI_CAPTURE_FEN).unwrap();
-        let histories = Histories::default();
+        let td = ThreadData::default();
         let mut picker = make_move_picker(None, 0, meta(&board));
 
         let mut captures: Vec<chess::moves::Move> = Vec::new();
-        while let Some(mv) = picker.next(&board, &histories) {
+        while let Some(mv) = picker.next(&board, &td) {
             if board.captured(&mv).is_some() {
                 captures.push(mv);
             } else {
@@ -610,7 +622,7 @@ mod tests {
     #[test]
     fn killers_sort_to_top_of_quiets() {
         let board = Board::from_fen(STARTING_FEN).unwrap();
-        let histories = Histories::default();
+        let td = ThreadData::default();
         let mut killers = KillerMovesTable::new();
 
         let all_moves = move_generation::legal::generate_all_moves(&board);
@@ -622,7 +634,7 @@ mod tests {
 
         let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
         // Starting position has no captures; all moves are quiet.
-        let moves = collect_all(&mut picker, &board, &histories);
+        let moves = collect_all(&mut picker, &board, &td);
 
         // The killer should be the first quiet move yielded.
         assert_eq!(
@@ -634,22 +646,22 @@ mod tests {
     #[test]
     fn history_ordering_among_quiets() {
         let board = Board::from_fen(STARTING_FEN).unwrap();
-        let mut histories = Histories::default();
+        let mut td = ThreadData::default();
         let killers = KillerMovesTable::new();
 
         let all_moves = move_generation::legal::generate_all_moves(&board);
         // Give a high history score to the move at index 3
         let favored_mv = *all_moves.at(3).unwrap();
-        histories.quiet_history.update(
+        td.histories.quiet_history.update(
             board.side_to_move(),
             favored_mv,
             Bitboard::default(),
-            Score::MAX_HISTORY,
-            Score::MAX_HISTORY,
+            16_000,
+            16_000,
         );
 
         let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
-        let moves = collect_all(&mut picker, &board, &histories);
+        let moves = collect_all(&mut picker, &board, &td);
 
         // The favored move should be yielded first (highest history score).
         assert_eq!(
@@ -659,11 +671,51 @@ mod tests {
     }
 
     #[test]
+    fn combined_history_score_never_exceeds_killer_bonus() {
+        // Quiet history and continuation history are summed when scoring a quiet move (see
+        // Histories::get). Saturating both for the same move must never let their combined
+        // score sort above KILLER_BONUS - killers must always be tried before history-scored
+        // quiets, no matter how "hot" a move's history entries are.
+        let board = Board::from_fen(STARTING_FEN).unwrap();
+        let mut td = ThreadData::default();
+
+        let all_moves = move_generation::legal::generate_all_moves(&board);
+        let mv = *all_moves.at(3).unwrap();
+        let side = board.side_to_move();
+        let threats = Bitboard::default();
+        let piece = board.piece_type_on_square(mv.from()).unwrap();
+
+        // Saturate quiet history for this move.
+        for _ in 0..10_000 {
+            td.histories
+                .quiet_history
+                .update(side, mv, threats, i32::MAX, i32::MAX);
+        }
+
+        // Saturate continuation history for this move behind an arbitrary previous move, and
+        // record that previous move so `Histories::get` picks it up as the ply-1 predecessor.
+        let prev_mv = Move::new(Square::B2, Square::B4, MoveFlag::DoublePush);
+        let prev_pc = Piece::Pawn;
+        for _ in 0..10_000 {
+            td.histories
+                .continuation_history
+                .update(prev_mv, prev_pc, mv, piece, i32::MAX);
+        }
+        td.stack.record_move(prev_mv, prev_pc, 0);
+
+        let combined = td.histories.get(&board, &td.stack, side, mv, threats, 1);
+        assert!(
+            combined < KILLER_BONUS,
+            "combined saturated history score ({combined}) must stay below KILLER_BONUS ({KILLER_BONUS})"
+        );
+    }
+
+    #[test]
     fn tt_move_not_duplicated_when_capture() {
         // Use a position where a capture is available so the TT move is a capture.
         let board = Board::from_fen(CAPTURES_FEN).unwrap();
         let mut tt = TranspositionTable::from_capacity(16);
-        let histories = Histories::default();
+        let td = ThreadData::default();
         let killers = KillerMovesTable::new();
 
         // Find a capture move to use as TT move.
@@ -685,7 +737,7 @@ mod tests {
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = Some(tt_entry.board_move);
         let mut picker = MovePicker::new(tt_move, &killers, 0, meta(&board), Bitboard::default());
-        let moves = collect_all(&mut picker, &board, &histories);
+        let moves = collect_all(&mut picker, &board, &td);
 
         let count = moves.iter().filter(|&&m| m == capture_mv).count();
         assert_eq!(count, 1, "TT capture move must appear exactly once");
@@ -694,10 +746,10 @@ mod tests {
     #[test]
     fn new_qsearch_yields_only_tacticals_when_not_in_check() {
         let board = Board::from_fen(CAPTURES_FEN).unwrap();
-        let histories = Histories::default();
-        let mut picker = MovePicker::new_qsearch(None, false);
+        let td = ThreadData::default();
+        let mut picker = MovePicker::new_qsearch(None, 4, false);
 
-        while let Some(mv) = picker.next(&board, &histories) {
+        while let Some(mv) = picker.next(&board, &td) {
             let is_capture = board.captured(&mv).is_some();
             let is_queen_promo = mv.flag() == chess::moves::MoveFlag::PromotionQueen;
             assert!(
@@ -714,15 +766,15 @@ mod tests {
     fn no_moves_yielded_when_no_tacticals_in_qsearch() {
         // Starting position has no captures — qsearch picker should yield nothing.
         let board = Board::from_fen(STARTING_FEN).unwrap();
-        let histories = Histories::default();
-        let mut picker = MovePicker::new_qsearch(None, false);
+        let td = ThreadData::default();
+        let mut picker = MovePicker::new_qsearch(None, 0, false);
         assert_eq!(
             picker.moves_yielded(),
             0,
             "QSearch picker must yield 0 moves when no captures available"
         );
         // Exhaust the picker
-        while picker.next(&board, &histories).is_some() {}
+        while picker.next(&board, &td).is_some() {}
         assert_eq!(
             picker.moves_yielded(),
             0,
@@ -733,12 +785,12 @@ mod tests {
     #[test]
     fn moves_yielded_matches_loop_counter() {
         let board = Board::from_fen(STARTING_FEN).unwrap();
-        let histories = Histories::default();
+        let td = ThreadData::default();
         let killers = KillerMovesTable::new();
         let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
 
         let mut expected_counter = 0usize;
-        while let Some(_mv) = picker.next(&board, &histories) {
+        while let Some(_mv) = picker.next(&board, &td) {
             let loop_counter = picker.moves_yielded() - 1;
             assert_eq!(loop_counter, expected_counter);
             expected_counter += 1;
@@ -751,10 +803,10 @@ mod tests {
         // Position with a pawn that can queen-promote (push, no capture available).
         // The queen push-promo should appear exactly once across all yielded moves.
         let board = Board::from_fen("8/P3k3/8/8/8/8/8/4K3 w - - 0 1").unwrap();
-        let histories = Histories::default();
+        let td = ThreadData::default();
         let killers = KillerMovesTable::new();
         let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
-        let moves = collect_all(&mut picker, &board, &histories);
+        let moves = collect_all(&mut picker, &board, &td);
 
         let queen_push_promos: Vec<_> = moves
             .iter()
@@ -785,7 +837,7 @@ mod tests {
             "8/P3k3/8/8/8/8/8/4K3 w - - 0 1",
         ];
 
-        let histories = Histories::default();
+        let td = ThreadData::default();
         let killers = KillerMovesTable::new();
 
         for fen in &positions {
@@ -800,7 +852,7 @@ mod tests {
 
             // Lazy: collect via picker
             let mut picker = MovePicker::new(None, &killers, 0, meta(&board), Bitboard::default());
-            let lazy_moves = collect_all(&mut picker, &board, &histories);
+            let lazy_moves = collect_all(&mut picker, &board, &td);
             assert_eq!(
                 lazy_moves.len(),
                 picker.moves_yielded(),
@@ -830,7 +882,7 @@ mod tests {
         // Position where white king is in check
         let board_in_check = Board::from_fen("4k3/8/8/8/8/8/4r3/4K3 w - - 0 1").unwrap();
         let meta_in_check = meta(&board_in_check);
-        let histories = Histories::default();
+        let td = ThreadData::default();
         let killers = KillerMovesTable::new();
         let mut picker = MovePicker::new(
             None,
@@ -840,7 +892,7 @@ mod tests {
             Bitboard::default(),
         );
         // Drive past TtMove stage by calling next() once
-        let _ = picker.next(&board_in_check, &histories);
+        let _ = picker.next(&board_in_check, &td);
         assert!(meta_in_check.in_check(), "in_check() should return true");
 
         // Position where white king is NOT in check
@@ -848,20 +900,20 @@ mod tests {
         let meta_safe = meta(&board_safe);
         let mut picker2 =
             MovePicker::new(None, &killers, 0, meta_safe.clone(), Bitboard::default());
-        let _ = picker2.next(&board_safe, &histories);
+        let _ = picker2.next(&board_safe, &td);
         assert!(!meta_safe.in_check(), "in_check() should return false");
     }
 
     #[test]
     fn no_bad_tacticals_in_qsearch() {
         let board = Board::from_fen("8/P3k3/8/8/8/8/8/4K3 w - - 0 1").unwrap();
-        let histories = Histories::default();
+        let td = ThreadData::default();
         // Not actually in check, but we want to ensure that bad tacticals (underpromotions) are not yielded in this
         // scenario.
-        let mut picker = MovePicker::new_qsearch(None, true);
+        let mut picker = MovePicker::new_qsearch(None, 0, true);
         assert_eq!(picker.current_stage(), Stage::GenerateTacticals);
 
-        let moves = collect_all(&mut picker, &board, &histories);
+        let moves = collect_all(&mut picker, &board, &td);
         assert_eq!(moves.len(), 6);
     }
 }

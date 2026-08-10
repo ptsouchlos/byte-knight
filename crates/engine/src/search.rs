@@ -516,7 +516,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let fp_margin = fp_base() + depth as i32 * fp_scale();
 
         // Loop through all moves in best-first order.
-        while let Some(mv) = picker.next(board, &td.histories) {
+        while let Some(mv) = picker.next(board, td) {
             let loop_counter = picker.moves_yielded() - 1;
 
             // Calculate the LMR reduction and depth which will be used later in FP
@@ -593,6 +593,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // make the move
             board.make_move_unchecked(&mv).unwrap();
             td.transposition_table.prefetch(board.zobrist_hash());
+            // Record the current move/piece in the stack
+            td.stack.record_move(mv, piece, ply as usize);
+
             let mut score = Score::DRAW;
 
             // Don't bother searching drawn positions
@@ -713,6 +716,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                         // calculate history bonus
                         let bonus = quiet_history::calculate_bonus_for_depth(depth);
+                        // Update quiet history
                         td.histories.quiet_history.update(
                             board.side_to_move(),
                             mv,
@@ -721,10 +725,23 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             bonus as LargeScoreType,
                         );
 
+                        // Update continuation history.
+                        // Check that we're not at the root ply first (no previous node).
+                        let prev_move = td.stack.prev_move(ply as usize);
+                        if let Some((p_mv, p_pc)) = prev_move {
+                            td.histories.continuation_history.update(
+                                p_mv,
+                                p_pc,
+                                mv,
+                                piece,
+                                bonus as i32,
+                            );
+                        }
+
                         // Apply a penalty to all quiets searched so far.
                         // The board is already in the parent state (we already unmade the move)
                         // so it's safe to look up the piece on the board using mv.from().
-                        for &(prev_mv, _) in picker.searched_quiets() {
+                        for &(prev_mv, prev_pc) in picker.searched_quiets() {
                             if prev_mv == mv {
                                 continue;
                             }
@@ -735,6 +752,18 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                                 -bonus as LargeScoreType,
                                 -bonus as LargeScoreType,
                             );
+
+                            // Same (prev_mv, prev_pc) predecessor context as the bonus above -
+                            // penalize the rejected quiet in that same continuation slot.
+                            if let Some((p_mv, p_pc)) = prev_move {
+                                td.histories.continuation_history.update(
+                                    p_mv,
+                                    p_pc,
+                                    prev_mv,
+                                    prev_pc,
+                                    -bonus as i32,
+                                );
+                            }
                         }
                     }
                     break;
@@ -855,6 +884,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             && sufficient_material
             && tt_entry.is_none_or(|entry| entry.flag() != ttable::EntryFlag::UpperBound)
         {
+            debug_assert!(td.stack[ply as usize - 1].mv.is_some_and(|m| m.is_valid()));
+
+            // Clear the current ply's move/piece before making a nullmove and recursing.
+            td.stack.clear_move(ply as usize);
+
             let null_move_depth = depth - params::nmp_reduction(depth as i32, improving) as i16 - 1;
             board.null_move();
             td.transposition_table.prefetch(board.zobrist_hash());
@@ -955,7 +989,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         };
 
         // When in check we must consider all moves; otherwise tacticals only.
-        let mut picker = move_picker::MovePicker::new_qsearch(tt_move, in_check);
+        let mut picker = move_picker::MovePicker::new_qsearch(tt_move, ply as usize, in_check);
 
         let mut local_pv = PrincipleVariation::new();
         // clear the current PV because this is a new position
@@ -966,7 +1000,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_move: Option<Move> = None;
         let original_alpha = alpha_use;
 
-        while let Some(mv) = picker.next(board, &td.histories) {
+        while let Some(mv) = picker.next(board, td) {
             // ------------------------------------------------------------
             // Delta pruning
             // ------------------------------------------------------------
@@ -1006,9 +1040,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // local PV is for each node below this one is different when we call negamax recursively
             // so we have to clear it
             local_pv.clear();
-
+            let piece = board.piece_type_on_square(mv.from()).unwrap();
             board.make_move_unchecked(&mv).unwrap();
             td.transposition_table.prefetch(board.zobrist_hash());
+            // Record the move in the stack.
+            td.stack.record_move(mv, piece, ply as usize);
 
             let score = if board.is_draw() {
                 Score::DRAW
@@ -1359,7 +1395,7 @@ mod tests {
                         Bitboard::from(to),
                         Bitboard::from(from) | Bitboard::from(to),
                     ] {
-                        let score = td.histories.get(side, mv, threats);
+                        let score = td.histories.get(&board, &td.stack, side, mv, threats, 0);
                         if score > max_history {
                             max_history = score;
                         }

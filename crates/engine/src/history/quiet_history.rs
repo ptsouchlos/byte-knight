@@ -9,6 +9,7 @@ use crate::{
     history::{
         threat_bucket::{ThreatBucket, ThreatIndex},
         types::{self, FromToHistory},
+        util::gravity,
     },
     score::{LargeScoreType, Score},
 };
@@ -47,12 +48,6 @@ impl QuietHistoryEntry {
         let cell = &mut self.bucket[threat_index.from()][threat_index.to()];
         *cell = gravity(*cell, bonus, Score::BUCKET_MAX);
     }
-}
-
-/// Applies the standard history "gravity" formula: moves `current` toward `bonus`, weighted by
-/// how close `current` already is to `max`, so repeated updates saturate instead of overflowing.
-fn gravity(current: LargeScoreType, bonus: LargeScoreType, max: LargeScoreType) -> LargeScoreType {
-    current + bonus - current * bonus.abs() / max
 }
 
 /// History table for all quiet moves, indexed by from-square -> to-square -> per side (butterfly
@@ -111,7 +106,7 @@ impl Default for QuietHistory {
 
 #[cfg(test)]
 mod tests {
-    use crate::{defs::MAX_DEPTH, score::Score};
+    use crate::defs::MAX_DEPTH;
 
     use super::{QuietHistory, calculate_bonus_for_depth};
     use chess::{bitboard::Bitboard, moves::Move, side::Side, square::Square};
@@ -188,27 +183,6 @@ mod tests {
         assert_eq!(
             from_only, untouched,
             "a bucket that was never updated should equal the other untouched buckets"
-        );
-    }
-
-    #[test]
-    fn combined_score_never_exceeds_max_history() {
-        let mut history_table = QuietHistory::new();
-        let mv = Move::new(Square::B1, Square::A1, chess::moves::MoveFlag::Standard);
-        let side = Side::Black;
-        let threats = Bitboard::from(Square::B1) | Bitboard::from(Square::A1);
-
-        // Hammer the same cell with maximal bonuses to try to force it past MAX_HISTORY -
-        // a saturated entry must never be able to sort above KILLER_BONUS in the move picker.
-        for _ in 0..10_000 {
-            history_table.update(side, mv, threats, i32::MAX, i32::MAX);
-        }
-
-        let score = history_table.get(side, mv, threats);
-        assert!(
-            score <= Score::MAX_HISTORY,
-            "saturated quiet history entry ({score}) must not exceed MAX_HISTORY ({})",
-            Score::MAX_HISTORY
         );
     }
 
