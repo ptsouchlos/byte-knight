@@ -7,7 +7,7 @@ use chess::{
     definitions::NumberOf,
     pieces::Piece,
     side::Side,
-    square::{self},
+    square::{self, Square},
 };
 
 use crate::{
@@ -26,7 +26,7 @@ pub const GAME_PHASE_MAX: i32 = 24;
 
 /// Piece-Square Tables, ordered by the ordinality of the pieces. See ['pieces::Piece']
 #[rustfmt::skip]
-pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES] = [
+pub const PSQTS : [[PhasedScore; Square::COUNT]; Piece::COUNT] = [
     // King
     [
         S(  22,  -89), S(  30,  -29), S(  30,  -20), S( -93,   26), S( -35,   10), S(  -9,   15), S(  57,   -6), S( 182, -123),
@@ -128,10 +128,10 @@ pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
 
 pub const BISHOP_PAIR_BONUS: PhasedScore = S(21, 67);
 
-pub const KING_SAFETY: [PhasedScore; NumberOf::PIECE_TYPES - 1] =
+pub const KING_SAFETY: [PhasedScore; Piece::COUNT - 1] =
     [S(-16, -11), S(-20, 7), S(-24, 6), S(-13, 9), S(-13, 7)];
 
-pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
+pub const PAWN_THREAT: [PhasedScore; Piece::COUNT] = [
     S(0, 0),    //King
     S(80, -40), //Queen
     S(90, 10),  //Rook
@@ -140,7 +140,7 @@ pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
     S(0, 0),    //Pawn
 ];
 
-pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
+pub const KNIGHT_THREAT: [PhasedScore; Piece::COUNT] = [
     S(0, 0),    //King
     S(53, -17), //Queen
     S(72, 15),  //Rook
@@ -149,7 +149,7 @@ pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
     S(0, 0),    //Pawn
 ];
 
-pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
+pub const BISHOP_THREAT: [PhasedScore; Piece::COUNT] = [
     S(0, 0),   //King
     S(74, 40), //Queen
     S(58, 30), //Rook

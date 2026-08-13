@@ -13,7 +13,6 @@ use crate::{
     bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
-    definitions::NumberOf,
     file::File,
     magics::{BISHOP_MAGICS, ROOK_MAGICS},
     pieces::Piece,
@@ -34,7 +33,7 @@ pub(crate) static BISHOP_ATTACKS: [Bitboard; 5248] = generate_bishop_attacks();
 const fn generate_bishop_attacks() -> [Bitboard; 5248] {
     let mut table = [Bitboard::empty(); 5248];
     let mut sq = 0u8;
-    while sq < NumberOf::SQUARES as u8 {
+    while sq < Square::COUNT as u8 {
         let magic = BISHOP_MAGICS[sq as usize];
 
         let mut subset = Bitboard::empty();
@@ -74,7 +73,7 @@ const fn generate_bishop_attacks() -> [Bitboard; 5248] {
 const fn generate_rook_attacks() -> [Bitboard; 102400] {
     let mut table = [Bitboard::empty(); 102400];
     let mut sq = 0u8;
-    while sq < NumberOf::SQUARES as u8 {
+    while sq < Square::COUNT as u8 {
         let magic = ROOK_MAGICS[sq as usize];
 
         let mut subset = Bitboard::empty();
@@ -278,7 +277,7 @@ pub fn pawn(square: Square, side: Side) -> Bitboard {
     }
 }
 
-const KING_ATTACKS: [Bitboard; NumberOf::SQUARES] = [
+const KING_ATTACKS: [Bitboard; Square::COUNT] = [
     Bitboard::new(770),
     Bitboard::new(1797),
     Bitboard::new(3594),
@@ -356,7 +355,7 @@ pub fn king(square: Square) -> Bitboard {
     KING_ATTACKS[square.index()]
 }
 
-const KNIGHT_ATTACKS: [Bitboard; NumberOf::SQUARES] = [
+const KNIGHT_ATTACKS: [Bitboard; Square::COUNT] = [
     Bitboard::new(0x20400),
     Bitboard::new(0x50800),
     Bitboard::new(0xa1100),
@@ -613,7 +612,6 @@ mod tests {
         attacks::{self, BISHOP_ATTACKS, ROOK_ATTACKS},
         bitboard::Bitboard,
         board::Board,
-        definitions::NumberOf,
         magics::{BISHOP_MAGICS, ROOK_MAGICS},
         move_generation::{self, square_state::is_square_attacked},
         pieces::Piece,
@@ -621,7 +619,7 @@ mod tests {
         square::Square,
     };
 
-    const EXPECTED_ORTHOGONAL_ATTACKS: [u64; NumberOf::SQUARES] = [
+    const EXPECTED_ORTHOGONAL_ATTACKS: [u64; Square::COUNT] = [
         0x1010101010101fe,
         0x2020202020202fd,
         0x4040404040404fb,
@@ -688,7 +686,7 @@ mod tests {
         0x7f80808080808080,
     ];
 
-    const EXPECTED_DIAGONAL_ATTACKS: [u64; NumberOf::SQUARES] = [
+    const EXPECTED_DIAGONAL_ATTACKS: [u64; Square::COUNT] = [
         0x8040201008040200,
         0x80402010080500,
         0x804020110a00,
@@ -755,7 +753,7 @@ mod tests {
         0x40201008040201,
     ];
 
-    const EXPECTED_KNIGHT_ATTACKS: [u64; NumberOf::SQUARES] = [
+    const EXPECTED_KNIGHT_ATTACKS: [u64; Square::COUNT] = [
         0x20400,
         0x50800,
         0xa1100,
@@ -823,7 +821,7 @@ mod tests {
     ];
 
     // these were generated empirically by running this test and printing out the attack bitboards as numbers
-    const EXPECTED_KING_ATTACKS: [u64; NumberOf::SQUARES] = [
+    const EXPECTED_KING_ATTACKS: [u64; Square::COUNT] = [
         770,
         1797,
         3594,
@@ -1015,7 +1013,7 @@ mod tests {
 
     #[test]
     fn test_pawn_attacks() {
-        let expected_black_pawn_attacks: [u64; NumberOf::SQUARES] = [
+        let expected_black_pawn_attacks: [u64; Square::COUNT] = [
             0,
             0,
             0,
@@ -1082,7 +1080,7 @@ mod tests {
             18014398509481984,
         ];
 
-        let expected_white_pawn_attacks: [u64; NumberOf::SQUARES] = [
+        let expected_white_pawn_attacks: [u64; Square::COUNT] = [
             512,
             1280,
             2560,

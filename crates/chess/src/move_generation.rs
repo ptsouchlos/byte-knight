@@ -384,7 +384,7 @@ pub fn are_legal(board: &Board, list: &MoveList) -> bool {
 #[cfg(test)]
 mod tests {
 
-    use crate::{board::Board, definitions::NumberOf, move_generation};
+    use crate::{board::Board, move_generation};
 
     use super::*;
 
@@ -474,7 +474,7 @@ mod tests {
 
     #[test]
     fn check_rook_relevant_bits() {
-        let rook_relevant_bit_expected: [u64; NumberOf::SQUARES] = [
+        let rook_relevant_bit_expected: [u64; Square::COUNT] = [
             282578800148862,
             565157600297596,
             1130315200595066,
@@ -555,7 +555,7 @@ mod tests {
 
     #[test]
     fn check_relevant_bishop_bits() {
-        let bishop_relevant_bit_expected: [u64; NumberOf::SQUARES] = [
+        let bishop_relevant_bit_expected: [u64; Square::COUNT] = [
             18049651735527936,
             70506452091904,
             275415828992,
@@ -639,7 +639,7 @@ mod tests {
     #[test]
     fn check_rook_attacks() {
         let occupancy = Bitboard::default();
-        const EXPECTED_ATTACKS: [u64; NumberOf::SQUARES] = [
+        const EXPECTED_ATTACKS: [u64; Square::COUNT] = [
             0x1010101010101fe,
             0x2020202020202fd,
             0x4040404040404fb,
@@ -717,7 +717,7 @@ mod tests {
     fn check_blocker_permutations() {
         const BASE: u64 = 2_u64;
 
-        for sq in 0..NumberOf::SQUARES {
+        for sq in 0..Square::COUNT {
             let rook_bb = relevant_rook_bits(Square::from_square_index(sq as u8));
             let permutations = create_blocker_permutations(rook_bb);
             let total_permutations = BASE.pow(rook_bb.as_number().count_ones());

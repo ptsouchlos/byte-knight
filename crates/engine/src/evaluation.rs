@@ -6,8 +6,15 @@
 use std::ops::AddAssign;
 
 use chess::{
-    attacks, bitboard::Bitboard, board::Board, definitions::NumberOf, file::File, pieces::Piece,
-    rank::Rank, side::Side, square,
+    attacks,
+    bitboard::Bitboard,
+    board::Board,
+    definitions::NumberOf,
+    file::File,
+    pieces::Piece,
+    rank::Rank,
+    side::Side,
+    square::{self, Square},
 };
 
 use crate::{
@@ -137,7 +144,7 @@ impl<Values: EvalValues> Evaluation<Values> {
         &self,
         board: &Board,
         side: Side,
-        attacks_by_square: &[Bitboard; NumberOf::SQUARES],
+        attacks_by_square: &[Bitboard; Square::COUNT],
         enemy_pawn_attacks: Bitboard,
     ) -> PhasedScore
     where
@@ -296,7 +303,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         // and threats, avoiding recomputing the same magic lookups several times.
         // `attacks_by_square` holds each occupied non-king square's attack set;
         // the per-side unions feed the threat evaluation and the mobility exclusion.
-        let mut attacks_by_square = [Bitboard::default(); NumberOf::SQUARES];
+        let mut attacks_by_square = [Bitboard::default(); Square::COUNT];
         let mut pawn_attacks = [Bitboard::default(); NumberOf::SIDES];
         let mut knight_attacks = [Bitboard::default(); NumberOf::SIDES];
         let mut bishop_attacks = [Bitboard::default(); NumberOf::SIDES];

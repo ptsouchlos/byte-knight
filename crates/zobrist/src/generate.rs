@@ -1,4 +1,4 @@
-use chess::{definitions::NumberOf, pieces::Piece, side::Side};
+use chess::{definitions::NumberOf, pieces::Piece, side::Side, square::Square};
 use rand::{Rng, SeedableRng, rngs::StdRng};
 
 #[derive(Debug, clap::Parser)]
@@ -6,9 +6,9 @@ pub(crate) struct GenerateArgs {}
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ZobristRandomValues {
-    pub piece_values: [[[u64; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+    pub piece_values: [[[u64; Square::COUNT]; Piece::COUNT]; NumberOf::SIDES],
     pub castling_values: [u64; NumberOf::CASTLING_OPTIONS],
-    pub en_passant_values: [u64; NumberOf::SQUARES + 1],
+    pub en_passant_values: [u64; Square::COUNT + 1],
     pub side_values: [u64; NumberOf::SIDES],
 }
 
@@ -25,9 +25,9 @@ impl ZobristRandomValues {
         let mut random = StdRng::from_seed(RANDOM_SEED);
         // initialize everything to 0
         let mut random_values = Self {
-            piece_values: [[[0; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+            piece_values: [[[0; Square::COUNT]; Piece::COUNT]; NumberOf::SIDES],
             castling_values: [0; NumberOf::CASTLING_OPTIONS],
-            en_passant_values: [0; NumberOf::SQUARES + 1],
+            en_passant_values: [0; Square::COUNT + 1],
             side_values: [0; NumberOf::SIDES],
         };
 
@@ -73,7 +73,7 @@ impl ZobristRandomValues {
     /// Returns the Zobrist hash value for the given en passant square.
     pub fn get_en_passant_value(&self, square: Option<u8>) -> u64 {
         match square {
-            None => self.en_passant_values[NumberOf::SQUARES],
+            None => self.en_passant_values[Square::COUNT],
             Some(square) => self.en_passant_values[square as usize],
         }
     }
@@ -88,7 +88,7 @@ pub(crate) fn execute(_args: GenerateArgs) -> anyhow::Result<()> {
     let values = ZobristRandomValues::default();
     println!("#[rustfmt::skip]");
     println!(
-        "pub(crate) const PIECE_VALUES: [[[u64; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES] = ["
+        "pub(crate) const PIECE_VALUES: [[[u64; Square::COUNT]; Piece::COUNT]; NumberOf::SIDES] = ["
     );
     for side in Side::iter() {
         println!("  // {side}");
@@ -96,7 +96,7 @@ pub(crate) fn execute(_args: GenerateArgs) -> anyhow::Result<()> {
         for piece in Piece::iter() {
             println!("    // {piece}");
             println!("    [");
-            for sq in 0..NumberOf::SQUARES {
+            for sq in 0..Square::COUNT {
                 if (sq % 8) == 0 {
                     print!("      ");
                 }
@@ -122,8 +122,8 @@ pub(crate) fn execute(_args: GenerateArgs) -> anyhow::Result<()> {
     println!("];");
     println!();
 
-    println!("pub(crate) const EN_PASSANT_VALUES: [u64; NumberOf::SQUARES + 1] = [");
-    for ep in 0..NumberOf::SQUARES + 1 {
+    println!("pub(crate) const EN_PASSANT_VALUES: [u64; Square::COUNT + 1] = [");
+    for ep in 0..Square::COUNT + 1 {
         println!("  {:<}, ", values.get_en_passant_value(Some(ep as u8)));
     }
     println!("];");

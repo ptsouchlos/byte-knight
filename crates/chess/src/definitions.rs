@@ -40,8 +40,6 @@ pub const ROOK_OFFSETS: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
 pub struct NumberOf;
 impl NumberOf {
-    pub const PIECE_TYPES: usize = 6;
-    pub const SQUARES: usize = 64;
     pub const FILES: usize = 8;
     pub const RANKS: usize = 8;
     pub const SIDES: usize = 2;

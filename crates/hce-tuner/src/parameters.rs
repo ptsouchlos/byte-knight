@@ -7,7 +7,7 @@ use chess::{
     definitions::NumberOf,
     pieces::{ALL_PIECES, Piece},
     side::Side,
-    square,
+    square::{self, Square},
 };
 
 use crate::tuning_position::TuningPosition;
@@ -38,7 +38,7 @@ impl Parameters {
 
         // PSQTs: enumerate all (piece, square) in Black's perspective (no flip)
         for &piece in ALL_PIECES.iter() {
-            for sq in 0..NumberOf::SQUARES as u8 {
+            for sq in 0..Square::COUNT as u8 {
                 let idx = Offsets::offset_for_piece_and_square(sq as usize, piece, Side::Black);
                 params[idx] = values.psqt(sq, piece, Side::Black).into();
             }
@@ -191,6 +191,7 @@ mod tests {
         definitions::NumberOf,
         pieces::{ALL_PIECES, Piece},
         side::Side,
+        square::Square,
     };
     use engine::{evaluation::ByteKnightEvaluation, traits::EvalValues};
 
@@ -205,7 +206,7 @@ mod tests {
 
         // PSQTs
         for &piece in ALL_PIECES.iter() {
-            for sq in 0..NumberOf::SQUARES as u8 {
+            for sq in 0..Square::COUNT as u8 {
                 let idx = Offsets::offset_for_piece_and_square(sq as usize, piece, Side::Black);
                 assert_eq!(
                     params[idx],

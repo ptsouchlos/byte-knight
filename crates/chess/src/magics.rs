@@ -7,10 +7,10 @@ use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{bitboard::Bitboard, definitions::NumberOf};
+use crate::{bitboard::Bitboard, square::Square};
 
 #[allow(unused)]
-pub(crate) const BISHOP_MAGICS: [MagicNumber; NumberOf::SQUARES] = [
+pub(crate) const BISHOP_MAGICS: [MagicNumber; Square::COUNT] = [
     MagicNumber::new(Bitboard::new(18049651735527936), 58, 0, 2603089664189407746),
     MagicNumber::new(Bitboard::new(70506452091904), 59, 64, 86711888284551185),
     MagicNumber::new(Bitboard::new(275415828992), 59, 96, 15278462302932713476),
@@ -208,7 +208,7 @@ pub(crate) const BISHOP_MAGICS: [MagicNumber; NumberOf::SQUARES] = [
 ];
 
 #[allow(unused)]
-pub(crate) const ROOK_MAGICS: [MagicNumber; NumberOf::SQUARES] = [
+pub(crate) const ROOK_MAGICS: [MagicNumber; Square::COUNT] = [
     MagicNumber::new(Bitboard::new(282578800148862), 52, 0, 2341871961128845312),
     MagicNumber::new(Bitboard::new(565157600297596), 53, 4096, 162129724031632076),
     MagicNumber::new(

@@ -8,12 +8,12 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::definitions::NumberOf;
+use crate::square::Square;
 
 /// Names of squares on the board. The index of the square name corresponds to the square index as represented by the bitboard.
 /// See the [crate::bitboard::Bitboard] for more information.
 #[rustfmt::skip]
-pub const SQUARE_NAME: [&str; NumberOf::SQUARES] = [
+pub const SQUARE_NAME: [&str; Square::COUNT] = [
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
     "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
     "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
@@ -25,12 +25,10 @@ pub const SQUARE_NAME: [&str; NumberOf::SQUARES] = [
 ];
 
 /// Fully qualified piece names. Use [Pieces] to index into this array.
-pub const PIECE_NAMES: [&str; NumberOf::PIECE_TYPES] =
-    ["King", "Queen", "Rook", "Bishop", "Knight", "Pawn"];
+pub const PIECE_NAMES: [&str; Piece::COUNT] = ["King", "Queen", "Rook", "Bishop", "Knight", "Pawn"];
 
 /// Short names for pieces. Use [Pieces] to index into this array.
-pub const PIECE_SHORT_NAMES: [char; NumberOf::PIECE_TYPES + 1] =
-    ['K', 'Q', 'R', 'B', 'N', 'P', ' '];
+pub const PIECE_SHORT_NAMES: [char; Piece::COUNT + 1] = ['K', 'Q', 'R', 'B', 'N', 'P', ' '];
 
 pub const SLIDER_PIECES: [Piece; 3] = [Piece::Rook, Piece::Bishop, Piece::Queen];
 pub const ALL_PIECES: [Piece; 6] = [

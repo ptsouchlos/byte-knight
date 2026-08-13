@@ -8,26 +8,26 @@
 use crate::{
     attacks,
     bitboard::Bitboard,
-    definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
+    definitions::{FILE_BITBOARDS, RANK_BITBOARDS},
     file::File,
     rank::Rank,
     square::Square,
 };
 
 #[allow(long_running_const_eval)]
-static RAYS_BETWEEN: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] = initialize_rays_between();
+static RAYS_BETWEEN: [[Bitboard; Square::COUNT]; Square::COUNT] = initialize_rays_between();
 
 /// Initializes the rays between all pairs of squares on the chessboard.
 ///
 /// Returns
 /// - A 2D array where each entry [from][to] contains a Bitboard representing the squares between `from` and `to`.
-const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] {
-    let mut rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] =
-        [[Bitboard::empty(); NumberOf::SQUARES]; NumberOf::SQUARES];
+const fn initialize_rays_between() -> [[Bitboard; Square::COUNT]; Square::COUNT] {
+    let mut rays_between: [[Bitboard; Square::COUNT]; Square::COUNT] =
+        [[Bitboard::empty(); Square::COUNT]; Square::COUNT];
     let mut from = 0u8;
     let mut to = 0u8;
-    while from < NumberOf::SQUARES as u8 {
-        while to < NumberOf::SQUARES as u8 {
+    while from < Square::COUNT as u8 {
+        while to < Square::COUNT as u8 {
             if attacks::rook(Square::from_square_index(from), Bitboard::empty())
                 .intersects(Bitboard::from_square(to))
             {

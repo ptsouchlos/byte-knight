@@ -36,14 +36,14 @@ impl PawnStructure {
     }
 }
 pub struct PawnEvaluator {
-    passed_pawn_masks: [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
+    passed_pawn_masks: [[Bitboard; Square::COUNT]; NumberOf::SIDES],
     adjacent_file_masks: [Bitboard; NumberOf::FILES],
 }
 
 impl PawnEvaluator {
     pub fn new() -> Self {
         let mut eval = PawnEvaluator {
-            passed_pawn_masks: [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SIDES],
+            passed_pawn_masks: [[Bitboard::default(); Square::COUNT]; NumberOf::SIDES],
             adjacent_file_masks: [Bitboard::default(); NumberOf::FILES],
         };
 

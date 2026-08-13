@@ -1,6 +1,4 @@
-use crate::{
-    board::Board, definitions::NumberOf, pieces::Piece, side::Side, square::Square, zobrist::values,
-};
+use crate::{board::Board, pieces::Piece, side::Side, square::Square, zobrist::values};
 
 pub(crate) fn sq_hash(piece: Piece, side: Side, square: Square) -> u64 {
     values::PIECE_VALUES[side as usize][piece as usize][square]
@@ -16,7 +14,7 @@ pub(crate) fn castling_hash(rights: u8) -> u64 {
 
 pub(crate) fn ep_hash(ep_sq: Option<Square>) -> u64 {
     match ep_sq {
-        None => values::EN_PASSANT_VALUES[NumberOf::SQUARES],
+        None => values::EN_PASSANT_VALUES[Square::COUNT],
         Some(sq) => values::EN_PASSANT_VALUES[sq.index()],
     }
 }
