@@ -7,7 +7,7 @@ use std::{fmt::Display, ops::Index};
 
 use anyhow::Result;
 
-use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS, square::Square};
+use crate::{bitboard::Bitboard, square::Square};
 
 /// Represents a file on the chess board.
 #[repr(u8)]
@@ -27,6 +27,18 @@ impl File {
     pub const MIN: u8 = 0;
     pub const MAX: u8 = 7;
     pub const COUNT: usize = 8;
+
+    /// Array of [`Bitboard`]s for each [`File`]
+    const BITBOARDS: [Bitboard; Self::COUNT] = [
+        Bitboard::new(72340172838076673),
+        Bitboard::new(144680345676153346),
+        Bitboard::new(289360691352306692),
+        Bitboard::new(578721382704613384),
+        Bitboard::new(1157442765409226768),
+        Bitboard::new(2314885530818453536),
+        Bitboard::new(4629771061636907072),
+        Bitboard::new(9259542123273814144),
+    ];
 
     /// Returns the file offset by `delta` if it is within range.
     /// Returns `None` if the resulting file is out of bounds.
@@ -67,7 +79,7 @@ impl File {
     }
 
     pub const fn to_bitboard(self) -> Bitboard {
-        FILE_BITBOARDS[self as usize]
+        Self::BITBOARDS[self as usize]
     }
 
     pub const fn of(sq: Square) -> Self {

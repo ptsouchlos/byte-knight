@@ -27,8 +27,8 @@ impl Offsets {
     offsets!(
         PSQT:          64 * Piece::COUNT,
         PASSED_PAWN:   NumberOf::PASSED_PAWN_RANKS,
-        DOUBLED_PAWN:  NumberOf::FILES,
-        ISOLATED_PAWN: NumberOf::FILES,
+        DOUBLED_PAWN:  File::COUNT,
+        ISOLATED_PAWN: File::COUNT,
         BISHOP_PAIR:   1,
         KING_SAFETY:   Piece::COUNT - 1,
         PAWN_THREAT:   Piece::COUNT,
@@ -39,8 +39,8 @@ impl Offsets {
         ROOK_MOBILITY: NumberOf::ROOK_MOVES +1,
         QUEEN_MOBILITY: NumberOf::QUEEN_MOVES +1,
         TEMPO_BONUS: 1,
-        ROOK_OPEN_FILE_BONUS: NumberOf::FILES,
-        ROOK_SEMI_OPEN_FILE_BONUS: NumberOf::FILES,
+        ROOK_OPEN_FILE_BONUS: File::COUNT,
+        ROOK_SEMI_OPEN_FILE_BONUS: File::COUNT,
         PAWN_SHIELD: NumberOf::KING_FLANK_FILES * NumberOf::PAWN_SHIELD_RANKS,
         PAWN_STORM:  NumberOf::KING_FLANK_FILES * NumberOf::PAWN_STORM_RANKS,
     );

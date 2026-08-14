@@ -150,9 +150,9 @@ fn print_params(params: &Parameters) {
     println!();
 
     // Print out the doubled pawn penalty values
-    println!("pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
+    println!("pub const DOUBLED_PAWN_VALUES: [PhasedScore; File::COUNT] = [");
 
-    for file in 0..NumberOf::FILES {
+    for file in 0..File::COUNT {
         let idx = Offsets::DOUBLED_PAWN + file;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
@@ -162,9 +162,9 @@ fn print_params(params: &Parameters) {
 
     println!();
 
-    println!("pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
+    println!("pub const ISOLATED_PAWN_VALUES: [PhasedScore; File::COUNT] = [");
 
-    for file in 0..NumberOf::FILES {
+    for file in 0..File::COUNT {
         let idx = Offsets::ISOLATED_PAWN + file;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
@@ -258,8 +258,8 @@ fn print_params(params: &Parameters) {
     );
 
     println!();
-    println!("pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [");
-    for file in 0..NumberOf::FILES {
+    println!("pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; File::COUNT] = [");
+    for file in 0..File::COUNT {
         let idx = Offsets::offset_for_rook_open_file(file as u8);
         let val = params.as_slice()[idx];
         println!("    {val:?},");
@@ -267,8 +267,8 @@ fn print_params(params: &Parameters) {
     println!("];");
 
     println!();
-    println!("pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [");
-    for file in 0..NumberOf::FILES {
+    println!("pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; File::COUNT] = [");
+    for file in 0..File::COUNT {
         let idx = Offsets::offset_for_rook_semi_open_file(file as u8);
         let val = params.as_slice()[idx];
         println!("    {val:?},");

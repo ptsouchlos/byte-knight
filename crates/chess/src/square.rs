@@ -446,7 +446,6 @@ pub fn is_square_on_rank(square: Square, rank: Rank) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::NumberOf,
         file::File,
         rank::Rank,
         square::{Square, is_square_on_rank, to_square},
@@ -481,7 +480,7 @@ mod tests {
     #[test]
     fn flip() {
         for rank in 0..4_u8 {
-            for file in 0..NumberOf::FILES as u8 {
+            for file in 0..File::COUNT as u8 {
                 let sq = to_square(file, rank);
                 let square = Square::from_square_index(sq);
                 let flipped = square.flip();

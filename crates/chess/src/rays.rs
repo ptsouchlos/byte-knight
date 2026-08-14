@@ -6,11 +6,7 @@
 //! This module provides functionality to retrieve the ray (line of squares) between two squares on a chessboard.
 
 use crate::{
-    attacks,
-    bitboard::Bitboard,
-    definitions::{FILE_BITBOARDS, RANK_BITBOARDS},
-    file::File,
-    rank::Rank,
+    attacks, bitboard::Bitboard, definitions::RANK_BITBOARDS, file::File, rank::Rank,
     square::Square,
 };
 
@@ -83,10 +79,10 @@ pub fn between(from: Square, to: Square) -> Bitboard {
 /// # Returns
 /// - A [`Bitboard`] representing the edge squares of the chessboard, excluding the specified
 pub fn edges(file: File, rank: Rank) -> Bitboard {
-    let file_bb = FILE_BITBOARDS[file];
+    let file_bb = file.to_bitboard();
     let rank_bb = RANK_BITBOARDS[rank];
-    (FILE_BITBOARDS[File::A as usize] & !file_bb)
-        | (FILE_BITBOARDS[File::H as usize] & !file_bb)
+    (File::A.to_bitboard() & !file_bb)
+        | (File::H.to_bitboard() & !file_bb)
         | (RANK_BITBOARDS[Rank::R1 as usize] & !rank_bb)
         | (RANK_BITBOARDS[Rank::R8 as usize] & !rank_bb)
 }

@@ -5,6 +5,7 @@
 
 use chess::{
     definitions::NumberOf,
+    file::File,
     pieces::Piece,
     side::Side,
     square::{self, Square},
@@ -104,7 +105,7 @@ pub const PASSED_PAWN_BONUS: [PhasedScore; NumberOf::PASSED_PAWN_RANKS] = [
     S(-7, 9),
 ];
 
-pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
+pub const DOUBLED_PAWN_VALUES: [PhasedScore; File::COUNT] = [
     S(-20, -37),
     S(2, -28),
     S(-4, -19),
@@ -115,7 +116,7 @@ pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
     S(-10, -39),
 ];
 
-pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
+pub const ISOLATED_PAWN_VALUES: [PhasedScore; File::COUNT] = [
     S(-8, -1),
     S(-8, -18),
     S(-18, -13),
@@ -239,7 +240,7 @@ pub const QUEEN_MOBILITY: [PhasedScore; NumberOf::QUEEN_MOVES + 1] = [
 // Small bonus for being the side to move.
 pub const TEMPO_BONUS: PhasedScore = S(27, 23);
 
-pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
+pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; File::COUNT] = [
     S(33, 6),
     S(31, 1),
     S(26, 12),
@@ -250,7 +251,7 @@ pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
     S(81, -4),
 ];
 
-pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
+pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; File::COUNT] = [
     S(1, 47),
     S(10, 18),
     S(9, 19),

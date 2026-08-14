@@ -7,7 +7,8 @@ use chess::{
     bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
-    definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
+    definitions::{NumberOf, RANK_BITBOARDS},
+    file::File,
     pieces::Piece,
     side::Side,
     square::Square,
@@ -37,14 +38,14 @@ impl PawnStructure {
 }
 pub struct PawnEvaluator {
     passed_pawn_masks: [[Bitboard; Square::COUNT]; NumberOf::SIDES],
-    adjacent_file_masks: [Bitboard; NumberOf::FILES],
+    adjacent_file_masks: [Bitboard; File::COUNT],
 }
 
 impl PawnEvaluator {
     pub fn new() -> Self {
         let mut eval = PawnEvaluator {
             passed_pawn_masks: [[Bitboard::default(); Square::COUNT]; NumberOf::SIDES],
-            adjacent_file_masks: [Bitboard::default(); NumberOf::FILES],
+            adjacent_file_masks: [Bitboard::default(); File::COUNT],
         };
 
         eval.initialize_pawn_masks();
@@ -124,15 +125,15 @@ impl PawnEvaluator {
     }
 
     fn initialize_pawn_masks(&mut self) {
-        for file in 0..NumberOf::FILES as u8 {
+        for file in File::iter() {
             let mut mask = Bitboard::default();
-            if file > 0 {
-                mask |= FILE_BITBOARDS[(file - 1) as usize];
+            if let Some(fl) = file.offset(-1) {
+                mask |= fl.to_bitboard();
             }
-            if file < (NumberOf::FILES as u8 - 1) {
-                mask |= FILE_BITBOARDS[(file + 1) as usize];
+            if let Some(fl) = file.offset(1) {
+                mask |= fl.to_bitboard();
             }
-            self.adjacent_file_masks[file as usize] = mask;
+            self.adjacent_file_masks[file.index()] = mask;
         }
 
         for sq in Bitboard::filled() {
@@ -149,7 +150,7 @@ impl PawnEvaluator {
                         FILE_BITBOARDS[(file.inner() - 1) as usize] & RANK_BITBOARDS[r as usize];
                 }
                 mask_w |= FILE_BITBOARDS[file as usize] & RANK_BITBOARDS[r as usize];
-                if file.inner() < (NumberOf::FILES as u8 - 1) {
+                if file.inner() < (File::COUNT as u8 - 1) {
                     mask_w |=
                         FILE_BITBOARDS[(file.inner() + 1) as usize] & RANK_BITBOARDS[r as usize];
                 }
@@ -163,7 +164,7 @@ impl PawnEvaluator {
                         FILE_BITBOARDS[(file.inner() - 1) as usize] & RANK_BITBOARDS[r as usize];
                 }
                 mask_b |= FILE_BITBOARDS[file] & RANK_BITBOARDS[r as usize];
-                if file.inner() < (NumberOf::FILES as u8 - 1) {
+                if file.inner() < (File::COUNT as u8 - 1) {
                     mask_b |=
                         FILE_BITBOARDS[(file.inner() + 1) as usize] & RANK_BITBOARDS[r as usize];
                 }
