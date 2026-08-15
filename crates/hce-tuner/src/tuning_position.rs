@@ -1,12 +1,12 @@
 // Part of the byte-knight project.
 // Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
 
-use chess::{definitions::NumberOf, side::Side};
+use chess::side::Side;
 
 use crate::{math, parameters::Parameters, tuner_score::TuningScore};
 
 pub(crate) struct TuningPosition {
-    pub(crate) parameter_indexes: [Vec<usize>; NumberOf::SIDES],
+    pub(crate) parameter_indexes: [Vec<usize>; Side::COUNT],
     pub(crate) phase: f64,
     pub(crate) phase_score: TuningScore,
     pub(crate) game_result: f64,

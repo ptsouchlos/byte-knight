@@ -17,7 +17,6 @@ use crate::square::Square;
 use crate::zobrist;
 use crate::zobrist::{Hashes, keys};
 
-use super::definitions::NumberOf;
 use super::fen;
 use super::side::Side;
 use super::{bitboard::Bitboard, pieces::Piece};
@@ -25,7 +24,7 @@ use super::{bitboard::Bitboard, pieces::Piece};
 /// Represents a chessboard position.
 #[derive(Debug, Clone)]
 pub struct Board {
-    bitboards: [Bitboard; Piece::COUNT + NumberOf::SIDES],
+    bitboards: [Bitboard; Piece::COUNT + Side::COUNT],
     pieces: [Option<Piece>; Square::COUNT],
     pub(crate) history: BoardHistory,
     state: BoardState,
@@ -86,7 +85,7 @@ impl Board {
     /// Create a new board in the default, *uninitialized*, state.
     fn new() -> Self {
         Board {
-            bitboards: [Bitboard::default(); Piece::COUNT + NumberOf::SIDES],
+            bitboards: [Bitboard::default(); Piece::COUNT + Side::COUNT],
             pieces: [None; Square::COUNT],
             history: BoardHistory::new(),
             state: BoardState::new(),

@@ -4,8 +4,8 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use chess::{
-    bitboard::Bitboard, bitboard_helpers, board::Board, definitions::NumberOf, file::File,
-    pieces::Piece, rank::Rank, side::Side, square::Square,
+    bitboard::Bitboard, bitboard_helpers, board::Board, file::File, pieces::Piece, rank::Rank,
+    side::Side, square::Square,
 };
 
 pub struct PawnStructure {
@@ -31,14 +31,14 @@ impl PawnStructure {
     }
 }
 pub struct PawnEvaluator {
-    passed_pawn_masks: [[Bitboard; Square::COUNT]; NumberOf::SIDES],
+    passed_pawn_masks: [[Bitboard; Square::COUNT]; Side::COUNT],
     adjacent_file_masks: [Bitboard; File::COUNT],
 }
 
 impl PawnEvaluator {
     pub fn new() -> Self {
         let mut eval = PawnEvaluator {
-            passed_pawn_masks: [[Bitboard::default(); Square::COUNT]; NumberOf::SIDES],
+            passed_pawn_masks: [[Bitboard::default(); Square::COUNT]; Side::COUNT],
             adjacent_file_masks: [Bitboard::default(); File::COUNT],
         };
 

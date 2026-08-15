@@ -9,7 +9,6 @@ use chess::{
     attacks,
     bitboard::Bitboard,
     board::Board,
-    definitions::NumberOf,
     file::File,
     pieces::Piece,
     rank::Rank,
@@ -239,7 +238,7 @@ impl<Values: EvalValues> Evaluation<Values> {
         score
     }
 
-    fn evaluate_pawn_structure(&self, board: &Board) -> [PhasedScore; NumberOf::SIDES]
+    fn evaluate_pawn_structure(&self, board: &Board) -> [PhasedScore; Side::COUNT]
     where
         PhasedScore: AddAssign<Values::ReturnScore>,
     {
@@ -254,7 +253,7 @@ impl<Values: EvalValues> Evaluation<Values> {
         }
 
         let structure = self.pawn_evaluator.detect_pawn_structure(board);
-        let mut score = [PhasedScore::default(); NumberOf::SIDES];
+        let mut score = [PhasedScore::default(); Side::COUNT];
 
         for side in Side::iter() {
             let idx = side as usize;
@@ -304,9 +303,9 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         // `attacks_by_square` holds each occupied non-king square's attack set;
         // the per-side unions feed the threat evaluation and the mobility exclusion.
         let mut attacks_by_square = [Bitboard::default(); Square::COUNT];
-        let mut pawn_attacks = [Bitboard::default(); NumberOf::SIDES];
-        let mut knight_attacks = [Bitboard::default(); NumberOf::SIDES];
-        let mut bishop_attacks = [Bitboard::default(); NumberOf::SIDES];
+        let mut pawn_attacks = [Bitboard::default(); Side::COUNT];
+        let mut knight_attacks = [Bitboard::default(); Side::COUNT];
+        let mut bishop_attacks = [Bitboard::default(); Side::COUNT];
 
         // loop through occupied squares
         for sq in occupancy {

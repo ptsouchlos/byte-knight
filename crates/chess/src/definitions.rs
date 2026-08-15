@@ -38,7 +38,6 @@ pub const ROOK_OFFSETS: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
 pub struct NumberOf;
 impl NumberOf {
-    pub const SIDES: usize = 2;
     pub const CASTLING_OPTIONS: usize = 16;
     // Passed pawns cannot be on ranks 1 or 8
     pub const PASSED_PAWN_RANKS: usize = 6;

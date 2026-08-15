@@ -1,7 +1,7 @@
-use crate::{definitions::NumberOf, pieces::Piece, square::Square};
+use crate::{definitions::NumberOf, pieces::Piece, side::Side, square::Square};
 
 #[rustfmt::skip]
-pub(crate) const PIECE_VALUES: [[[u64; Square::COUNT]; Piece::COUNT]; NumberOf::SIDES] = [
+pub(crate) const PIECE_VALUES: [[[u64; Square::COUNT]; Piece::COUNT]; Side::COUNT] = [
   // W
   [
     // King
@@ -229,4 +229,4 @@ pub(crate) const EN_PASSANT_VALUES: [u64; Square::COUNT + 1] = [
     10240470122788184378,
 ];
 
-pub(crate) const SIDE_VALUES: [u64; NumberOf::SIDES] = [7494101670147000078, 16456364064684951647];
+pub(crate) const SIDE_VALUES: [u64; Side::COUNT] = [7494101670147000078, 16456364064684951647];

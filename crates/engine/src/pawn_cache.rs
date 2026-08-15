@@ -9,7 +9,7 @@
 
 use std::cell::Cell;
 
-use chess::{bitboard::Bitboard, definitions::NumberOf};
+use chess::{bitboard::Bitboard, side::Side};
 
 use crate::{phased_score::PhasedScore, utils};
 const SIZE: usize = 1 << 15; // 32768 entries
@@ -22,7 +22,7 @@ const SIZE: usize = 1 << 15; // 32768 entries
 struct Entry {
     white_pawns: Bitboard,
     black_pawns: Bitboard,
-    score: [PhasedScore; NumberOf::SIDES],
+    score: [PhasedScore; Side::COUNT],
 }
 
 /// A simple pawn cache implementation that uses a fixed-size array of `Cell<Entry>` to store pawn structure evaluations.
@@ -62,7 +62,7 @@ impl PawnCache {
         pawn_hash: u64,
         white_bb: Bitboard,
         black_bb: Bitboard,
-    ) -> Option<[PhasedScore; NumberOf::SIDES]> {
+    ) -> Option<[PhasedScore; Side::COUNT]> {
         let index = self.get_index(pawn_hash);
         if let Some(cell) = self.table.get(index) {
             let entry = cell.get();
@@ -79,7 +79,7 @@ impl PawnCache {
         pawn_hash: u64,
         white_bb: Bitboard,
         black_bb: Bitboard,
-        score: [PhasedScore; NumberOf::SIDES],
+        score: [PhasedScore; Side::COUNT],
     ) {
         let index = self.get_index(pawn_hash);
         self.table[index].set(Entry {

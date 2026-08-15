@@ -18,7 +18,7 @@ pub enum Side {
 }
 
 impl Side {
-    const COUNT: usize = 2;
+    pub const COUNT: usize = 2;
     const ALL_SIDES: [Self; Self::COUNT] = [Side::White, Side::Black];
 
     /// Returns the opposite side.

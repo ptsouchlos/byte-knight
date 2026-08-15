@@ -6,10 +6,10 @@ pub(crate) struct GenerateArgs {}
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ZobristRandomValues {
-    pub piece_values: [[[u64; Square::COUNT]; Piece::COUNT]; NumberOf::SIDES],
+    pub piece_values: [[[u64; Square::COUNT]; Piece::COUNT]; Side::COUNT],
     pub castling_values: [u64; NumberOf::CASTLING_OPTIONS],
     pub en_passant_values: [u64; Square::COUNT + 1],
-    pub side_values: [u64; NumberOf::SIDES],
+    pub side_values: [u64; Side::COUNT],
 }
 
 const RANDOM_SEED: [u8; 32] = [115; 32];
@@ -25,10 +25,10 @@ impl ZobristRandomValues {
         let mut random = StdRng::from_seed(RANDOM_SEED);
         // initialize everything to 0
         let mut random_values = Self {
-            piece_values: [[[0; Square::COUNT]; Piece::COUNT]; NumberOf::SIDES],
+            piece_values: [[[0; Square::COUNT]; Piece::COUNT]; Side::COUNT],
             castling_values: [0; NumberOf::CASTLING_OPTIONS],
             en_passant_values: [0; Square::COUNT + 1],
-            side_values: [0; NumberOf::SIDES],
+            side_values: [0; Side::COUNT],
         };
 
         random_values
@@ -88,7 +88,7 @@ pub(crate) fn execute(_args: GenerateArgs) -> anyhow::Result<()> {
     let values = ZobristRandomValues::default();
     println!("#[rustfmt::skip]");
     println!(
-        "pub(crate) const PIECE_VALUES: [[[u64; Square::COUNT]; Piece::COUNT]; NumberOf::SIDES] = ["
+        "pub(crate) const PIECE_VALUES: [[[u64; Square::COUNT]; Piece::COUNT]; Side::COUNT] = ["
     );
     for side in Side::iter() {
         println!("  // {side}");
@@ -129,8 +129,8 @@ pub(crate) fn execute(_args: GenerateArgs) -> anyhow::Result<()> {
     println!("];");
     println!();
 
-    println!("pub(crate) const SIDE_VALUES: [u64; NumberOf::SIDES] = [");
-    for sd in 0..NumberOf::SIDES {
+    println!("pub(crate) const SIDE_VALUES: [u64; Side::COUNT] = [");
+    for sd in 0..Side::COUNT {
         println!("  {:<}, ", values.get_side_value(sd));
     }
     println!("];");
