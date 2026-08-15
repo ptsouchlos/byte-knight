@@ -138,7 +138,7 @@ impl PawnEvaluator {
             let mut mask_b = Bitboard::default();
             // Mask for white pawns
             // All squares in front of the pawn on the same file and adjacent files
-            for r in (rank.inner() + 1)..NumberOf::RANKS as u8 {
+            for r in (rank.inner() + 1)..Rank::COUNT as u8 {
                 let rnk = Rank::try_from(r).unwrap();
                 let rank_bb = rnk.to_bitboard();
 

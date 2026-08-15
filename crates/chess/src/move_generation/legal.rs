@@ -4,7 +4,6 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use crate::attacks;
-use crate::definitions::RANK_BITBOARDS;
 use crate::move_generation;
 use crate::move_generation::emit_pawn_targets;
 use crate::move_generation::enumerate::enumerate_moves;
@@ -47,7 +46,7 @@ fn calculate_en_passant_bitboard(
             let mut discovered_checkers = move_generation::calculate_checkers(board, occupancy);
             let king_sq = board.king_square(board.side_to_move());
             let king_rank = king_sq.rank();
-            discovered_checkers &= RANK_BITBOARDS[king_rank as usize];
+            discovered_checkers &= king_rank.to_bitboard();
 
             let is_discovered_check = discovered_checkers.number_of_occupied_squares() > 0
                 && checkers.number_of_occupied_squares() == 0;

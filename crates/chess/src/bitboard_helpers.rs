@@ -264,7 +264,6 @@ mod tests {
         bitboard_helpers::{
             self, east, north, north_east, north_west, south, south_east, south_west, west,
         },
-        definitions::RANK_BITBOARDS,
         rank::Rank,
         square::Square,
     };
@@ -321,7 +320,7 @@ mod tests {
         // Test with a single bit first
         let bb = Bitboard::from(Square::A1);
         let filled = bitboard_helpers::east_fill(bb);
-        assert_eq!(filled, RANK_BITBOARDS[Rank::R1 as usize]);
+        assert_eq!(filled, Rank::R1.to_bitboard());
 
         // Test with multiple bits
         let bb =
@@ -345,7 +344,7 @@ mod tests {
 
         let single_sq_bb = Bitboard::from(Square::H1);
         let filled_bb = bitboard_helpers::west_fill(single_sq_bb);
-        assert_eq!(filled_bb, RANK_BITBOARDS[Rank::R1 as usize]);
+        assert_eq!(filled_bb, Rank::R1.to_bitboard());
     }
 
     #[test]

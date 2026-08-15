@@ -8,7 +8,7 @@ use std::{
     ops::{Index, Sub},
 };
 
-use crate::{bitboard::Bitboard, definitions::RANK_BITBOARDS, side::Side, square::Square};
+use crate::{bitboard::Bitboard, side::Side, square::Square};
 use anyhow::Result;
 
 /// Represents a rank on the chess board.
@@ -29,6 +29,17 @@ impl Rank {
     pub const MIN: u8 = 0;
     pub const MAX: u8 = 7;
     pub const COUNT: usize = 8;
+
+    const RANK_BITBOARDS: [Bitboard; Self::COUNT] = [
+        Bitboard::new(255),
+        Bitboard::new(65280),
+        Bitboard::new(16711680),
+        Bitboard::new(4278190080),
+        Bitboard::new(1095216660480),
+        Bitboard::new(280375465082880),
+        Bitboard::new(71776119061217280),
+        Bitboard::new(18374686479671623680),
+    ];
 
     pub const fn all() -> [Self; Self::COUNT] {
         [
@@ -110,7 +121,7 @@ impl Rank {
 
     /// Converts the rank to its corresponding bitboard representation.
     pub fn to_bitboard(self) -> Bitboard {
-        RANK_BITBOARDS[self as usize]
+        Self::RANK_BITBOARDS[self as usize]
     }
 
     pub fn index(self) -> usize {
