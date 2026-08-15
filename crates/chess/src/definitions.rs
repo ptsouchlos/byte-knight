@@ -63,8 +63,3 @@ impl CastlingAvailability {
 }
 
 pub static DEFAULT_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-// 0001 0000 0001 0000 0001 0000 0001 0000 0001 0000 0001 0000 0001 0000 0001
-// 72,340,172,838,076,673 as decimal
-pub const FILE_A: u64 = 0x0101010101010101;
-pub const RANK_1: u64 = 0xFF;
