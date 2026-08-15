@@ -3,6 +3,7 @@
 
 use chess::{
     definitions::NumberOf,
+    file::File,
     pieces::Piece,
     side::Side,
     square::{self, Square},

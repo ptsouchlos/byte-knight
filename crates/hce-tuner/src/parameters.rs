@@ -5,6 +5,7 @@ use std::ops::{Add, AddAssign, Index, IndexMut};
 
 use chess::{
     definitions::NumberOf,
+    file::File,
     pieces::{ALL_PIECES, Piece},
     side::Side,
     square::{self, Square},
