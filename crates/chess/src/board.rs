@@ -17,7 +17,6 @@ use crate::square::Square;
 use crate::zobrist;
 use crate::zobrist::{Hashes, keys};
 
-use super::definitions::NumberOf;
 use super::fen;
 use super::side::Side;
 use super::{bitboard::Bitboard, pieces::Piece};
@@ -25,8 +24,8 @@ use super::{bitboard::Bitboard, pieces::Piece};
 /// Represents a chessboard position.
 #[derive(Debug, Clone)]
 pub struct Board {
-    bitboards: [Bitboard; NumberOf::PIECE_TYPES + NumberOf::SIDES],
-    pieces: [Option<Piece>; NumberOf::SQUARES],
+    bitboards: [Bitboard; Piece::COUNT + Side::COUNT],
+    pieces: [Option<Piece>; Square::COUNT],
     pub(crate) history: BoardHistory,
     state: BoardState,
 }
@@ -86,8 +85,8 @@ impl Board {
     /// Create a new board in the default, *uninitialized*, state.
     fn new() -> Self {
         Board {
-            bitboards: [Bitboard::default(); NumberOf::PIECE_TYPES + NumberOf::SIDES],
-            pieces: [None; NumberOf::SQUARES],
+            bitboards: [Bitboard::default(); Piece::COUNT + Side::COUNT],
+            pieces: [None; Square::COUNT],
             history: BoardHistory::new(),
             state: BoardState::new(),
         }
@@ -130,7 +129,7 @@ impl Board {
         let piece_bb = &mut self.bitboards[piece as usize];
         piece_bb.set_square(square);
 
-        let side_bb = &mut self.bitboards[NumberOf::PIECE_TYPES + side as usize];
+        let side_bb = &mut self.bitboards[Piece::COUNT + side as usize];
         side_bb.set_square(square);
 
         self.pieces[square] = Some(piece);
@@ -140,7 +139,7 @@ impl Board {
         let piece_bb = &mut self.bitboards[piece as usize];
         piece_bb.clear_square(square);
 
-        let side_bb = &mut self.bitboards[NumberOf::PIECE_TYPES + side as usize];
+        let side_bb = &mut self.bitboards[Piece::COUNT + side as usize];
         side_bb.clear_square(square);
 
         self.pieces[square] = None;
@@ -296,7 +295,7 @@ impl Board {
 
     /// Returns all the pieces of a given side in a single [`Bitboard`].
     pub fn pieces(&self, side: Side) -> Bitboard {
-        self.bitboards[NumberOf::PIECE_TYPES + side as usize]
+        self.bitboards[Piece::COUNT + side as usize]
     }
 
     /// Returns the white pieces of this [`Board`] in a single [`Bitboard`].

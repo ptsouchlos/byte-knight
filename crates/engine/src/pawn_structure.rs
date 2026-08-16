@@ -4,13 +4,8 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use chess::{
-    bitboard::Bitboard,
-    bitboard_helpers,
-    board::Board,
-    definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
-    pieces::Piece,
-    side::Side,
-    square::Square,
+    bitboard::Bitboard, bitboard_helpers, board::Board, file::File, pieces::Piece, rank::Rank,
+    side::Side, square::Square,
 };
 
 pub struct PawnStructure {
@@ -36,15 +31,15 @@ impl PawnStructure {
     }
 }
 pub struct PawnEvaluator {
-    passed_pawn_masks: [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
-    adjacent_file_masks: [Bitboard; NumberOf::FILES],
+    passed_pawn_masks: [[Bitboard; Square::COUNT]; Side::COUNT],
+    adjacent_file_masks: [Bitboard; File::COUNT],
 }
 
 impl PawnEvaluator {
     pub fn new() -> Self {
         let mut eval = PawnEvaluator {
-            passed_pawn_masks: [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SIDES],
-            adjacent_file_masks: [Bitboard::default(); NumberOf::FILES],
+            passed_pawn_masks: [[Bitboard::default(); Square::COUNT]; Side::COUNT],
+            adjacent_file_masks: [Bitboard::default(); File::COUNT],
         };
 
         eval.initialize_pawn_masks();
@@ -124,15 +119,15 @@ impl PawnEvaluator {
     }
 
     fn initialize_pawn_masks(&mut self) {
-        for file in 0..NumberOf::FILES as u8 {
+        for file in File::iter() {
             let mut mask = Bitboard::default();
-            if file > 0 {
-                mask |= FILE_BITBOARDS[(file - 1) as usize];
+            if let Some(fl) = file.offset(-1) {
+                mask |= fl.to_bitboard();
             }
-            if file < (NumberOf::FILES as u8 - 1) {
-                mask |= FILE_BITBOARDS[(file + 1) as usize];
+            if let Some(fl) = file.offset(1) {
+                mask |= fl.to_bitboard();
             }
-            self.adjacent_file_masks[file as usize] = mask;
+            self.adjacent_file_masks[file.index()] = mask;
         }
 
         for sq in Bitboard::filled() {
@@ -143,29 +138,35 @@ impl PawnEvaluator {
             let mut mask_b = Bitboard::default();
             // Mask for white pawns
             // All squares in front of the pawn on the same file and adjacent files
-            for r in (rank.inner() + 1)..NumberOf::RANKS as u8 {
-                if file.inner() > 0 {
-                    mask_w |=
-                        FILE_BITBOARDS[(file.inner() - 1) as usize] & RANK_BITBOARDS[r as usize];
+            for r in (rank.inner() + 1)..Rank::COUNT as u8 {
+                let rnk = Rank::try_from(r).unwrap();
+                let rank_bb = rnk.to_bitboard();
+
+                if let Some(fl) = file.offset(-1) {
+                    mask_w |= fl.to_bitboard() & rank_bb;
                 }
-                mask_w |= FILE_BITBOARDS[file as usize] & RANK_BITBOARDS[r as usize];
-                if file.inner() < (NumberOf::FILES as u8 - 1) {
-                    mask_w |=
-                        FILE_BITBOARDS[(file.inner() + 1) as usize] & RANK_BITBOARDS[r as usize];
+
+                mask_w |= file.to_bitboard() & rank_bb;
+
+                if let Some(fl) = file.offset(1) {
+                    mask_w |= fl.to_bitboard() & rank_bb;
                 }
             }
 
             // Mask for black pawns
             // All squares in front of the pawn on the same file and adjacent files
             for r in 0..rank.inner() {
-                if file.inner() > 0 {
-                    mask_b |=
-                        FILE_BITBOARDS[(file.inner() - 1) as usize] & RANK_BITBOARDS[r as usize];
+                let rnk = Rank::try_from(r).unwrap();
+                let rank_bb = rnk.to_bitboard();
+
+                if let Some(fl) = file.offset(-1) {
+                    mask_b |= fl.to_bitboard() & rank_bb;
                 }
-                mask_b |= FILE_BITBOARDS[file] & RANK_BITBOARDS[r as usize];
-                if file.inner() < (NumberOf::FILES as u8 - 1) {
-                    mask_b |=
-                        FILE_BITBOARDS[(file.inner() + 1) as usize] & RANK_BITBOARDS[r as usize];
+
+                mask_b |= file.to_bitboard() & rank_bb;
+
+                if let Some(fl) = file.offset(1) {
+                    mask_b |= fl.to_bitboard() & rank_bb;
                 }
             }
 

@@ -5,9 +5,10 @@
 
 use chess::{
     definitions::NumberOf,
+    file::File,
     pieces::Piece,
     side::Side,
-    square::{self},
+    square::{self, Square},
 };
 
 use crate::{
@@ -26,7 +27,7 @@ pub const GAME_PHASE_MAX: i32 = 24;
 
 /// Piece-Square Tables, ordered by the ordinality of the pieces. See ['pieces::Piece']
 #[rustfmt::skip]
-pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES] = [
+pub const PSQTS : [[PhasedScore; Square::COUNT]; Piece::COUNT] = [
     // King
     [
         S(  22,  -89), S(  30,  -29), S(  30,  -20), S( -93,   26), S( -35,   10), S(  -9,   15), S(  57,   -6), S( 182, -123),
@@ -104,7 +105,7 @@ pub const PASSED_PAWN_BONUS: [PhasedScore; NumberOf::PASSED_PAWN_RANKS] = [
     S(-7, 9),
 ];
 
-pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
+pub const DOUBLED_PAWN_VALUES: [PhasedScore; File::COUNT] = [
     S(-20, -37),
     S(2, -28),
     S(-4, -19),
@@ -115,7 +116,7 @@ pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
     S(-10, -39),
 ];
 
-pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
+pub const ISOLATED_PAWN_VALUES: [PhasedScore; File::COUNT] = [
     S(-8, -1),
     S(-8, -18),
     S(-18, -13),
@@ -128,10 +129,10 @@ pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
 
 pub const BISHOP_PAIR_BONUS: PhasedScore = S(21, 67);
 
-pub const KING_SAFETY: [PhasedScore; NumberOf::PIECE_TYPES - 1] =
+pub const KING_SAFETY: [PhasedScore; Piece::COUNT - 1] =
     [S(-16, -11), S(-20, 7), S(-24, 6), S(-13, 9), S(-13, 7)];
 
-pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
+pub const PAWN_THREAT: [PhasedScore; Piece::COUNT] = [
     S(0, 0),    //King
     S(80, -40), //Queen
     S(90, 10),  //Rook
@@ -140,7 +141,7 @@ pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
     S(0, 0),    //Pawn
 ];
 
-pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
+pub const KNIGHT_THREAT: [PhasedScore; Piece::COUNT] = [
     S(0, 0),    //King
     S(53, -17), //Queen
     S(72, 15),  //Rook
@@ -149,7 +150,7 @@ pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
     S(0, 0),    //Pawn
 ];
 
-pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [
+pub const BISHOP_THREAT: [PhasedScore; Piece::COUNT] = [
     S(0, 0),   //King
     S(74, 40), //Queen
     S(58, 30), //Rook
@@ -239,7 +240,7 @@ pub const QUEEN_MOBILITY: [PhasedScore; NumberOf::QUEEN_MOVES + 1] = [
 // Small bonus for being the side to move.
 pub const TEMPO_BONUS: PhasedScore = S(27, 23);
 
-pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
+pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; File::COUNT] = [
     S(33, 6),
     S(31, 1),
     S(26, 12),
@@ -250,7 +251,7 @@ pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
     S(81, -4),
 ];
 
-pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [
+pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; File::COUNT] = [
     S(1, 47),
     S(10, 18),
     S(9, 19),

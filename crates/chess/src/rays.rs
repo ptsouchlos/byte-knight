@@ -5,29 +5,22 @@
 
 //! This module provides functionality to retrieve the ray (line of squares) between two squares on a chessboard.
 
-use crate::{
-    attacks,
-    bitboard::Bitboard,
-    definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
-    file::File,
-    rank::Rank,
-    square::Square,
-};
+use crate::{attacks, bitboard::Bitboard, file::File, rank::Rank, square::Square};
 
 #[allow(long_running_const_eval)]
-static RAYS_BETWEEN: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] = initialize_rays_between();
+static RAYS_BETWEEN: [[Bitboard; Square::COUNT]; Square::COUNT] = initialize_rays_between();
 
 /// Initializes the rays between all pairs of squares on the chessboard.
 ///
 /// Returns
 /// - A 2D array where each entry [from][to] contains a Bitboard representing the squares between `from` and `to`.
-const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] {
-    let mut rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] =
-        [[Bitboard::empty(); NumberOf::SQUARES]; NumberOf::SQUARES];
+const fn initialize_rays_between() -> [[Bitboard; Square::COUNT]; Square::COUNT] {
+    let mut rays_between: [[Bitboard; Square::COUNT]; Square::COUNT] =
+        [[Bitboard::empty(); Square::COUNT]; Square::COUNT];
     let mut from = 0u8;
     let mut to = 0u8;
-    while from < NumberOf::SQUARES as u8 {
-        while to < NumberOf::SQUARES as u8 {
+    while from < Square::COUNT as u8 {
+        while to < Square::COUNT as u8 {
             if attacks::rook(Square::from_square_index(from), Bitboard::empty())
                 .intersects(Bitboard::from_square(to))
             {
@@ -83,12 +76,12 @@ pub fn between(from: Square, to: Square) -> Bitboard {
 /// # Returns
 /// - A [`Bitboard`] representing the edge squares of the chessboard, excluding the specified
 pub fn edges(file: File, rank: Rank) -> Bitboard {
-    let file_bb = FILE_BITBOARDS[file];
-    let rank_bb = RANK_BITBOARDS[rank];
-    (FILE_BITBOARDS[File::A as usize] & !file_bb)
-        | (FILE_BITBOARDS[File::H as usize] & !file_bb)
-        | (RANK_BITBOARDS[Rank::R1 as usize] & !rank_bb)
-        | (RANK_BITBOARDS[Rank::R8 as usize] & !rank_bb)
+    let file_bb = file.to_bitboard();
+    let rank_bb = rank.to_bitboard();
+    (File::A.to_bitboard() & !file_bb)
+        | (File::H.to_bitboard() & !file_bb)
+        | (Rank::R1.to_bitboard() & !rank_bb)
+        | (Rank::R8.to_bitboard() & !rank_bb)
 }
 
 /// Returns a [`Bitboard`] representing the entire line (board edge to board edge) that intersects both `from` and `to`.

@@ -3,8 +3,6 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use crate::bitboard::Bitboard;
-
 pub const SPACE: char = ' ';
 pub const NEWLINE: char = '\n';
 pub const DASH: char = '-';
@@ -40,11 +38,6 @@ pub const ROOK_OFFSETS: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
 pub struct NumberOf;
 impl NumberOf {
-    pub const PIECE_TYPES: usize = 6;
-    pub const SQUARES: usize = 64;
-    pub const FILES: usize = 8;
-    pub const RANKS: usize = 8;
-    pub const SIDES: usize = 2;
     pub const CASTLING_OPTIONS: usize = 16;
     // Passed pawns cannot be on ranks 1 or 8
     pub const PASSED_PAWN_RANKS: usize = 6;
@@ -56,8 +49,6 @@ impl NumberOf {
     pub const PAWN_STORM_RANKS: usize = 4;
     pub const KING_FLANK_FILES: usize = 3;
 }
-
-pub const EMPTY: u64 = 0;
 
 pub struct CastlingAvailability;
 impl CastlingAvailability {
@@ -71,33 +62,3 @@ impl CastlingAvailability {
 }
 
 pub static DEFAULT_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-// 0001 0000 0001 0000 0001 0000 0001 0000 0001 0000 0001 0000 0001 0000 0001
-// 72,340,172,838,076,673 as decimal
-pub const FILE_A: u64 = 0x0101010101010101;
-pub const RANK_1: u64 = 0xFF;
-
-type FileBitboards = [Bitboard; NumberOf::FILES];
-type RankBitboards = [Bitboard; NumberOf::RANKS];
-
-pub const FILE_BITBOARDS: FileBitboards = [
-    Bitboard::new(72340172838076673),
-    Bitboard::new(144680345676153346),
-    Bitboard::new(289360691352306692),
-    Bitboard::new(578721382704613384),
-    Bitboard::new(1157442765409226768),
-    Bitboard::new(2314885530818453536),
-    Bitboard::new(4629771061636907072),
-    Bitboard::new(9259542123273814144),
-];
-
-pub const RANK_BITBOARDS: RankBitboards = [
-    Bitboard::new(255),
-    Bitboard::new(65280),
-    Bitboard::new(16711680),
-    Bitboard::new(4278190080),
-    Bitboard::new(1095216660480),
-    Bitboard::new(280375465082880),
-    Bitboard::new(71776119061217280),
-    Bitboard::new(18374686479671623680),
-];

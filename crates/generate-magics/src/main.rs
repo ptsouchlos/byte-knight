@@ -9,7 +9,7 @@ use anyhow::{Result, bail};
 use chess::{
     attacks,
     bitboard::Bitboard,
-    definitions::{BISHOP_BLOCKER_PERMUTATIONS, NumberOf, ROOK_BLOCKER_PERMUTATIONS},
+    definitions::{BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS},
     magics::MagicNumber,
     move_generation,
     pieces::{Piece, SQUARE_NAME},
@@ -98,7 +98,7 @@ fn try_to_make_table(
 
 fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
     let mut rng = rand::rng();
-    let mut magic_numbers = Vec::with_capacity(NumberOf::SQUARES);
+    let mut magic_numbers = Vec::with_capacity(Square::COUNT);
     assert!(piece == Piece::Rook || piece == Piece::Bishop);
 
     let mut offset = 0;
@@ -149,7 +149,7 @@ fn main() {
     let magic_bishop_numbers = find_magic_numbers(Piece::Bishop);
     let magic_rook_numbers = find_magic_numbers(Piece::Rook);
 
-    println!("pub(crate) const BISHOP_MAGICS: [MagicNumber; NumberOf::SQUARES] = [");
+    println!("pub(crate) const BISHOP_MAGICS: [MagicNumber; Square::COUNT] = [");
     for magic in magic_bishop_numbers {
         println!(
             "  MagicNumber::new(Bitboard::new({}), {}, {}, {}),",
@@ -158,7 +158,7 @@ fn main() {
     }
     println!("];");
 
-    println!("pub(crate) const ROOK_MAGICS: [MagicNumber; NumberOf::SQUARES] = [");
+    println!("pub(crate) const ROOK_MAGICS: [MagicNumber; Square::COUNT] = [");
     for magic in magic_rook_numbers {
         println!(
             "  MagicNumber::new(Bitboard::new({}), {}, {}, {}),",

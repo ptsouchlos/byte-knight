@@ -3,7 +3,7 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use chess::{bitboard::Bitboard, definitions::NumberOf, moves::Move, side::Side};
+use chess::{bitboard::Bitboard, moves::Move, side::Side};
 
 use crate::{
     history::{
@@ -53,7 +53,7 @@ impl QuietHistoryEntry {
 /// History table for all quiet moves, indexed by from-square -> to-square -> per side (butterfly
 /// history), with each entry further split into threat buckets (see [`QuietHistoryEntry`]).
 pub struct QuietHistory {
-    from_to_entries: [FromToHistory<QuietHistoryEntry>; NumberOf::SIDES],
+    from_to_entries: [FromToHistory<QuietHistoryEntry>; Side::COUNT],
 }
 
 /// Safe calculation of the bonus applied to quiet moves that are inserted into the history table.
@@ -72,7 +72,7 @@ pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
 
 impl QuietHistory {
     pub(crate) fn new() -> Self {
-        let from_to_entries = [types::default_from_to_history(); NumberOf::SIDES];
+        let from_to_entries = [types::default_from_to_history(); Side::COUNT];
         Self { from_to_entries }
     }
 
@@ -94,7 +94,7 @@ impl QuietHistory {
     }
 
     pub(crate) fn clear(&mut self) {
-        self.from_to_entries = [types::default_from_to_history(); NumberOf::SIDES];
+        self.from_to_entries = [types::default_from_to_history(); Side::COUNT];
     }
 }
 

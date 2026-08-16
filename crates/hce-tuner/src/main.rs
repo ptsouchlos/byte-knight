@@ -3,7 +3,9 @@
 
 use chess::{
     definitions::NumberOf,
+    file::File,
     pieces::{ALL_PIECES, PIECE_NAMES, Piece},
+    square::Square,
 };
 use clap::{Parser, Subcommand, ValueEnum};
 use indicatif::ParallelProgressIterator;
@@ -122,12 +124,12 @@ fn print_table(indent: usize, table: &[TuningScore]) {
 fn print_params(params: &Parameters) {
     println!("Tuned parameters:");
     println!("=================");
-    println!("pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES] = [");
+    println!("pub const PSQTS : [[PhasedScore; Square::COUNT]; Piece::COUNT] = [");
     for piece in ALL_PIECES {
         println!("    // {}", PIECE_NAMES[piece as usize]);
         println!("    [");
-        let start_idx = piece as usize * NumberOf::SQUARES;
-        let end_index = start_idx + NumberOf::SQUARES;
+        let start_idx = piece as usize * Square::COUNT;
+        let end_index = start_idx + Square::COUNT;
         let table = &params.as_slice()[start_idx..end_index];
         print_table(8, table);
         println!("    ],");
@@ -149,9 +151,9 @@ fn print_params(params: &Parameters) {
     println!();
 
     // Print out the doubled pawn penalty values
-    println!("pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
+    println!("pub const DOUBLED_PAWN_VALUES: [PhasedScore; File::COUNT] = [");
 
-    for file in 0..NumberOf::FILES {
+    for file in 0..File::COUNT {
         let idx = Offsets::DOUBLED_PAWN + file;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
@@ -161,9 +163,9 @@ fn print_params(params: &Parameters) {
 
     println!();
 
-    println!("pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
+    println!("pub const ISOLATED_PAWN_VALUES: [PhasedScore; File::COUNT] = [");
 
-    for file in 0..NumberOf::FILES {
+    for file in 0..File::COUNT {
         let idx = Offsets::ISOLATED_PAWN + file;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");
@@ -177,7 +179,7 @@ fn print_params(params: &Parameters) {
     );
 
     println!();
-    println!("pub const KING_SAFETY: [PhasedScore; NumberOf::PIECE_TYPES - 1] =");
+    println!("pub const KING_SAFETY: [PhasedScore; Piece::COUNT - 1] =");
     print!("    [");
     for piece_idx in Piece::iter().filter(|&p| p != Piece::King) {
         let idx = Offsets::KING_SAFETY + piece_idx as usize - 1;
@@ -187,7 +189,7 @@ fn print_params(params: &Parameters) {
     println!("];");
 
     println!();
-    println!("pub const PAWN_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
+    println!("pub const PAWN_THREAT: [PhasedScore; Piece::COUNT] = [");
     for piece_idx in Piece::iter() {
         let idx = Offsets::PAWN_THREAT + piece_idx as usize;
         let val = params.as_slice()[idx];
@@ -196,7 +198,7 @@ fn print_params(params: &Parameters) {
     println!("];");
 
     println!();
-    println!("pub const KNIGHT_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
+    println!("pub const KNIGHT_THREAT: [PhasedScore; Piece::COUNT] = [");
     for piece_idx in Piece::iter() {
         let idx = Offsets::KNIGHT_THREAT + piece_idx as usize;
         let val = params.as_slice()[idx];
@@ -205,7 +207,7 @@ fn print_params(params: &Parameters) {
     println!("];");
 
     println!();
-    println!("pub const BISHOP_THREAT: [PhasedScore; NumberOf::PIECE_TYPES] = [");
+    println!("pub const BISHOP_THREAT: [PhasedScore; Piece::COUNT] = [");
     for piece_idx in Piece::iter() {
         let idx = Offsets::BISHOP_THREAT + piece_idx as usize;
         let val = params.as_slice()[idx];
@@ -257,8 +259,8 @@ fn print_params(params: &Parameters) {
     );
 
     println!();
-    println!("pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [");
-    for file in 0..NumberOf::FILES {
+    println!("pub const ROOK_OPEN_FILE_BONUS: [PhasedScore; File::COUNT] = [");
+    for file in 0..File::COUNT {
         let idx = Offsets::offset_for_rook_open_file(file as u8);
         let val = params.as_slice()[idx];
         println!("    {val:?},");
@@ -266,8 +268,8 @@ fn print_params(params: &Parameters) {
     println!("];");
 
     println!();
-    println!("pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; NumberOf::FILES] = [");
-    for file in 0..NumberOf::FILES {
+    println!("pub const ROOK_SEMI_OPEN_FILE_BONUS: [PhasedScore; File::COUNT] = [");
+    for file in 0..File::COUNT {
         let idx = Offsets::offset_for_rook_semi_open_file(file as u8);
         let val = params.as_slice()[idx];
         println!("    {val:?},");

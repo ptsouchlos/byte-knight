@@ -12,7 +12,7 @@ use std::{
     },
 };
 
-use crate::{bitboard_helpers, definitions::EMPTY, square::Square};
+use crate::{bitboard_helpers, square::Square};
 
 /// Bitboard representation of a chess board.
 /// LSB (bit 0) is a1, MSB (bit 63) is h8.
@@ -96,7 +96,7 @@ impl Bitboard {
     /// # Returns
     /// True if the [`Bitboard`] is empty, false otherwise.
     pub const fn is_empty(&self) -> bool {
-        self.data == EMPTY
+        self.data == 0
     }
 
     pub const fn is_nonempty(&self) -> bool {

@@ -1,7 +1,13 @@
 // Part of the byte-knight project.
 // Tuner adapted from jw1912/hce-tuner (https://github.com/jw1912/hce-tuner)
 
-use chess::{definitions::NumberOf, pieces::Piece, side::Side, square};
+use chess::{
+    definitions::NumberOf,
+    file::File,
+    pieces::Piece,
+    side::Side,
+    square::{self, Square},
+};
 
 pub(crate) struct Offsets;
 
@@ -20,29 +26,29 @@ macro_rules! offsets {
 
 impl Offsets {
     offsets!(
-        PSQT:          64 * NumberOf::PIECE_TYPES,
+        PSQT:          64 * Piece::COUNT,
         PASSED_PAWN:   NumberOf::PASSED_PAWN_RANKS,
-        DOUBLED_PAWN:  NumberOf::FILES,
-        ISOLATED_PAWN: NumberOf::FILES,
+        DOUBLED_PAWN:  File::COUNT,
+        ISOLATED_PAWN: File::COUNT,
         BISHOP_PAIR:   1,
-        KING_SAFETY:   NumberOf::PIECE_TYPES - 1,
-        PAWN_THREAT:   NumberOf::PIECE_TYPES,
-        KNIGHT_THREAT: NumberOf::PIECE_TYPES,
-        BISHOP_THREAT: NumberOf::PIECE_TYPES,
+        KING_SAFETY:   Piece::COUNT - 1,
+        PAWN_THREAT:   Piece::COUNT,
+        KNIGHT_THREAT: Piece::COUNT,
+        BISHOP_THREAT: Piece::COUNT,
         KNIGHT_MOBILITY: NumberOf::KNIGHT_MOVES +1,
         BISHOP_MOBILITY: NumberOf::BISHOP_MOVES +1,
         ROOK_MOBILITY: NumberOf::ROOK_MOVES +1,
         QUEEN_MOBILITY: NumberOf::QUEEN_MOVES +1,
         TEMPO_BONUS: 1,
-        ROOK_OPEN_FILE_BONUS: NumberOf::FILES,
-        ROOK_SEMI_OPEN_FILE_BONUS: NumberOf::FILES,
+        ROOK_OPEN_FILE_BONUS: File::COUNT,
+        ROOK_SEMI_OPEN_FILE_BONUS: File::COUNT,
         PAWN_SHIELD: NumberOf::KING_FLANK_FILES * NumberOf::PAWN_SHIELD_RANKS,
         PAWN_STORM:  NumberOf::KING_FLANK_FILES * NumberOf::PAWN_STORM_RANKS,
     );
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
         Self::PSQT
-            + (piece as usize * NumberOf::SQUARES)
+            + (piece as usize * Square::COUNT)
             + square::flip_if(side == Side::White, square as u8) as usize
     }
 

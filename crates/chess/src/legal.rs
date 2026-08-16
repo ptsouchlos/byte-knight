@@ -19,7 +19,6 @@ use crate::{
     attacks,
     bitboard::Bitboard,
     board::Board,
-    definitions::RANK_BITBOARDS,
     move_generation::{self, metadata::CheckPinMetadata, square_state},
     moves::{Move, MoveFlag},
     pieces::Piece,
@@ -372,7 +371,7 @@ fn ep_legal(
         // Horizontal discovered check: remove both pawns and test king's rank.
         let modified_occ = occupancy & !Bitboard::from(from) & !Bitboard::from(cap_sq);
         let king_rank = king_sq.rank();
-        let rank_bb = RANK_BITBOARDS[king_rank as usize];
+        let rank_bb = king_rank.to_bitboard();
         let rank_attackers = attacks::rook(king_sq, modified_occ)
             & rank_bb
             & (board.piece_bitboard(Piece::Rook, them) | board.piece_bitboard(Piece::Queen, them));
