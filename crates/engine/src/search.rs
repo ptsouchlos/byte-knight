@@ -735,6 +735,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                                 mv,
                                 piece,
                                 bonus as i32,
+                                ply,
                             );
                         }
 
@@ -762,6 +763,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                                     prev_mv,
                                     prev_pc,
                                     -bonus as i32,
+                                    ply,
                                 );
                             }
                         }
