@@ -699,7 +699,7 @@ mod tests {
         for _ in 0..10_000 {
             td.histories
                 .continuation_history
-                .update(prev_mv, prev_pc, mv, piece, i32::MAX);
+                .update(prev_mv, prev_pc, mv, piece, i32::MAX, 1i16);
         }
         td.stack.record_move(prev_mv, prev_pc, 0);
 
