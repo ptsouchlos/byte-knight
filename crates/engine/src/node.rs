@@ -20,6 +20,7 @@ pub struct NodeStack {
 
 impl NodeStack {
     /// The (move, piece) played to reach the node at `ply`, if any.
+    #[allow(unused)]
     pub(crate) fn prev_move(&self, ply: usize) -> Option<(Move, Piece)> {
         if ply == 0 {
             return None;
