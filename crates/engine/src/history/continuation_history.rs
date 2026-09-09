@@ -22,7 +22,13 @@ impl ContinuationHistory {
     const BONUS_MAX: i32 = Self::MAX / 4;
 
     fn index_from_ply(prev_ply: i16) -> usize {
-        (prev_ply & 1 == 0) as usize
+        let index = Self::PLIES.iter().position(|&p| p as i16 == prev_ply);
+        debug_assert!(
+            index.is_some(),
+            "prev_ply {prev_ply} must be one of ContinuationHistory::PLIES {:?}",
+            Self::PLIES
+        );
+        index.unwrap_or(0)
     }
 
     pub(crate) fn get(
@@ -84,7 +90,7 @@ mod tests {
         let mv = Move::new(Square::B4, Square::B5, MoveFlag::Standard);
         let bonus = 300;
         let pc = Piece::Pawn;
-        let prev_ply = 4i16;
+        let prev_ply = 2i16;
 
         // Update the score
         cont_hist.update(prev_mv, pc, mv, pc, bonus, prev_ply);
