@@ -48,6 +48,8 @@ impl Histories {
         mv: &Move,
         ply: usize,
     ) -> i32 {
+        // The given move is not guaranteed to be valid and available on `board`.
+        // Treat "no piece there" as "no continuation-history contribution" (i.e. return 0).
         if let Some(piece) = board.piece_type_on_square(mv.from()) {
             ContinuationHistory::PLIES
                 .iter()
