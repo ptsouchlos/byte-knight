@@ -33,12 +33,17 @@ impl AspirationWindow {
         self.beta
     }
 
+    /// A score at or below `alpha` is a fail-low that needs a wider window unless
+    /// `alpha` is already `-INF`. In that case there is nowhere left to widen and we
+    /// must accept the score as final. Otherwise, a search that returns `-INF` itself,
+    /// would widen forever and never terminate.
     pub(crate) fn failed_low(&self, score: Score) -> bool {
-        score != -Score::INF && score <= self.alpha
+        self.alpha > -Score::INF && score <= self.alpha
     }
 
+    /// See [`Self::failed_low`]; the symmetric case for `beta`/`INF`.
     pub(crate) fn failed_high(&self, score: Score) -> bool {
-        score != Score::INF && score >= self.beta
+        self.beta < Score::INF && score >= self.beta
     }
 
     /// Create a new [`AspirationWindow`] centered around the given score.
