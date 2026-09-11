@@ -692,18 +692,25 @@ mod tests {
                 .update(side, mv, threats, i32::MAX, i32::MAX);
         }
 
-        // Saturate continuation history for this move behind an arbitrary previous move, and
-        // record that previous move so `Histories::get` picks it up as the ply-1 predecessor.
+        // Saturate both the ply-1 and ply-2 continuation-history slots for this move behind
+        // arbitrary previous moves, and record those moves so `Histories::get` picks them up
+        // as the ply-1 and ply-2 predecessors respectively.
         let prev_mv = Move::new(Square::B2, Square::B4, MoveFlag::DoublePush);
         let prev_pc = Piece::Pawn;
+        let prev_mv2 = Move::new(Square::G2, Square::G4, MoveFlag::DoublePush);
+        let prev_pc2 = Piece::Pawn;
         for _ in 0..10_000 {
             td.histories
                 .continuation_history
-                .update(prev_mv, prev_pc, mv, piece, i32::MAX);
+                .update(prev_mv, prev_pc, mv, piece, i32::MAX, 1i16);
+            td.histories
+                .continuation_history
+                .update(prev_mv2, prev_pc2, mv, piece, i32::MAX, 2i16);
         }
-        td.stack.record_move(prev_mv, prev_pc, 0);
+        td.stack.record_move(prev_mv, prev_pc, 1);
+        td.stack.record_move(prev_mv2, prev_pc2, 0);
 
-        let combined = td.histories.get(&board, &td.stack, side, mv, threats, 1);
+        let combined = td.histories.get(&board, &td.stack, side, mv, threats, 2);
         assert!(
             combined < KILLER_BONUS,
             "combined saturated history score ({combined}) must stay below KILLER_BONUS ({KILLER_BONUS})"

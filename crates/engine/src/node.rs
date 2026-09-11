@@ -19,18 +19,6 @@ pub struct NodeStack {
 }
 
 impl NodeStack {
-    /// The (move, piece) played to reach the node at `ply`, if any.
-    pub(crate) fn prev_move(&self, ply: usize) -> Option<(Move, Piece)> {
-        if ply == 0 {
-            return None;
-        }
-        let prev = self[ply - 1];
-        match (prev.mv, prev.piece) {
-            (Some(mv), Some(pc)) => Some((mv, pc)),
-            _ => None,
-        }
-    }
-
     /// Record a move/piece pair for the given ply.
     pub(crate) fn record_move(&mut self, mv: Move, pc: Piece, ply: usize) {
         self.data[ply].mv = Some(mv);

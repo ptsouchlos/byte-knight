@@ -34,7 +34,7 @@ use crate::{
     move_picker,
     node_types::{NodeType, NonPvNode, RootNode},
     principle_variation::PrincipleVariation,
-    score::{self, LargeScoreType, Score, ScoreType},
+    score::{self, Score, ScoreType},
     search, see,
     table::Table,
     thread_data::{LimitType, ThreadData},
@@ -716,28 +716,26 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         td.killers_table.update(ply as usize, mv, piece);
 
                         // calculate history bonus
-                        let bonus = quiet_history::calculate_bonus_for_depth(depth);
+                        let bonus = quiet_history::calculate_bonus_for_depth(depth) as i32;
+                        let cont_hist_bonuses = &[bonus, bonus];
+
                         // Update quiet history
                         td.histories.quiet_history.update(
                             board.side_to_move(),
                             mv,
                             threats,
-                            bonus as LargeScoreType,
-                            bonus as LargeScoreType,
+                            bonus,
+                            bonus,
                         );
 
                         // Update continuation history.
-                        // Check that we're not at the root ply first (no previous node).
-                        let prev_move = td.stack.prev_move(ply as usize);
-                        if let Some((p_mv, p_pc)) = prev_move {
-                            td.histories.continuation_history.update(
-                                p_mv,
-                                p_pc,
-                                mv,
-                                piece,
-                                bonus as i32,
-                            );
-                        }
+                        td.histories.update_continuation_history(
+                            &td.stack,
+                            &mv,
+                            piece,
+                            ply as usize,
+                            cont_hist_bonuses,
+                        );
 
                         // Apply a penalty to all quiets searched so far.
                         // The board is already in the parent state (we already unmade the move)
@@ -750,21 +748,18 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                                 board.side_to_move(),
                                 prev_mv,
                                 threats,
-                                -bonus as LargeScoreType,
-                                -bonus as LargeScoreType,
+                                -bonus,
+                                -bonus,
                             );
 
-                            // Same (prev_mv, prev_pc) predecessor context as the bonus above -
-                            // penalize the rejected quiet in that same continuation slot.
-                            if let Some((p_mv, p_pc)) = prev_move {
-                                td.histories.continuation_history.update(
-                                    p_mv,
-                                    p_pc,
-                                    prev_mv,
-                                    prev_pc,
-                                    -bonus as i32,
-                                );
-                            }
+                            let cont_maluses = &[-bonus, -bonus];
+                            td.histories.update_continuation_history(
+                                &td.stack,
+                                &prev_mv,
+                                prev_pc,
+                                ply as usize,
+                                cont_maluses,
+                            );
                         }
                     }
                     break;
@@ -1154,12 +1149,10 @@ mod tests {
     use crate::{
         evaluation::ByteKnightEvaluation,
         log_level::LogDebug,
-        score::Score,
+        score::{LargeScoreType, Score},
         search::{Search, limits::SearchLimits},
         thread_data::ThreadData,
     };
-
-    use super::LargeScoreType;
 
     fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchLimits) {
         let mut td = ThreadData::from_limits(config);

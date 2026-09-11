@@ -5,7 +5,7 @@
 
 //! This module contains all history tables and consolidates them into a Histories object.
 
-use chess::{bitboard::Bitboard, board::Board, moves::Move, side::Side};
+use chess::{bitboard::Bitboard, board::Board, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
     history::{continuation_history::ContinuationHistory, quiet_history::QuietHistory},
@@ -48,12 +48,50 @@ impl Histories {
         mv: &Move,
         ply: usize,
     ) -> i32 {
-        if let Some((prev_mv, prev_pc)) = node_stack.prev_move(ply) {
-            let piece = board.piece_type_on_square(mv.from()).unwrap();
-            self.continuation_history.get(prev_mv, prev_pc, *mv, piece)
+        // The given move is not guaranteed to be valid and available on `board`.
+        // Treat "no piece there" as "no continuation-history contribution" (i.e. return 0).
+        if let Some(piece) = board.piece_type_on_square(mv.from()) {
+            ContinuationHistory::PLIES
+                .iter()
+                .filter(|&&prev_ply| ply >= prev_ply)
+                .filter_map(|&prev_ply| {
+                    let prev = node_stack[ply - prev_ply];
+                    let (prev_mv, prev_pc) = (prev.mv?, prev.piece?);
+                    Some(self.continuation_history.get(
+                        prev_mv,
+                        prev_pc,
+                        *mv,
+                        piece,
+                        prev_ply as i16,
+                    ))
+                })
+                .sum()
         } else {
             0
         }
+    }
+
+    pub(crate) fn update_continuation_history(
+        &mut self,
+        node_stack: &NodeStack,
+        mv: &Move,
+        pc: Piece,
+        ply: usize,
+        bonuses: &[LargeScoreType; ContinuationHistory::PLY_COUNT],
+    ) {
+        ContinuationHistory::PLIES
+            .iter()
+            .zip(bonuses)
+            .filter(|&(&prev_ply, _)| ply >= prev_ply)
+            .filter_map(|(&prev_ply, &bonus)| {
+                let prev_node = node_stack[ply - prev_ply];
+                let (prev_mv, prev_pc) = (prev_node.mv?, prev_node.piece?);
+                Some((prev_mv, prev_pc, bonus, prev_ply))
+            })
+            .for_each(|(prev_mv, prev_pc, bonus, prev_ply)| {
+                self.continuation_history
+                    .update(prev_mv, prev_pc, *mv, pc, bonus, prev_ply as i16);
+            });
     }
 
     pub fn clear(&mut self) {
