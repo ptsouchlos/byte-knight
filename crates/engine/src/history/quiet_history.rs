@@ -8,10 +8,11 @@ use chess::{bitboard::Bitboard, moves::Move, side::Side};
 use crate::{
     history::{
         threat_bucket::{ThreatBucket, ThreatIndex},
-        types::{self, FromToHistory},
+        types::FromToHistory,
         util::gravity,
     },
     score::{LargeScoreType, Score},
+    utils::{self, boxed_and_zeroed},
 };
 
 /// A single quiet-history cell, split into a threat-agnostic `factoriser` and a `bucket` indexed
@@ -53,7 +54,7 @@ impl QuietHistoryEntry {
 /// History table for all quiet moves, indexed by from-square -> to-square -> per side (butterfly
 /// history), with each entry further split into threat buckets (see [`QuietHistoryEntry`]).
 pub struct QuietHistory {
-    from_to_entries: [FromToHistory<QuietHistoryEntry>; Side::COUNT],
+    from_to_entries: Box<[FromToHistory<QuietHistoryEntry>; Side::COUNT]>,
 }
 
 /// Safe calculation of the bonus applied to quiet moves that are inserted into the history table.
@@ -71,11 +72,6 @@ pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
 }
 
 impl QuietHistory {
-    pub(crate) fn new() -> Self {
-        let from_to_entries = [types::default_from_to_history(); Side::COUNT];
-        Self { from_to_entries }
-    }
-
     pub(crate) fn get(&self, side: Side, mv: Move, threats: Bitboard) -> LargeScoreType {
         let idx = ThreatIndex::new(&mv, threats);
         self.from_to_entries[side][mv.from()][mv.to()].score(idx)
@@ -94,13 +90,15 @@ impl QuietHistory {
     }
 
     pub(crate) fn clear(&mut self) {
-        self.from_to_entries = [types::default_from_to_history(); Side::COUNT];
+        self.from_to_entries = unsafe { boxed_and_zeroed() }
     }
 }
 
 impl Default for QuietHistory {
     fn default() -> Self {
-        Self::new()
+        Self {
+            from_to_entries: unsafe { utils::boxed_and_zeroed() },
+        }
     }
 }
 
@@ -113,7 +111,7 @@ mod tests {
 
     #[test]
     fn initialize_history_table() {
-        let history_table = QuietHistory::new();
+        let history_table = QuietHistory::default();
         // loop through all sides, from-squares, and to-squares
         for side in 0..2 {
             for from in 0..64 {
@@ -133,7 +131,7 @@ mod tests {
         // repeated positive updates must strictly increase the read-back score - but the exact
         // magnitude is an internal accounting detail (bonus split, gravity truncation), not
         // something worth hardcoding here.
-        let mut history_table = QuietHistory::new();
+        let mut history_table = QuietHistory::default();
         let mv = Move::new(Square::B1, Square::A1, chess::moves::MoveFlag::Standard);
         let side = Side::Black;
         let score = 37;
@@ -157,7 +155,7 @@ mod tests {
 
     #[test]
     fn threat_buckets_are_independent_of_untouched_buckets() {
-        let mut history_table = QuietHistory::new();
+        let mut history_table = QuietHistory::default();
         let mv = Move::new(Square::B1, Square::A1, chess::moves::MoveFlag::Standard);
         let side = Side::Black;
 

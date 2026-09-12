@@ -10,7 +10,3 @@ use chess::{pieces::Piece, square::Square};
 pub(crate) type FromToHistory<T> = [[T; Square::COUNT]; Square::COUNT];
 
 pub(crate) type PieceToHistory<T> = [[T; Square::COUNT]; Piece::COUNT];
-
-pub(crate) fn default_from_to_history<T: Default + Copy>() -> FromToHistory<T> {
-    [[Default::default(); Square::COUNT]; Square::COUNT]
-}
