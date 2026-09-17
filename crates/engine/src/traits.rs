@@ -39,4 +39,5 @@ pub trait EvalValues {
         rank_index: usize,
         side: Side,
     ) -> Self::ReturnScore;
+    fn pawn_defense_bonus(&self) -> Self::ReturnScore;
 }

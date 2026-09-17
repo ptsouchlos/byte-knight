@@ -280,6 +280,8 @@ pub const PAWN_STORM: [[PhasedScore; NumberOf::PAWN_STORM_RANKS]; NumberOf::KING
     [S(-47, 223), S(-60, 85), S(-22, 22), S(-2, 2)],
 ];
 
+pub const PAWN_DEFENSE: PhasedScore = S(6, 8);
+
 const RANK_1: u8 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -365,6 +367,10 @@ impl EvalValues for ByteKnightValues {
         _side: Side,
     ) -> Self::ReturnScore {
         PAWN_STORM[file_index][rank_index]
+    }
+
+    fn pawn_defense_bonus(&self) -> Self::ReturnScore {
+        PAWN_DEFENSE
     }
 }
 
