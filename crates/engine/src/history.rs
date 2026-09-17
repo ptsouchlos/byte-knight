@@ -8,11 +8,15 @@
 use chess::{bitboard::Bitboard, board::Board, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
-    history::{continuation_history::ContinuationHistory, quiet_history::QuietHistory},
+    history::{
+        capture_history::CaptureHistory, continuation_history::ContinuationHistory,
+        quiet_history::QuietHistory,
+    },
     node::NodeStack,
     score::LargeScoreType,
 };
 
+pub mod capture_history;
 pub mod continuation_history;
 pub mod quiet_history;
 pub mod threat_bucket;
@@ -25,6 +29,7 @@ mod util;
 pub struct Histories {
     pub quiet_history: QuietHistory,
     pub continuation_history: ContinuationHistory,
+    pub capture_history: CaptureHistory,
 }
 
 impl Histories {
@@ -72,6 +77,16 @@ impl Histories {
         }
     }
 
+    pub(crate) fn capture_history_score(&self, board: &Board, mv: &Move) -> i32 {
+        let pc = board
+            .piece_type_on_square(mv.to())
+            .expect("Invalid move for capture scoring");
+        let captured_piece = board
+            .captured(mv)
+            .expect("Invalid move for capture scoring.");
+        self.capture_history.get(board, *mv, pc, captured_piece) as i32
+    }
+
     pub(crate) fn update_continuation_history(
         &mut self,
         node_stack: &NodeStack,
@@ -98,5 +113,6 @@ impl Histories {
     pub fn clear(&mut self) {
         self.quiet_history.clear();
         self.continuation_history.clear();
+        self.capture_history.clear();
     }
 }
