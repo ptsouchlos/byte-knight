@@ -28,6 +28,7 @@ pub struct Histories {
 }
 
 impl Histories {
+    #[allow(unused)]
     pub(crate) fn get(
         &self,
         board: &Board,
