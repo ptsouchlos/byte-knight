@@ -369,7 +369,7 @@ impl EvalValues for ByteKnightValues {
         PAWN_STORM[file_index][rank_index]
     }
 
-    fn pawn_defense_bonus(&self) -> Self::ReturnScore {
+    fn pawn_defense_bonus(&self, _side: Side) -> Self::ReturnScore {
         PAWN_DEFENSE
     }
 }
