@@ -230,18 +230,20 @@ impl MovePicker {
                 .killers
                 .iter()
                 .any(|k| k.is_some_and(|k| k.matches(*mv, piece)));
-            if is_killer {
-                KILLER_BONUS
-            } else {
-                thread_data.histories.get(
-                    board,
-                    &thread_data.stack,
-                    board.side_to_move(),
-                    *mv,
-                    threats,
-                    self.ply,
-                )
-            }
+            let killer_bonus = if is_killer { KILLER_BONUS } else { 0 };
+            let quiet_hist_bonus =
+                thread_data
+                    .histories
+                    .quiet_history
+                    .get(board.side_to_move(), *mv, threats);
+            let cont_hist_bonus = thread_data.histories.continuation_history_score(
+                board,
+                &thread_data.stack,
+                mv,
+                self.ply,
+            );
+
+            killer_bonus + quiet_hist_bonus + cont_hist_bonus
         }
     }
 
