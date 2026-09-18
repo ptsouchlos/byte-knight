@@ -620,24 +620,17 @@ mod tests {
             "rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3",
         ];
 
-        let scores: [ScoreType; 128] = [
-            27, -5, 713, 734, -666, -688, 1387, -1340, 607, 642, -560, -595, 24, 23, 32, 25, 25,
-            16, 23, -666, -688, 713, 734, -1340, 1387, -560, -595, 607, 642, 24, 25, 16, 23, 23,
-            32, 25, 34, 25, 23, -398, 551, 13, 21, 16, 445, -504, -9, -35, 878, -862, 101, 82,
-            -830, 910, 24, 17, 24, 31, -1266, -1348, -8, 1283, -1348, 56, 234, 265, -188, -219, 53,
-            -188, -219, 234, 265, -7, -5, -5, 23, 23, 23, 40, 6, 8, 23, 23, 23, 6, 40, 38, 12, 46,
-            24, 20, 22, 26, -315, 20, 34, 0, 22, 26, 24, 20, 361, 26, 16, 15, 30, 31, 18, 28, 23,
-            30, 31, 16, 15, 28, 18, 23, 34, 33, 26, 40, 12, 14, 20, 6, 27, 46,
-        ];
-
         let eval = ByteKnightEvaluation::default();
 
-        for (i, fen) in positions.iter().enumerate() {
-            let board = Board::from_fen(fen).unwrap();
-            let score = eval.eval(&board);
-            println!("{},", score.0);
-            assert_eq!(score.0, scores[i]);
-        }
+        let scores: Vec<ScoreType> = positions
+            .iter()
+            .map(|fen| {
+                let board = Board::from_fen(fen).unwrap();
+                eval.eval(&board).0
+            })
+            .collect();
+
+        insta::assert_yaml_snapshot!(scores);
     }
 
     #[test]
