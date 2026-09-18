@@ -38,6 +38,7 @@ thiserror = "2.0.20"
 uci-parser = "1.1.0"
 ctrlc = "3.5.2"
 rapidhash = "4.4.1"
+insta = { version = "1.48.0", features = ["yaml"] }
 
 [profile.dev]
 opt-level = 1
