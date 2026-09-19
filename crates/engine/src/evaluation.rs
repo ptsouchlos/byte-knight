@@ -8,6 +8,7 @@ use std::ops::AddAssign;
 use chess::{
     attacks,
     bitboard::Bitboard,
+    bitboard_helpers,
     board::Board,
     file::File,
     pieces::Piece,
@@ -243,7 +244,11 @@ impl<Values: EvalValues> Evaluation<Values> {
         PhasedScore: AddAssign<Values::ReturnScore>,
     {
         let white_pawns = board.piece_bitboard(Piece::Pawn, Side::White);
+        let white_pawn_attacks =
+            bitboard_helpers::north_east(white_pawns) | bitboard_helpers::north_west(white_pawns);
         let black_pawns = board.piece_bitboard(Piece::Pawn, Side::Black);
+        let black_pawn_attacks =
+            bitboard_helpers::south_east(black_pawns) | bitboard_helpers::south_west(black_pawns);
 
         if let Some(cached_score) =
             self.pawn_cache
@@ -254,6 +259,13 @@ impl<Values: EvalValues> Evaluation<Values> {
 
         let structure = self.pawn_evaluator.detect_pawn_structure(board);
         let mut score = [PhasedScore::default(); Side::COUNT];
+
+        let white_defended =
+            (white_pawn_attacks & board.pieces(Side::White)).number_of_occupied_squares() as i16;
+        let black_defended =
+            (black_pawn_attacks & board.pieces(Side::Black)).number_of_occupied_squares() as i16;
+        score[Side::White] += self.values().pawn_defense_bonus(Side::White) * white_defended;
+        score[Side::Black] += self.values().pawn_defense_bonus(Side::Black) * black_defended;
 
         for side in Side::iter() {
             let idx = side as usize;

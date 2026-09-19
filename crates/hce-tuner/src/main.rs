@@ -316,6 +316,13 @@ fn print_params(params: &Parameters) {
         println!("],")
     }
     println!("];");
+
+    println!();
+    println!(
+        "pub const PAWN_DEFENSE: PhasedScore = {:?}",
+        params.as_slice()[Offsets::offset_for_pawn_defense()]
+    );
+    println!();
 }
 
 fn plot_k(tuner: &Tuner) {

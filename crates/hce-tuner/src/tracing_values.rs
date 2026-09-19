@@ -140,4 +140,10 @@ impl EvalValues for TracingValues {
         self.record(side, idx);
         PhasedScore::default()
     }
+
+    fn pawn_defense_bonus(&self, side: Side) -> Self::ReturnScore {
+        let idx = Offsets::offset_for_pawn_defense();
+        self.record(side, idx);
+        PhasedScore::default()
+    }
 }
