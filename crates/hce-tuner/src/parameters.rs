@@ -121,6 +121,10 @@ impl Parameters {
             }
         }
 
+        // Pawn defense bonus
+        params[Offsets::offset_for_pawn_defense()] =
+            values.pawn_defense_bonus(1, Side::White).into();
+
         params
     }
 

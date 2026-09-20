@@ -136,8 +136,12 @@ To run the full suite of supported tests, benchmarks and other development depen
 - [just](https://github.com/casey/just)
 - Rust llvm-profdata component
   - Install with `rustup component add llvm-tools-preview`
-- [grcov](https://github.com/mozilla/grcov) (Used to generate code coverage reports)
-- [lcov](https://github.com/linux-test-project/lcov) (Required for `genhtml` to create HTML reports from `lcov` data)
+- [grcov](https://github.com/mozilla/grcov): Used to generate code coverage reports
+- [lcov](https://github.com/linux-test-project/lcov): Required for `genhtml` to create HTML reports from `lcov` data
+
+The following are optional development dependencies:
+
+- [insta](https://github.com/mitsuhiko/insta): Used for snapshot tests
 
 ## License
 
