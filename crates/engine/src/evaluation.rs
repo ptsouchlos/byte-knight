@@ -264,8 +264,12 @@ impl<Values: EvalValues> Evaluation<Values> {
             (white_pawn_attacks & board.pieces(Side::White)).number_of_occupied_squares() as i16;
         let black_defended =
             (black_pawn_attacks & board.pieces(Side::Black)).number_of_occupied_squares() as i16;
-        score[Side::White] += self.values().pawn_defense_bonus(Side::White) * white_defended;
-        score[Side::Black] += self.values().pawn_defense_bonus(Side::Black) * black_defended;
+        score[Side::White] += self
+            .values()
+            .pawn_defense_bonus(white_defended, Side::White);
+        score[Side::Black] += self
+            .values()
+            .pawn_defense_bonus(black_defended, Side::Black);
 
         for side in Side::iter() {
             let idx = side as usize;
