@@ -46,7 +46,7 @@ where
     pawn_cache: PawnCache,
 }
 
-impl<Values: EvalValues> Evaluation<Values> {
+impl<Values: EvalValues<ReturnScore = PhasedScore>> Evaluation<Values> {
     pub fn new(values: Values) -> Self {
         Evaluation {
             values,
@@ -288,6 +288,54 @@ impl<Values: EvalValues> Evaluation<Values> {
 
         score
     }
+
+    fn evaluate_knight_outposts(&self, board: &Board, side: Side) -> PhasedScore {
+        let ranks = (Rank::R4.to_bitboard() | Rank::R5.to_bitboard() | Rank::R6.to_bitboard())
+            .relative_to(side);
+
+        let knights = board.piece_bitboard(Piece::Knight, side) & ranks;
+        if knights.is_empty() {
+            // No candidate knights, return early.
+            return PhasedScore::default();
+        }
+
+        // Get support pawns
+        let pawns = board.piece_bitboard(Piece::Pawn, side);
+        let support = match side {
+            Side::White => {
+                bitboard_helpers::north_east(pawns) | bitboard_helpers::north_west(pawns)
+            }
+            Side::Black => {
+                bitboard_helpers::south_east(pawns) | bitboard_helpers::south_west(pawns)
+            }
+        };
+
+        let candidates = knights & support;
+        if candidates.is_empty() {
+            return PhasedScore::default();
+        }
+
+        let enemy = side.opposite();
+        let enemy_pawns = board.piece_bitboard(Piece::Pawn, enemy);
+        let enemy_attacks = match enemy {
+            Side::White => {
+                bitboard_helpers::north_east(enemy_pawns)
+                    | bitboard_helpers::north_west(enemy_pawns)
+            }
+            Side::Black => {
+                bitboard_helpers::south_east(enemy_pawns)
+                    | bitboard_helpers::south_west(enemy_pawns)
+            }
+        };
+
+        let challenge_span = match enemy {
+            Side::White => bitboard_helpers::north_fill(enemy_attacks),
+            Side::Black => bitboard_helpers::south_fill(enemy_attacks),
+        };
+
+        let count = (candidates & !challenge_span).number_of_occupied_squares() as i16;
+        self.values().knight_outputs(count, side)
+    }
 }
 
 impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<Values> {
@@ -451,11 +499,22 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         mg[opp_idx] += their_rook_bonus.mg() as i32;
         eg[opp_idx] += their_rook_bonus.eg() as i32;
 
+        // Knight outposts
+        let our_knight_outpost_bonus = self.evaluate_knight_outposts(board, side_to_move);
+        let their_knight_output_bonus =
+            self.evaluate_knight_outposts(board, side_to_move.opposite());
+
+        mg[stm_idx] += our_knight_outpost_bonus.mg() as i32;
+        eg[stm_idx] += our_knight_outpost_bonus.eg() as i32;
+
+        mg[opp_idx] += their_knight_output_bonus.mg() as i32;
+        eg[opp_idx] += their_knight_output_bonus.eg() as i32;
+
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
         let score = PhasedScore::new(mg_score as ScoreType, eg_score as ScoreType);
 
-        // taper the score based on the game phase
+        // Taper the score based on the game phase
         let val = score.taper(game_phase.min(GAME_PHASE_MAX) as PhaseType, GAME_PHASE_MAX);
         Score::new(val)
     }
