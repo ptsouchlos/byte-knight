@@ -290,8 +290,11 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Evaluation<Values> {
     }
 
     fn evaluate_knight_outposts(&self, board: &Board, side: Side) -> PhasedScore {
-        let ranks = (Rank::R4.to_bitboard() | Rank::R5.to_bitboard() | Rank::R6.to_bitboard())
-            .relative_to(side);
+        let ranks = (Rank::R4.to_bitboard()
+            | Rank::R5.to_bitboard()
+            | Rank::R6.to_bitboard()
+            | Rank::R7.to_bitboard())
+        .relative_to(side);
 
         let knights = board.piece_bitboard(Piece::Knight, side) & ranks;
         if knights.is_empty() {
