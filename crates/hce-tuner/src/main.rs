@@ -322,6 +322,13 @@ fn print_params(params: &Parameters) {
         "pub const PAWN_DEFENSE: PhasedScore = {:?};",
         params.as_slice()[Offsets::offset_for_pawn_defense()]
     );
+
+    println!();
+    println!(
+        "pub const KNIGHT_OUTPOST: PhasedScore = {:?};",
+        params.as_slice()[Offsets::offset_for_knight_outposts()]
+    );
+
     println!();
 }
 
