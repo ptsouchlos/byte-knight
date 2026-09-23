@@ -334,7 +334,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Evaluation<Values> {
         };
 
         let count = (candidates & !challenge_span).number_of_occupied_squares() as i16;
-        self.values().knight_outputs(count, side)
+        self.values().knight_outpost_bonus(count, side)
     }
 }
 
@@ -501,14 +501,14 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         // Knight outposts
         let our_knight_outpost_bonus = self.evaluate_knight_outposts(board, side_to_move);
-        let their_knight_output_bonus =
+        let their_knight_outpost_bonus =
             self.evaluate_knight_outposts(board, side_to_move.opposite());
 
         mg[stm_idx] += our_knight_outpost_bonus.mg() as i32;
         eg[stm_idx] += our_knight_outpost_bonus.eg() as i32;
 
-        mg[opp_idx] += their_knight_output_bonus.mg() as i32;
-        eg[opp_idx] += their_knight_output_bonus.eg() as i32;
+        mg[opp_idx] += their_knight_outpost_bonus.mg() as i32;
+        eg[opp_idx] += their_knight_outpost_bonus.eg() as i32;
 
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];

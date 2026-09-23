@@ -375,7 +375,7 @@ impl EvalValues for ByteKnightValues {
         PAWN_DEFENSE * count
     }
 
-    fn knight_outputs(&self, count: i16, _side: Side) -> Self::ReturnScore {
+    fn knight_outpost_bonus(&self, count: i16, _side: Side) -> Self::ReturnScore {
         KNIGHT_OUTPOST * count
     }
 }
