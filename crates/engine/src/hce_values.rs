@@ -282,6 +282,8 @@ pub const PAWN_STORM: [[PhasedScore; NumberOf::PAWN_STORM_RANKS]; NumberOf::KING
 
 pub const PAWN_DEFENSE: PhasedScore = S(6, 8);
 
+pub const KNIGHT_OUTPOST: PhasedScore = S(12, 8);
+
 const RANK_1: u8 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -371,6 +373,10 @@ impl EvalValues for ByteKnightValues {
 
     fn pawn_defense_bonus(&self, count: i16, _side: Side) -> Self::ReturnScore {
         PAWN_DEFENSE * count
+    }
+
+    fn knight_outputs(&self, count: i16, _side: Side) -> Self::ReturnScore {
+        KNIGHT_OUTPOST * count
     }
 }
 
