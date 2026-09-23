@@ -125,6 +125,10 @@ impl Parameters {
         params[Offsets::offset_for_pawn_defense()] =
             values.pawn_defense_bonus(1, Side::White).into();
 
+        // Knight outposts
+        params[Offsets::offset_for_knight_outposts()] =
+            values.knight_outpost_bonus(1, Side::White).into();
+
         params
     }
 
