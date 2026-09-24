@@ -560,11 +560,9 @@ mod tests {
     /// Starting position — no captures, no promotions.
     const STARTING_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    /// Position with captures of different values:
-    ///   White rook on a1, white pawn on e4, black queen on d5, black pawn on d6.
-    ///   Pawn can capture queen (PxQ) and pawn (PxP); rook can capture queen (RxQ).
-    ///   Multiple captures with different MVV-LVA values.
-    const MULTI_CAPTURE_FEN: &str = "8/8/3p4/3q4/3PP3/8/8/R3K1k1 w - - 0 1";
+    /// Position with three SEE-winning captures of different victim values:
+    /// exd5 (PxQ), exf5 (PxN) and Rxb4 (RxP).
+    const MULTI_CAPTURE_FEN: &str = "7k/8/8/3q1n2/1p2P3/8/8/1R2K3 w - - 0 1";
 
     #[test]
     fn tt_move_comes_first() {
@@ -619,45 +617,25 @@ mod tests {
     }
 
     #[test]
-    fn mvv_lva_ordering_within_tacticals() {
-        // PxQ (pawn captures queen) has higher MVV-LVA than PxP (pawn captures pawn),
-        // and RxQ (rook captures queen) also scores highly.
-        // Expected MVV-LVA ordering (highest first):
-        //   PxQ (victim=queen, attacker=pawn): 25*5 - 1 = 124
-        //   RxQ (victim=queen, attacker=rook): 25*5 - 4 = 121
-        //   PxP (victim=pawn, attacker=pawn):  25*1 - 1 = 24
+    fn captures_ordered_by_victim_value_with_empty_history() {
+        // Fresh ThreadData has zeroed capture history, so ordering is purely by victim value.
         let board = Board::from_fen(MULTI_CAPTURE_FEN).unwrap();
         let td = ThreadData::default();
         let mut picker = make_move_picker(None, 0, meta(&board));
 
-        let mut captures: Vec<chess::moves::Move> = Vec::new();
+        let mut victim_values = Vec::new();
         while let Some(mv) = picker.next(&board, &td) {
-            if board.captured(&mv).is_some() {
-                captures.push(mv);
-            } else {
-                // First quiet signals end of tactical stage
-                break;
+            match board.captured(&mv) {
+                Some(victim) => victim_values.push(see::piece_value(victim)),
+                None => break,
             }
         }
 
-        assert!(!captures.is_empty(), "Expected at least one capture");
-        // Verify that each capture is at least as valuable as the next one (descending order)
-        for pair in captures.windows(2) {
-            let a = pair[0];
-            let b = pair[1];
-            let victim_a = board.captured(&a).unwrap();
-            let piece_a = piece_for_move(&board, &a);
-            let victim_b = board.captured(&b).unwrap();
-            let piece_b = piece_for_move(&board, &b);
-            let score_a = super::mvv_lva(victim_a, piece_a);
-            let score_b = super::mvv_lva(victim_b, piece_b);
-            assert!(
-                score_a >= score_b,
-                "Captures not in MVV-LVA order: {:?} ({score_a}) before {:?} ({score_b})",
-                a.to_long_algebraic(),
-                b.to_long_algebraic()
-            );
-        }
+        assert_eq!(victim_values.len(), 3, "Expected PxQ, PxN and RxP");
+        assert!(
+            victim_values.windows(2).all(|pair| pair[0] >= pair[1]),
+            "Captures not ordered by descending victim value: {victim_values:?}"
+        );
     }
 
     #[test]
