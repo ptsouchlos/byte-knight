@@ -44,7 +44,8 @@ impl Offsets {
         ROOK_SEMI_OPEN_FILE_BONUS: File::COUNT,
         PAWN_SHIELD: NumberOf::KING_FLANK_FILES * NumberOf::PAWN_SHIELD_RANKS,
         PAWN_STORM:  NumberOf::KING_FLANK_FILES * NumberOf::PAWN_STORM_RANKS,
-        PAWN_DEFENSE: 1
+        PAWN_DEFENSE: 1,
+        KNIGHT_OUTPOSTS: 1
     );
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
@@ -146,6 +147,10 @@ impl Offsets {
 
     pub(crate) fn offset_for_pawn_defense() -> usize {
         Self::PAWN_DEFENSE
+    }
+
+    pub(crate) fn offset_for_knight_outposts() -> usize {
+        Self::KNIGHT_OUTPOSTS
     }
 }
 

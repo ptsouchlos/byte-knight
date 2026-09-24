@@ -148,4 +148,12 @@ impl EvalValues for TracingValues {
         }
         PhasedScore::default()
     }
+
+    fn knight_outpost_bonus(&self, count: i16, side: Side) -> Self::ReturnScore {
+        let idx = Offsets::offset_for_knight_outposts();
+        for _ in 0..count {
+            self.record(side, idx);
+        }
+        PhasedScore::default()
+    }
 }

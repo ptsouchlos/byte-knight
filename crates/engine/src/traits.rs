@@ -40,4 +40,5 @@ pub trait EvalValues {
         side: Side,
     ) -> Self::ReturnScore;
     fn pawn_defense_bonus(&self, count: i16, side: Side) -> Self::ReturnScore;
+    fn knight_outpost_bonus(&self, count: i16, side: Side) -> Self::ReturnScore;
 }

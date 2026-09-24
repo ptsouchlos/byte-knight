@@ -12,7 +12,7 @@ use std::{
     },
 };
 
-use crate::{bitboard_helpers, square::Square};
+use crate::{bitboard_helpers, side::Side, square::Square};
 
 /// Bitboard representation of a chess board.
 /// LSB (bit 0) is a1, MSB (bit 63) is h8.
@@ -143,7 +143,7 @@ impl Bitboard {
     }
 
     /// Get the least significant set square in the bitboard.
-    #[inline(always)]
+    #[inline]
     pub fn lsb(self) -> Option<Square> {
         if !self.is_empty() {
             Some(Square::from_square_index(
@@ -154,10 +154,46 @@ impl Bitboard {
         }
     }
 
+    /// Get and pop the least significant bit (set square) in the [`Bitboard`].
+    #[inline]
     pub fn pop_lsb(&mut self) -> Option<Square> {
         let lsb = self.lsb()?;
         self.clear_square(lsb);
         Some(lsb)
+    }
+
+    /// Return a new [`Bitboard`] that has its files flipped.
+    #[inline]
+    pub const fn flip_files(self) -> Bitboard {
+        const K1: u64 = 0x5555555555555555;
+        const K2: u64 = 0x3333333333333333;
+        const K4: u64 = 0x0F0F0F0F0F0F0F0F;
+
+        let mut result = self.data;
+        result = ((result >> 1) & K1) | ((result & K1) << 1);
+        result = ((result >> 2) & K2) | ((result & K2) << 2);
+        result = ((result >> 4) & K4) | ((result & K4) << 4);
+
+        Bitboard { data: result }
+    }
+
+    /// Return a new [`Bitboard`] that has its ranks flipped.
+    #[inline]
+    pub const fn flip_ranks(self) -> Bitboard {
+        Bitboard {
+            data: self.data.swap_bytes(),
+        }
+    }
+
+    /// Return a [`Bitboard`] relative to the given side. The [`Bitboard`] representation
+    /// is relative, so if the given side is [`Side::Black`], the returned board will be flipped
+    /// vertically (flipped ranks).
+    #[inline]
+    pub const fn relative_to(self, side: Side) -> Bitboard {
+        match side {
+            Side::White => self,
+            Side::Black => self.flip_ranks(),
+        }
     }
 }
 
@@ -407,7 +443,7 @@ impl Display for Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use crate::bitboard_helpers;
+    use crate::{bitboard_helpers, rank::Rank};
 
     use super::*;
 
@@ -579,5 +615,19 @@ mod tests {
         }
 
         assert_eq!(new_bb, bb);
+    }
+
+    #[test]
+    fn flip_ranks_relative_to() {
+        let bb = Square::A1.as_bitboard() | Square::B2.as_bitboard() | Square::C3.as_bitboard();
+        let flipped = bb.flip_ranks();
+        let black_relative = bb.relative_to(Side::Black);
+        assert_eq!(flipped, black_relative);
+
+        let rank_1_bb = Rank::R1.to_bitboard();
+        let rank_8_bb = rank_1_bb.flip_ranks();
+        let rank_1_files_flipped = rank_1_bb.flip_files();
+        assert_eq!(rank_8_bb, Rank::R8.to_bitboard());
+        assert_eq!(rank_1_bb, rank_1_files_flipped);
     }
 }
