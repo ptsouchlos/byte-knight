@@ -94,6 +94,9 @@ pub(crate) struct MovePicker {
     /// Quiet (non-promotion, non-capture) moves yielded so far, with their moving piece.
     /// Used by the caller for history penalty on a beta cutoff.
     searched_quiets: ArrayVec<(Move, Piece), MAX_MOVE_LIST_SIZE>,
+    /// Captures yielded so far, with their attacker and victim pieces.
+    /// Used by the caller for capture-history bonus/penalty on a beta cutoff.
+    searched_tacticals: ArrayVec<(Move, Piece, Piece), MAX_MOVE_LIST_SIZE>,
     /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to BadTacticals.
     pub(crate) skip_quiets: bool,
     /// When true, apply SEE filtering to captures. False in in-check qsearch so all captures
@@ -140,6 +143,7 @@ impl MovePicker {
             pick_index: 0,
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
+            searched_tacticals: ArrayVec::new(),
             skip_quiets: false,
             split_tacticals: true,
             skip_bad_tacticals: false,
@@ -168,6 +172,7 @@ impl MovePicker {
             pick_index: 0,
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
+            searched_tacticals: ArrayVec::new(),
             skip_quiets: !in_check,
             // When in check, all captures are potential evasions so SEE pruning is skipped.
             // When not in check, SEE pruning applies (only winning captures are good).
@@ -187,6 +192,12 @@ impl MovePicker {
     /// Used by the caller to apply history penalties on a beta cutoff.
     pub(crate) fn searched_quiets(&self) -> &[(Move, Piece)] {
         self.searched_quiets.as_slice()
+    }
+
+    /// Returns the captures yielded so far (move, attacker piece, victim piece).
+    /// Used by the caller to apply capture-history bonus/penalty on a beta cutoff.
+    pub(crate) fn searched_tacticals(&self) -> &[(Move, Piece, Piece)] {
+        self.searched_tacticals.as_slice()
     }
 
     pub(crate) fn current_stage(&self) -> Stage {
@@ -322,11 +333,19 @@ impl MovePicker {
 
             if let Some(tt_mv) = self.tt_move.filter(|_| tt_legal) {
                 // Track as a searched quiet if this is a quiet move.
-                if board.captured(&tt_mv).is_none() && !tt_mv.is_promotion() {
+                if let Some(victim) = board.captured(&tt_mv) {
                     let piece = board
                         .piece_on_square(tt_mv.from())
                         .map(|(pc, _)| pc)
                         .expect("TT move from-square must have a piece");
+                    // TODO: How should we handle push failures? Do we need to?
+                    let _ = self.searched_tacticals.try_push((tt_mv, piece, victim));
+                } else if !tt_mv.is_promotion() {
+                    let piece = board
+                        .piece_on_square(tt_mv.from())
+                        .map(|(pc, _)| pc)
+                        .expect("TT move from-square must have a piece");
+                    // TODO: How should we handle push failures? Do we need to?
                     let _ = self.searched_quiets.try_push((tt_mv, piece));
                 }
                 self.tt_move_yielded = true;
@@ -354,6 +373,16 @@ impl MovePicker {
 
                 // Is this a good tactical?
                 if self.is_good_tactical(board, &scored_mv) {
+                    if let Some(victim) = board.captured(&scored_mv.mv) {
+                        let piece = board
+                            .piece_on_square(scored_mv.mv.from())
+                            .map(|(pc, _)| pc)
+                            .expect("Move from-square must have a piece");
+                        // TODO: How should we handle push failures? Do we need to?
+                        let _ = self
+                            .searched_tacticals
+                            .try_push((scored_mv.mv, piece, victim));
+                    }
                     self.moves_yielded += 1;
                     return Some(scored_mv.mv);
                 } else {
@@ -397,6 +426,7 @@ impl MovePicker {
                         });
                     // Only track truly quiet moves (not underpromotions) for history penalty.
                     if !mv.is_promotion() {
+                        // TODO: How should we handle push failures? Do we need to?
                         let _ = self.searched_quiets.try_push((mv, piece));
                     }
                     self.moves_yielded += 1;
@@ -416,6 +446,16 @@ impl MovePicker {
                     self.pick_index += 1;
                     if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
                         continue;
+                    }
+                    if let Some(victim) = board.captured(&scored_mv.mv) {
+                        let piece = board
+                            .piece_on_square(scored_mv.mv.from())
+                            .map(|(pc, _)| pc)
+                            .expect("Move from-square must have a piece");
+                        // TODO: How should we handle push failures? Do we need to?
+                        let _ = self
+                            .searched_tacticals
+                            .try_push((scored_mv.mv, piece, victim));
                     }
                     self.moves_yielded += 1;
                     return Some(scored_mv.mv);
