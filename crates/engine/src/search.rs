@@ -570,7 +570,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // ---------------------------------------------------------------------------------
             // LMP - Late Move Pruning
-            // We assume our move ordering is just too good, so if we're under a certain depth
+            // We assume our move ordering is just too good. So if we're under a certain depth
             // and have made more than a certain number of moves, we can assume that later moves
             // won't be as good, so we prune them.
             // ---------------------------------------------------------------------------------
@@ -728,7 +728,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             bonus,
                         );
 
-                        // Update continuation history.
+                        // Update continuation history with bonus
                         td.histories.update_continuation_history(
                             &td.stack,
                             &mv,
