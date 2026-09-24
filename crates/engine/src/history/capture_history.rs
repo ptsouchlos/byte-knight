@@ -10,7 +10,7 @@ use chess::{board::Board, moves::Move, pieces::Piece};
 use crate::{
     history::{types::PieceToHistory, util},
     score::LargeScoreType,
-    tuneable::{capture_history_scale, capture_history_offset},
+    tuneable::{capture_history_offset, capture_history_scale},
     utils,
 };
 
