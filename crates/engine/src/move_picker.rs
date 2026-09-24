@@ -225,7 +225,7 @@ impl MovePicker {
                 0
             };
 
-            base + mvv_lva(victim, piece)
+            base + mvv_lva(victim, piece) + thread_data.histories.capture_history_score(board, mv)
         } else if mv.is_promotion() {
             if mv.is_promote_to_queen() {
                 QUEEN_PUSH_PROMO_BONUS
