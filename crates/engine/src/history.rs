@@ -77,23 +77,6 @@ impl Histories {
         }
     }
 
-    /// Get the capture history score for the given [`Board`] and [`Move`].
-    ///
-    /// # Arguments
-    /// - `board`: The current [`Board`]
-    /// - `mv`: The [`Move`] to get the score of.
-    pub(crate) fn capture_history_score(&self, board: &Board, mv: &Move) -> i32 {
-        // Attacker piece
-        let pc = board
-            .piece_type_on_square(mv.from())
-            .expect("Invalid move for capture scoring");
-        // Attacked piece
-        let captured_piece = board
-            .captured(mv)
-            .expect("Invalid move for capture scoring.");
-        self.capture_history.get(board, *mv, pc, captured_piece) as i32
-    }
-
     pub(crate) fn update_continuation_history(
         &mut self,
         node_stack: &NodeStack,

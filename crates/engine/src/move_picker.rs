@@ -26,6 +26,7 @@ use crate::{
     scored_move_list::ScoredMoveList,
     see,
     thread_data::ThreadData,
+    tuneable::movepick_mvv_scale,
 };
 
 /// Bonus applied to killer moves in the quiet scoring stage so they sort
@@ -33,19 +34,11 @@ use crate::{
 const KILLER_BONUS: LargeScoreType = 10_000_000;
 
 /// Score tier for queen capture-promotions — above queen push-promos.
-const QUEEN_CAPTURE_PROMO_BONUS: LargeScoreType = 30_000;
+const QUEEN_CAPTURE_PROMO_BONUS: LargeScoreType = 300_000;
 /// Score tier for queen push-promotions — above all regular captures.
-/// Max MVV-LVA (PxQ) is 124, so 20_000 comfortably clears it.
-const QUEEN_PUSH_PROMO_BONUS: LargeScoreType = 20_000;
-
-/// MVV-LVA score for move ordering without the `<< 16` shift used by
-/// `Evaluation::mvv_lva`. Range: 20..=124 for non-king captures.
-fn mvv_lva(victim: Piece, attacker: Piece) -> LargeScoreType {
-    let can_capture = victim != Piece::King;
-    (can_capture as LargeScoreType)
-        * (25 * Evaluation::<ByteKnightValues>::piece_value(victim)
-            - Evaluation::<ByteKnightValues>::piece_value(attacker))
-}
+/// Captures max out at around ~60k (SEE of victim + max cap history value),
+/// so 200_000 comfortably clears it.
+const QUEEN_PUSH_PROMO_BONUS: LargeScoreType = 200_000;
 
 /// Stages for the move picker.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -225,7 +218,13 @@ impl MovePicker {
                 0
             };
 
-            base + mvv_lva(victim, piece) + thread_data.histories.capture_history_score(board, mv)
+            let victim_value = see::piece_value(victim);
+            let scaled_score = (movepick_mvv_scale() * victim_value) / 128;
+            let cap_hist_score = thread_data
+                .histories
+                .capture_history
+                .get(board, *mv, piece, victim) as i32;
+            base + scaled_score + cap_hist_score
         } else if mv.is_promotion() {
             if mv.is_promote_to_queen() {
                 QUEEN_PUSH_PROMO_BONUS

@@ -41,6 +41,7 @@ tunable_params!(
     lmr_min_moves_seen      = 3, 1, 6, 1,            false;
     capture_history_scale   = 300, 50, 600, 25,      true;
     capture_history_offset  = 250, 0, 500, 25,       true;
+    movepick_mvv_scale      = 2048, 1024, 4096, 1,   true;
 );
 
 pub(crate) const LMR_OFFSET: f64 = 0.2;
