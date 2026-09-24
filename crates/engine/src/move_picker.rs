@@ -26,6 +26,7 @@ use crate::{
     scored_move_list::ScoredMoveList,
     see,
     thread_data::ThreadData,
+    tuneable::movepick_mvv_scale,
 };
 
 /// Bonus applied to killer moves in the quiet scoring stage so they sort
@@ -33,19 +34,11 @@ use crate::{
 const KILLER_BONUS: LargeScoreType = 10_000_000;
 
 /// Score tier for queen capture-promotions — above queen push-promos.
-const QUEEN_CAPTURE_PROMO_BONUS: LargeScoreType = 30_000;
+const QUEEN_CAPTURE_PROMO_BONUS: LargeScoreType = 300_000;
 /// Score tier for queen push-promotions — above all regular captures.
-/// Max MVV-LVA (PxQ) is 124, so 20_000 comfortably clears it.
-const QUEEN_PUSH_PROMO_BONUS: LargeScoreType = 20_000;
-
-/// MVV-LVA score for move ordering without the `<< 16` shift used by
-/// `Evaluation::mvv_lva`. Range: 20..=124 for non-king captures.
-fn mvv_lva(victim: Piece, attacker: Piece) -> LargeScoreType {
-    let can_capture = victim != Piece::King;
-    (can_capture as LargeScoreType)
-        * (25 * Evaluation::<ByteKnightValues>::piece_value(victim)
-            - Evaluation::<ByteKnightValues>::piece_value(attacker))
-}
+/// Captures max out at around ~60k (SEE of victim + max cap history value),
+/// so 200_000 comfortably clears it.
+const QUEEN_PUSH_PROMO_BONUS: LargeScoreType = 200_000;
 
 /// Stages for the move picker.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,6 +87,9 @@ pub(crate) struct MovePicker {
     /// Quiet (non-promotion, non-capture) moves yielded so far, with their moving piece.
     /// Used by the caller for history penalty on a beta cutoff.
     searched_quiets: ArrayVec<(Move, Piece), MAX_MOVE_LIST_SIZE>,
+    /// Captures yielded so far, with their attacker and victim pieces.
+    /// Used by the caller for capture-history bonus/penalty on a beta cutoff.
+    searched_tacticals: ArrayVec<(Move, Piece, Piece), MAX_MOVE_LIST_SIZE>,
     /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to BadTacticals.
     pub(crate) skip_quiets: bool,
     /// When true, apply SEE filtering to captures. False in in-check qsearch so all captures
@@ -140,6 +136,7 @@ impl MovePicker {
             pick_index: 0,
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
+            searched_tacticals: ArrayVec::new(),
             skip_quiets: false,
             split_tacticals: true,
             skip_bad_tacticals: false,
@@ -168,6 +165,7 @@ impl MovePicker {
             pick_index: 0,
             moves_yielded: 0,
             searched_quiets: ArrayVec::new(),
+            searched_tacticals: ArrayVec::new(),
             skip_quiets: !in_check,
             // When in check, all captures are potential evasions so SEE pruning is skipped.
             // When not in check, SEE pruning applies (only winning captures are good).
@@ -187,6 +185,12 @@ impl MovePicker {
     /// Used by the caller to apply history penalties on a beta cutoff.
     pub(crate) fn searched_quiets(&self) -> &[(Move, Piece)] {
         self.searched_quiets.as_slice()
+    }
+
+    /// Returns the captures yielded so far (move, attacker piece, victim piece).
+    /// Used by the caller to apply capture-history bonus/penalty on a beta cutoff.
+    pub(crate) fn searched_tacticals(&self) -> &[(Move, Piece, Piece)] {
+        self.searched_tacticals.as_slice()
     }
 
     pub(crate) fn current_stage(&self) -> Stage {
@@ -214,7 +218,13 @@ impl MovePicker {
                 0
             };
 
-            base + mvv_lva(victim, piece)
+            let victim_value = see::piece_value(victim);
+            let scaled_score = (movepick_mvv_scale() * victim_value) / 128;
+            let cap_hist_score = thread_data
+                .histories
+                .capture_history
+                .get(board, *mv, piece, victim) as i32;
+            base + scaled_score + cap_hist_score
         } else if mv.is_promotion() {
             if mv.is_promote_to_queen() {
                 QUEEN_PUSH_PROMO_BONUS
@@ -322,11 +332,19 @@ impl MovePicker {
 
             if let Some(tt_mv) = self.tt_move.filter(|_| tt_legal) {
                 // Track as a searched quiet if this is a quiet move.
-                if board.captured(&tt_mv).is_none() && !tt_mv.is_promotion() {
+                if let Some(victim) = board.captured(&tt_mv) {
                     let piece = board
                         .piece_on_square(tt_mv.from())
                         .map(|(pc, _)| pc)
                         .expect("TT move from-square must have a piece");
+                    // TODO: How should we handle push failures? Do we need to?
+                    let _ = self.searched_tacticals.try_push((tt_mv, piece, victim));
+                } else if !tt_mv.is_promotion() {
+                    let piece = board
+                        .piece_on_square(tt_mv.from())
+                        .map(|(pc, _)| pc)
+                        .expect("TT move from-square must have a piece");
+                    // TODO: How should we handle push failures? Do we need to?
                     let _ = self.searched_quiets.try_push((tt_mv, piece));
                 }
                 self.tt_move_yielded = true;
@@ -354,6 +372,16 @@ impl MovePicker {
 
                 // Is this a good tactical?
                 if self.is_good_tactical(board, &scored_mv) {
+                    if let Some(victim) = board.captured(&scored_mv.mv) {
+                        let piece = board
+                            .piece_on_square(scored_mv.mv.from())
+                            .map(|(pc, _)| pc)
+                            .expect("Move from-square must have a piece");
+                        // TODO: How should we handle push failures? Do we need to?
+                        let _ = self
+                            .searched_tacticals
+                            .try_push((scored_mv.mv, piece, victim));
+                    }
                     self.moves_yielded += 1;
                     return Some(scored_mv.mv);
                 } else {
@@ -397,6 +425,7 @@ impl MovePicker {
                         });
                     // Only track truly quiet moves (not underpromotions) for history penalty.
                     if !mv.is_promotion() {
+                        // TODO: How should we handle push failures? Do we need to?
                         let _ = self.searched_quiets.try_push((mv, piece));
                     }
                     self.moves_yielded += 1;
@@ -416,6 +445,16 @@ impl MovePicker {
                     self.pick_index += 1;
                     if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
                         continue;
+                    }
+                    if let Some(victim) = board.captured(&scored_mv.mv) {
+                        let piece = board
+                            .piece_on_square(scored_mv.mv.from())
+                            .map(|(pc, _)| pc)
+                            .expect("Move from-square must have a piece");
+                        // TODO: How should we handle push failures? Do we need to?
+                        let _ = self
+                            .searched_tacticals
+                            .try_push((scored_mv.mv, piece, victim));
                     }
                     self.moves_yielded += 1;
                     return Some(scored_mv.mv);
@@ -521,11 +560,9 @@ mod tests {
     /// Starting position — no captures, no promotions.
     const STARTING_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    /// Position with captures of different values:
-    ///   White rook on a1, white pawn on e4, black queen on d5, black pawn on d6.
-    ///   Pawn can capture queen (PxQ) and pawn (PxP); rook can capture queen (RxQ).
-    ///   Multiple captures with different MVV-LVA values.
-    const MULTI_CAPTURE_FEN: &str = "8/8/3p4/3q4/3PP3/8/8/R3K1k1 w - - 0 1";
+    /// Position with three SEE-winning captures of different victim values:
+    /// exd5 (PxQ), exf5 (PxN) and Rxb4 (RxP).
+    const MULTI_CAPTURE_FEN: &str = "7k/8/8/3q1n2/1p2P3/8/8/1R2K3 w - - 0 1";
 
     #[test]
     fn tt_move_comes_first() {
@@ -580,45 +617,25 @@ mod tests {
     }
 
     #[test]
-    fn mvv_lva_ordering_within_tacticals() {
-        // PxQ (pawn captures queen) has higher MVV-LVA than PxP (pawn captures pawn),
-        // and RxQ (rook captures queen) also scores highly.
-        // Expected MVV-LVA ordering (highest first):
-        //   PxQ (victim=queen, attacker=pawn): 25*5 - 1 = 124
-        //   RxQ (victim=queen, attacker=rook): 25*5 - 4 = 121
-        //   PxP (victim=pawn, attacker=pawn):  25*1 - 1 = 24
+    fn captures_ordered_by_victim_value_with_empty_history() {
+        // Fresh ThreadData has zeroed capture history, so ordering is purely by victim value.
         let board = Board::from_fen(MULTI_CAPTURE_FEN).unwrap();
         let td = ThreadData::default();
         let mut picker = make_move_picker(None, 0, meta(&board));
 
-        let mut captures: Vec<chess::moves::Move> = Vec::new();
+        let mut victim_values = Vec::new();
         while let Some(mv) = picker.next(&board, &td) {
-            if board.captured(&mv).is_some() {
-                captures.push(mv);
-            } else {
-                // First quiet signals end of tactical stage
-                break;
+            match board.captured(&mv) {
+                Some(victim) => victim_values.push(see::piece_value(victim)),
+                None => break,
             }
         }
 
-        assert!(!captures.is_empty(), "Expected at least one capture");
-        // Verify that each capture is at least as valuable as the next one (descending order)
-        for pair in captures.windows(2) {
-            let a = pair[0];
-            let b = pair[1];
-            let victim_a = board.captured(&a).unwrap();
-            let piece_a = piece_for_move(&board, &a);
-            let victim_b = board.captured(&b).unwrap();
-            let piece_b = piece_for_move(&board, &b);
-            let score_a = super::mvv_lva(victim_a, piece_a);
-            let score_b = super::mvv_lva(victim_b, piece_b);
-            assert!(
-                score_a >= score_b,
-                "Captures not in MVV-LVA order: {:?} ({score_a}) before {:?} ({score_b})",
-                a.to_long_algebraic(),
-                b.to_long_algebraic()
-            );
-        }
+        assert_eq!(victim_values.len(), 3, "Expected PxQ, PxN and RxP");
+        assert!(
+            victim_values.windows(2).all(|pair| pair[0] >= pair[1]),
+            "Captures not ordered by descending victim value: {victim_values:?}"
+        );
     }
 
     #[test]
