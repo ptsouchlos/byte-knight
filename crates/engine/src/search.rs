@@ -28,7 +28,7 @@ use crate::{
     aspiration_window::AspirationWindow,
     defs::{MAX_DEPTH, MAX_PLY},
     evaluation::ByteKnightEvaluation,
-    history::quiet_history,
+    history::{capture_history, quiet_history},
     lmr,
     log_level::LogLevel,
     move_picker,
@@ -762,6 +762,34 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             );
                         }
                     }
+
+                    // Update capture history with a bonus for the capture that caused this cutoff.
+                    let capture_bonus = capture_history::calculate_bonus_for_depth(depth) as i32;
+                    if let Some(victim) = board.captured(&mv) {
+                        td.histories.capture_history.update(
+                            board,
+                            mv,
+                            piece,
+                            victim,
+                            capture_bonus,
+                        );
+                    }
+
+                    // Apply a malus for every capture searched so far this node, regardless
+                    // of whether the cutoff move itself was a quiet or a capture
+                    for &(prev_mv, prev_pc, prev_victim) in picker.searched_tacticals() {
+                        if prev_mv == mv {
+                            continue;
+                        }
+                        td.histories.capture_history.update(
+                            board,
+                            prev_mv,
+                            prev_pc,
+                            prev_victim,
+                            -capture_bonus,
+                        );
+                    }
+
                     break;
                 }
             }
