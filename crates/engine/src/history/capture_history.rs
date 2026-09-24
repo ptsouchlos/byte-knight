@@ -10,8 +10,16 @@ use chess::{board::Board, moves::Move, pieces::Piece};
 use crate::{
     history::{types::PieceToHistory, util},
     score::LargeScoreType,
+    tuneable::{capture_history_scale, capture_history_offset},
     utils,
 };
+
+/// Computes the capture-history bonus/malus magnitude for a given depth.
+pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
+    let mult = capture_history_scale() as i16;
+    let offset = capture_history_offset() as i16;
+    depth.saturating_mul(mult).saturating_sub(offset)
+}
 
 /// Capture history table containing [attacker piece][to][victim piece] per side.
 pub struct CaptureHistory {
