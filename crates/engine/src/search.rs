@@ -14,6 +14,7 @@ use std::{
 };
 
 use anyhow::{Result, bail};
+use arrayvec::ArrayVec;
 use chess::{
     attacks,
     board::Board,
@@ -515,6 +516,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
         let fp_margin = fp_base() + depth as i32 * fp_scale();
 
+        let mut searched_quiets = ArrayVec::<(Move, Piece), MAX_MOVE_LIST_SIZE>::new();
+        let mut searched_captures = ArrayVec::<(Move, Piece, Piece), MAX_MOVE_LIST_SIZE>::new();
+
         // Loop through all moves in best-first order.
         while let Some(mv) = picker.next(board, td) {
             let loop_counter = picker.moves_yielded() - 1;
@@ -531,7 +535,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             let is_mated = best_score.mated();
             let is_root = Node::ROOT;
             let is_pv = Node::PV;
-            let is_quiet = board.captured(&mv).is_none() && !mv.is_promotion();
+            let maybe_victim = board.captured(&mv);
+            let is_quiet = maybe_victim.is_none() && !mv.is_promotion();
             let piece = board.piece_on_square(mv.from()).map(|(pc, _)| pc).unwrap();
 
             let is_bad_tactical = picker.current_stage() == move_picker::Stage::BadTacticals;
@@ -685,6 +690,13 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 }
             }
 
+            // Track the searched moves so we can update their history entries later
+            if is_quiet {
+                searched_quiets.push((mv, piece));
+            } else if let Some(victim) = maybe_victim {
+                searched_captures.push((mv, piece, victim));
+            }
+
             // undo the move
             board.unmake_move().unwrap();
             moves_seen += 1;
@@ -738,9 +750,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         );
 
                         // Apply a penalty to all quiets searched so far.
-                        // The board is already in the parent state (we already unmade the move)
-                        // so it's safe to look up the piece on the board using mv.from().
-                        for &(prev_mv, prev_pc) in picker.searched_quiets() {
+                        for &(prev_mv, prev_pc) in searched_quiets.iter() {
                             if prev_mv == mv {
                                 continue;
                             }
@@ -765,7 +775,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                     // Update capture history with a bonus for the capture that caused this cutoff.
                     let capture_bonus = capture_history::calculate_bonus_for_depth(depth) as i32;
-                    if let Some(victim) = board.captured(&mv) {
+                    if let Some(victim) = maybe_victim {
                         td.histories.capture_history.update(
                             board,
                             mv,
@@ -777,7 +787,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                     // Apply a malus for every capture searched so far this node, regardless
                     // of whether the cutoff move itself was a quiet or a capture
-                    for &(prev_mv, prev_pc, prev_victim) in picker.searched_tacticals() {
+                    for &(prev_mv, prev_pc, prev_victim) in searched_captures.iter() {
                         if prev_mv == mv {
                             continue;
                         }
