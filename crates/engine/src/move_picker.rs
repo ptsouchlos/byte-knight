@@ -3,18 +3,15 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use arrayvec::ArrayVec;
 use chess::{
     attacks,
     bitboard::Bitboard,
     board::Board,
-    definitions::MAX_MOVE_LIST_SIZE,
     move_generation::{
         self, legal::generate_moves_with_metadata, metadata::CheckPinMetadata,
         move_filter::MoveFilter,
     },
     moves::Move,
-    pieces::Piece,
 };
 
 use crate::{
@@ -84,12 +81,6 @@ pub(crate) struct MovePicker {
     pick_index: usize,
     /// Total moves yielded so far. Caller uses `moves_yielded() - 1` as the loop counter.
     moves_yielded: usize,
-    /// Quiet (non-promotion, non-capture) moves yielded so far, with their moving piece.
-    /// Used by the caller for history penalty on a beta cutoff.
-    searched_quiets: ArrayVec<(Move, Piece), MAX_MOVE_LIST_SIZE>,
-    /// Captures yielded so far, with their attacker and victim pieces.
-    /// Used by the caller for capture-history bonus/penalty on a beta cutoff.
-    searched_tacticals: ArrayVec<(Move, Piece, Piece), MAX_MOVE_LIST_SIZE>,
     /// When true (qsearch not-in-check), skip GenerateQuiets and go directly to BadTacticals.
     pub(crate) skip_quiets: bool,
     /// When true, apply SEE filtering to captures. False in in-check qsearch so all captures
@@ -135,8 +126,6 @@ impl MovePicker {
             threats: Some(threats),
             pick_index: 0,
             moves_yielded: 0,
-            searched_quiets: ArrayVec::new(),
-            searched_tacticals: ArrayVec::new(),
             skip_quiets: false,
             split_tacticals: true,
             skip_bad_tacticals: false,
@@ -164,8 +153,6 @@ impl MovePicker {
             threats: None,
             pick_index: 0,
             moves_yielded: 0,
-            searched_quiets: ArrayVec::new(),
-            searched_tacticals: ArrayVec::new(),
             skip_quiets: !in_check,
             // When in check, all captures are potential evasions so SEE pruning is skipped.
             // When not in check, SEE pruning applies (only winning captures are good).
@@ -179,18 +166,6 @@ impl MovePicker {
     /// The caller can compute `loop_counter = moves_yielded() - 1` (0-based) after each `next()`.
     pub(crate) fn moves_yielded(&self) -> usize {
         self.moves_yielded
-    }
-
-    /// Returns the quiet moves yielded so far (move + piece pairs).
-    /// Used by the caller to apply history penalties on a beta cutoff.
-    pub(crate) fn searched_quiets(&self) -> &[(Move, Piece)] {
-        self.searched_quiets.as_slice()
-    }
-
-    /// Returns the captures yielded so far (move, attacker piece, victim piece).
-    /// Used by the caller to apply capture-history bonus/penalty on a beta cutoff.
-    pub(crate) fn searched_tacticals(&self) -> &[(Move, Piece, Piece)] {
-        self.searched_tacticals.as_slice()
     }
 
     pub(crate) fn current_stage(&self) -> Stage {
@@ -331,22 +306,6 @@ impl MovePicker {
             self.metadata = Some(meta);
 
             if let Some(tt_mv) = self.tt_move.filter(|_| tt_legal) {
-                // Track as a searched quiet if this is a quiet move.
-                if let Some(victim) = board.captured(&tt_mv) {
-                    let piece = board
-                        .piece_on_square(tt_mv.from())
-                        .map(|(pc, _)| pc)
-                        .expect("TT move from-square must have a piece");
-                    // TODO: How should we handle push failures? Do we need to?
-                    let _ = self.searched_tacticals.try_push((tt_mv, piece, victim));
-                } else if !tt_mv.is_promotion() {
-                    let piece = board
-                        .piece_on_square(tt_mv.from())
-                        .map(|(pc, _)| pc)
-                        .expect("TT move from-square must have a piece");
-                    // TODO: How should we handle push failures? Do we need to?
-                    let _ = self.searched_quiets.try_push((tt_mv, piece));
-                }
                 self.tt_move_yielded = true;
                 self.moves_yielded += 1;
                 return Some(tt_mv);
@@ -372,16 +331,6 @@ impl MovePicker {
 
                 // Is this a good tactical?
                 if self.is_good_tactical(board, &scored_mv) {
-                    if let Some(victim) = board.captured(&scored_mv.mv) {
-                        let piece = board
-                            .piece_on_square(scored_mv.mv.from())
-                            .map(|(pc, _)| pc)
-                            .expect("Move from-square must have a piece");
-                        // TODO: How should we handle push failures? Do we need to?
-                        let _ = self
-                            .searched_tacticals
-                            .try_push((scored_mv.mv, piece, victim));
-                    }
                     self.moves_yielded += 1;
                     return Some(scored_mv.mv);
                 } else {
@@ -413,21 +362,6 @@ impl MovePicker {
                     if self.tt_move_yielded && self.tt_move == Some(mv) {
                         continue;
                     }
-                    let piece = board
-                        .piece_on_square(mv.from())
-                        .map(|(pc, _)| pc)
-                        .unwrap_or_else(|| {
-                            panic!(
-                                "Move from-square must have a piece: {} {}",
-                                board.to_fen(),
-                                mv.to_long_algebraic()
-                            )
-                        });
-                    // Only track truly quiet moves (not underpromotions) for history penalty.
-                    if !mv.is_promotion() {
-                        // TODO: How should we handle push failures? Do we need to?
-                        let _ = self.searched_quiets.try_push((mv, piece));
-                    }
                     self.moves_yielded += 1;
                     return Some(mv);
                 }
@@ -445,16 +379,6 @@ impl MovePicker {
                     self.pick_index += 1;
                     if self.tt_move_yielded && self.tt_move == Some(scored_mv.mv) {
                         continue;
-                    }
-                    if let Some(victim) = board.captured(&scored_mv.mv) {
-                        let piece = board
-                            .piece_on_square(scored_mv.mv.from())
-                            .map(|(pc, _)| pc)
-                            .expect("Move from-square must have a piece");
-                        // TODO: How should we handle push failures? Do we need to?
-                        let _ = self
-                            .searched_tacticals
-                            .try_push((scored_mv.mv, piece, victim));
                     }
                     self.moves_yielded += 1;
                     return Some(scored_mv.mv);
