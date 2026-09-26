@@ -16,8 +16,8 @@ pub struct ContinuationHistory {
 }
 
 impl ContinuationHistory {
-    pub(crate) const PLY_COUNT: usize = 2;
-    pub(crate) const PLIES: [usize; Self::PLY_COUNT] = [1, 2];
+    pub(crate) const PLY_COUNT: usize = 3;
+    pub(crate) const PLIES: [usize; Self::PLY_COUNT] = [1, 2, 4];
     const MAX: i32 = 16384;
     const BONUS_MAX: i32 = Self::MAX / 4;
 

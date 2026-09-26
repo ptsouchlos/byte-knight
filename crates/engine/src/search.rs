@@ -729,7 +729,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
                         // calculate history bonus
                         let bonus = quiet_history::calculate_bonus_for_depth(depth) as i32;
-                        let cont_hist_bonuses = &[bonus, bonus];
+                        let cont_hist_bonuses = &[bonus, bonus, bonus];
 
                         // Update quiet history
                         td.histories.quiet_history.update(
@@ -762,7 +762,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                                 -bonus,
                             );
 
-                            let cont_maluses = &[-bonus, -bonus];
+                            let cont_maluses = &[-bonus, -bonus, -bonus];
                             td.histories.update_continuation_history(
                                 &td.stack,
                                 &prev_mv,
