@@ -29,7 +29,6 @@ use crate::{
     aspiration_window::AspirationWindow,
     defs::{MAX_DEPTH, MAX_PLY},
     evaluation::ByteKnightEvaluation,
-    history::{capture_history, quiet_history},
     lmr,
     log_level::LogLevel,
     move_picker,
@@ -728,16 +727,21 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         td.killers_table.update(ply as usize, mv, piece);
 
                         // calculate history bonus
-                        let bonus = quiet_history::calculate_bonus_for_depth(depth) as i32;
-                        let cont_hist_bonuses = &[bonus, bonus];
+                        let quiet_bonus = params::quiet_history_bonus(depth) as i32;
+                        let quiet_malus = params::quiet_history_malus(depth) as i32;
+                        let cont_hist_1_bonus = params::cont_hist_1_bonus(depth) as i32;
+                        let cont_hist_2_bonus = params::cont_hist_2_bonus(depth) as i32;
+                        let cont_hist_1_malus = params::cont_hist_1_malus(depth) as i32;
+                        let cont_hist_2_malus = params::cont_hist_2_malus(depth) as i32;
+                        let cont_hist_bonuses = &[cont_hist_1_bonus, cont_hist_2_bonus];
 
                         // Update quiet history
                         td.histories.quiet_history.update(
                             board.side_to_move(),
                             mv,
                             threats,
-                            bonus,
-                            bonus,
+                            quiet_bonus,
+                            quiet_bonus,
                         );
 
                         // Update continuation history with bonus
@@ -758,11 +762,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                                 board.side_to_move(),
                                 prev_mv,
                                 threats,
-                                -bonus,
-                                -bonus,
+                                quiet_malus,
+                                quiet_malus,
                             );
 
-                            let cont_maluses = &[-bonus, -bonus];
+                            let cont_maluses = &[cont_hist_1_malus, cont_hist_2_malus];
                             td.histories.update_continuation_history(
                                 &td.stack,
                                 &prev_mv,
@@ -773,15 +777,17 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         }
                     }
 
+                    let cap_hist_bonus = params::capture_history_bonus(depth) as i32;
+                    let cap_hist_malus = params::capture_history_malus(depth) as i32;
+
                     // Update capture history with a bonus for the capture that caused this cutoff.
-                    let capture_bonus = capture_history::calculate_bonus_for_depth(depth) as i32;
                     if let Some(victim) = maybe_victim {
                         td.histories.capture_history.update(
                             board,
                             mv,
                             piece,
                             victim,
-                            capture_bonus,
+                            cap_hist_bonus,
                         );
                     }
 
@@ -796,7 +802,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                             prev_mv,
                             prev_pc,
                             prev_victim,
-                            -capture_bonus,
+                            cap_hist_malus,
                         );
                     }
 
