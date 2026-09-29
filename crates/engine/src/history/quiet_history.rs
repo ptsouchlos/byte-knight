@@ -57,20 +57,6 @@ pub struct QuietHistory {
     from_to_entries: Box<[FromToHistory<QuietHistoryEntry>; Side::COUNT]>,
 }
 
-/// Safe calculation of the bonus applied to quiet moves that are inserted into the history table.
-/// This uses `wrappinag_mul` and `wrapping_sub` to safely calculate the value.
-///
-/// # Arguments
-/// - `depth`: The current depth
-///
-/// # Returns
-/// The calculated history score.
-pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
-    depth
-        .saturating_mul(Score::HISTORY_MULT)
-        .saturating_sub(Score::HISTORY_OFFSET)
-}
-
 impl QuietHistory {
     pub(crate) fn get(&self, side: Side, mv: Move, threats: Bitboard) -> LargeScoreType {
         let idx = ThreatIndex::new(&mv, threats);
@@ -104,9 +90,7 @@ impl Default for QuietHistory {
 
 #[cfg(test)]
 mod tests {
-    use crate::defs::MAX_DEPTH;
-
-    use super::{QuietHistory, calculate_bonus_for_depth};
+    use super::QuietHistory;
     use chess::{bitboard::Bitboard, moves::Move, side::Side, square::Square};
 
     #[test]
@@ -182,14 +166,5 @@ mod tests {
             from_only, untouched,
             "a bucket that was never updated should equal the other untouched buckets"
         );
-    }
-
-    #[test]
-    fn calculate_bonus_for_any_depth() {
-        for depth in 1..MAX_DEPTH {
-            let bonus = calculate_bonus_for_depth(depth as i16);
-            assert!(bonus > 0);
-            assert!(bonus as i32 <= i16::MAX.into());
-        }
     }
 }

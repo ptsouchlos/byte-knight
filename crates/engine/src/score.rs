@@ -62,10 +62,6 @@ impl Score {
     pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_PLY);
     /// "Infinity" score
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
-    /// Multiplier for the history bonus calculation.
-    pub const HISTORY_MULT: ScoreType = 300;
-    /// Offset for the history bonus calculation.
-    pub const HISTORY_OFFSET: ScoreType = 250;
     /// Max/min value for the threat-agnostic factorizer in [`crate::history::quiet_history::QuietHistory`].
     /// Kept smaller than [`Score::BUCKET_MAX`] since the factorizer
     /// updates on every touch (dense) while a given bucket cell only updates for its specific
