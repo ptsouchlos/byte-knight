@@ -549,6 +549,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 && !is_mated
                 && is_bad_tactical
                 && (depth as i32) <= see_tacticals_max_depth()
+                && moves_seen > 0
                 && !see::see(board, mv, -(depth as i32) * see_tacticals_margin())
             {
                 continue;

@@ -163,7 +163,7 @@ impl TranspositionTable {
         bucket
             .entries
             .iter()
-            .find(|&entry| entry.validate_key(zobrist))
+            .find(|&entry| !entry.is_empty() && entry.validate_key(zobrist))
             .copied()
     }
 
