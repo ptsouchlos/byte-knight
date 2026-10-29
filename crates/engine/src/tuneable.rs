@@ -23,11 +23,11 @@ tunable_params!(
     see_tacticals_margin         = 61, 0..=100,          true;
     fp_base                      = 94, 50..=150,         true;
     fp_scale                     = 74, 40..=120,         true;
-    fp_max_depth                 = 3, 1..=8,             true;
+    fp_max_depth                 = 3, 1..=6,             true;
     rfp_max_depth                = 4, 1..=10,            true;
     rfp_margin                   = 75, 40..=120,         true;
     rfp_improving_margin         = 26, 0..=60,           true;
-    nmp_min_depth                = 3, 1..=8,             true;
+    nmp_min_depth                = 3, 1..=6,             true;
     nmp_depth_reduction          = 2, 0..=6,             false;
     nmp_improving_bonus          = 1, 0..=4,             false;
     nmp_depth_divisor            = 4, 2..=8,             false;
@@ -65,6 +65,6 @@ tunable_params!(
     tm_best_move_offset          = 11000, 9000..=13000,  true;
     tm_best_move_scale           = 500, 300..=800,       true;
     tm_best_move_min_scale       = 5000, 4000..=6000,    true;
-    lmr_offset                   = 200, 150..=400,       true;
-    lmr_scaling_factor           = 2000, 1500..=4000,    true;
+    lmr_offset                   = 200, 50..=350,        true;
+    lmr_scaling_factor           = 2000, 1000..=3000,    true;
 );
