@@ -3,7 +3,7 @@
 // GNU General Public License v3.0 or later
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
-use crate::tuneable::{LMR_OFFSET, LMR_SCALING_FACTOR};
+use crate::tuneable::{lmr_offset, lmr_scaling_factor};
 
 /// LMR (Late Move Reduction) formula for calculating the reduction factor
 /// based on the natural logarithm of the current depth and the number of moves made.
@@ -19,8 +19,10 @@ use crate::tuneable::{LMR_OFFSET, LMR_SCALING_FACTOR};
 pub(crate) fn formula(depth: usize, move_count: usize) -> f64 {
     let d_ln = (depth as f64).ln();
     let mvs_ln = (move_count as f64).ln();
+    let scaled_lmr_offset = lmr_offset() as f64 / 1000.0;
+    let scaled_lmr_scaling_factor = lmr_scaling_factor() as f64 / 1000.0;
     if d_ln.is_finite() && mvs_ln.is_finite() {
-        LMR_OFFSET + (d_ln * mvs_ln) / LMR_SCALING_FACTOR
+        scaled_lmr_offset + (d_ln * mvs_ln) / scaled_lmr_scaling_factor
     } else {
         0_f64
     }
