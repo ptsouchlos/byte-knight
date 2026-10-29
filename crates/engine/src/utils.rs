@@ -85,7 +85,6 @@ macro_rules! tunable_params {
         }
 
         $(
-
         // Fail the build if val is outside of [min, max] range
         const _: () = assert!($min <= $val && $val <= $max);
 
