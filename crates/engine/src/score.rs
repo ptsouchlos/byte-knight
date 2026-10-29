@@ -62,16 +62,6 @@ impl Score {
     pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_PLY);
     /// "Infinity" score
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
-    /// Max/min value for the threat-agnostic factorizer in [`crate::history::quiet_history::QuietHistory`].
-    /// Kept smaller than [`Score::BUCKET_MAX`] since the factorizer
-    /// updates on every touch (dense) while a given bucket cell only updates for its specific
-    /// threat configuration (sparse). The more-frequently-touched signal should saturate at a
-    /// lower ceiling so the sparser, more specific bucket signal can carry more of the magnitude.
-    pub const FACTORIZER_MAX: LargeScoreType = 4_096;
-    /// Max/min value for a single threat bucket cell in [`crate::history::quiet_history::QuietHistory`].
-    /// See [`Score::FACTORIZER_MAX`] for the invariant and reasoning this must preserve.
-    pub const BUCKET_MAX: LargeScoreType = 12_288;
-
     pub fn new(score: ScoreType) -> Score {
         Score(score)
     }

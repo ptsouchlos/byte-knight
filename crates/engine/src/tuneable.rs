@@ -67,4 +67,8 @@ tunable_params!(
     tm_best_move_min_scale       = 5000, 4000..=6000,    true;
     lmr_offset                   = 200, 50..=350,        true;
     lmr_scaling_factor           = 2000, 1000..=3000,    true;
+    cap_hist_max                 = 16384, 8192..=24576,  true;
+    cont_hist_max                = 16384, 8192..=24576,  true;
+    quiet_hist_factorizer_max    = 4096, 2048..=6144,    true;
+    quiet_hist_bucket_max        = 12288, 8192..=16384,  true;
 );

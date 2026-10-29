@@ -11,7 +11,8 @@ use crate::{
         types::FromToHistory,
         util::gravity,
     },
-    score::{LargeScoreType, Score},
+    score::LargeScoreType,
+    tuneable::{quiet_hist_bucket_max, quiet_hist_factorizer_max},
     utils::{self, boxed_and_zeroed},
 };
 
@@ -39,15 +40,21 @@ impl QuietHistoryEntry {
         bonus: LargeScoreType,
         factorizer_bonus: LargeScoreType,
     ) {
+        // The factorizer cap is kept below the bucket cap (their tuneable ranges don't overlap):
+        // the factorizer updates on every touch (dense) while a bucket cell only updates for its
+        // specific threat configuration (sparse), so the denser signal saturates lower and the
+        // more specific bucket signal carries more of the magnitude.
+        let factorizer_max = quiet_hist_factorizer_max();
+        let bucket_max = quiet_hist_bucket_max();
+
         // Clamp defensively regardless of what the caller passes in - gravity() multiplies
         // `current * bonus.abs()`, which overflows i32 for a large-enough unclamped bonus.
-        let factorizer_bonus =
-            factorizer_bonus.clamp(-Score::FACTORIZER_MAX, Score::FACTORIZER_MAX);
-        self.factorizer = gravity(self.factorizer, factorizer_bonus, Score::FACTORIZER_MAX);
+        let factorizer_bonus = factorizer_bonus.clamp(-factorizer_max, factorizer_max);
+        self.factorizer = gravity(self.factorizer, factorizer_bonus, factorizer_max);
 
-        let bonus = bonus.clamp(-Score::BUCKET_MAX, Score::BUCKET_MAX);
+        let bonus = bonus.clamp(-bucket_max, bucket_max);
         let cell = &mut self.bucket[threat_index.from()][threat_index.to()];
-        *cell = gravity(*cell, bonus, Score::BUCKET_MAX);
+        *cell = gravity(*cell, bonus, bucket_max);
     }
 }
 
