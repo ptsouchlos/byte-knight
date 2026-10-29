@@ -34,6 +34,7 @@ macro_rules! tunable_params {
         #[cfg(feature = "tuning")]
         use std::sync::atomic::Ordering;
 
+
         #[cfg(feature = "tuning")]
         pub fn list_params() {
             $(
@@ -61,7 +62,7 @@ macro_rules! tunable_params {
         pub fn print_params_ob() {
             $(
                 if $spsa {
-                    let step = ($max - $min) / 20;
+                    let step = (($max - $min) / 20).max(1);
                     println!(
                         "{}, int, {}.0, {}.0, {}.0, {}, 0.002",
                         stringify!($name),
@@ -84,6 +85,10 @@ macro_rules! tunable_params {
         }
 
         $(
+
+        // Fail the build if val is outside of [min, max] range
+        const _: () = assert!($min <= $val && $val <= $max);
+
         #[cfg(feature = "tuning")]
         #[inline]
         pub fn $name() -> i32 {
