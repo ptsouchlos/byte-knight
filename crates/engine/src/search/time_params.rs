@@ -1,7 +1,7 @@
 use crate::tuneable::{
-    tm_best_move_min_scale, tm_best_move_offset, tm_best_move_scale, tm_eval_stability_min_scale,
-    tm_eval_stability_offset, tm_eval_stability_scale, tm_node_stability_offset,
-    tm_node_stability_scale,
+    hard_tm_inc_scale, hard_tm_scale, soft_tm_inc_scale, soft_tm_scale, tm_best_move_min_scale,
+    tm_best_move_offset, tm_best_move_scale, tm_eval_stability_min_scale, tm_eval_stability_offset,
+    tm_eval_stability_scale, tm_node_stability_offset, tm_node_stability_scale,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -14,6 +14,10 @@ pub struct TimeParams {
     pub best_move_offset: f32,
     pub best_move_scale: f32,
     pub best_move_min: f32,
+    pub soft_tm_scale: f32,
+    pub soft_tm_inc_scale: f32,
+    pub hard_tm_scale: f32,
+    pub hard_tm_inc_scale: f32,
 }
 
 impl TimeParams {
@@ -27,6 +31,10 @@ impl TimeParams {
             best_move_offset: tm_best_move_offset() as f32 / 10000.0,
             best_move_scale: tm_best_move_scale() as f32 / 10000.0,
             best_move_min: tm_best_move_min_scale() as f32 / 10000.0,
+            soft_tm_scale: soft_tm_scale() as f32 / 1000.0,
+            soft_tm_inc_scale: soft_tm_inc_scale() as f32 / 1000.0,
+            hard_tm_scale: hard_tm_scale() as f32 / 1000.0,
+            hard_tm_inc_scale: hard_tm_inc_scale() as f32 / 1000.0,
         }
     }
 }

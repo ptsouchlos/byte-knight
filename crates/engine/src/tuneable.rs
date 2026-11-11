@@ -71,4 +71,8 @@ tunable_params!(
     cont_hist_max                = 16384, 8192..=24576,  true;
     quiet_hist_factorizer_max    = 4096, 2048..=6144,    true;
     quiet_hist_bucket_max        = 12288, 8192..=16384,  true;
+    soft_tm_scale                = 50, 20..=80,          true;
+    soft_tm_inc_scale            = 500, 250..=750,       true;
+    hard_tm_scale                = 200, 50..=350,        true;
+    hard_tm_inc_scale            = 500, 250..=750,       true;
 );

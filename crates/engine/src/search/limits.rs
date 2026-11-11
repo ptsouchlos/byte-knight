@@ -65,7 +65,8 @@ impl SearchLimits {
             // Calculate our soft/hard limits
             if let Some(time) = time {
                 let inc = increment.unwrap_or(Duration::ZERO);
-                let (hard, soft) = SearchLimits::calculate_time_limits(time, inc);
+                let (hard, soft) =
+                    SearchLimits::calculate_time_limits(time, inc, params.time_params);
                 params.soft_timeout = soft;
                 params.hard_timeout = hard;
             }
@@ -117,13 +118,24 @@ impl SearchLimits {
         (tp.node_stability_offset - best_move_fraction) * tp.node_stability_scale
     }
 
-    fn calculate_time_limits(time: Duration, inc: Duration) -> (Duration, Duration) {
+    fn calculate_time_limits(
+        time: Duration,
+        inc: Duration,
+        tp: TimeParams,
+    ) -> (Duration, Duration) {
         let overhead = Duration::from_millis(UCI_OVERHEAD_MS);
         let budget = time.saturating_sub(overhead);
-        let soft = budget / 20 + inc / 2;
-        let hard = (budget / 5 + inc / 2).min(budget).max(soft);
+        let budget_ms = budget.as_millis() as f32;
+        let inc_ms = inc.as_millis() as f32;
+        let soft = tp.soft_tm_scale * budget_ms + tp.soft_tm_inc_scale * inc_ms;
+        let hard = (tp.hard_tm_scale * budget_ms + tp.hard_tm_inc_scale * inc_ms)
+            .min(budget_ms)
+            .max(soft);
 
-        (hard, soft)
+        (
+            Duration::from_millis(hard as u64),
+            Duration::from_millis(soft as u64),
+        )
     }
 }
 
@@ -154,12 +166,15 @@ mod tests {
         SearchLimits::new(&opts, &board)
     }
 
+    fn calculate_time_limits(time: Duration, increment: Duration) -> (Duration, Duration) {
+        let tp = TimeParams::default();
+        SearchLimits::calculate_time_limits(time, increment, tp)
+    }
+
     #[test]
     fn time_limits_typical() {
-        let (hard, soft) = SearchLimits::calculate_time_limits(
-            Duration::from_millis(100),
-            Duration::from_millis(100),
-        );
+        let (hard, soft) =
+            calculate_time_limits(Duration::from_millis(100), Duration::from_millis(100));
         assert!(soft > Duration::ZERO);
         assert!(hard > Duration::ZERO);
         assert!(hard >= soft);
@@ -167,15 +182,14 @@ mod tests {
 
     #[test]
     fn time_limits_no_increment() {
-        let (hard, soft) =
-            SearchLimits::calculate_time_limits(Duration::from_millis(10), Duration::ZERO);
+        let (hard, soft) = calculate_time_limits(Duration::from_millis(10), Duration::ZERO);
         assert!(hard >= soft);
     }
 
     #[test]
     fn time_limits_zero_time() {
         // Must not panic; both limits may be zero but that is acceptable.
-        let (hard, soft) = SearchLimits::calculate_time_limits(Duration::ZERO, Duration::ZERO);
+        let (hard, soft) = calculate_time_limits(Duration::ZERO, Duration::ZERO);
         let _ = (hard, soft);
     }
 
