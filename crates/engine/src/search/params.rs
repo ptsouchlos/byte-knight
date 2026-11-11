@@ -22,6 +22,13 @@ pub(crate) fn late_move_threshold(depth: i32, improvement: i32) -> i32 {
     lmp_base() + depth * depth + adjustment
 }
 
+/// Magnitude of a history update: `depth * scale - offset`, floored at 1 so that a tuned
+/// `offset` larger than `scale` can never flip a bonus into a malus (or vice versa) at low depth.
+#[inline]
+fn history_magnitude(depth: i16, scale: i16, offset: i16) -> i16 {
+    depth.saturating_mul(scale).saturating_sub(offset).max(1)
+}
+
 // Defines a history bonus function using the given tuneable values
 macro_rules! history_bonus {
     (
@@ -29,9 +36,7 @@ macro_rules! history_bonus {
     ) => {
         #[inline]
         pub(crate) fn $bonus_fn(depth: i16) -> i16 {
-            depth
-                .saturating_mul($bonus_scale() as i16)
-                .saturating_sub($bonus_offset() as i16) as i16
+            history_magnitude(depth, $bonus_scale() as i16, $bonus_offset() as i16)
         }
     };
 }
@@ -43,9 +48,7 @@ macro_rules! history_malus {
     ) => {
         #[inline]
         pub(crate) fn $malus_fn(depth: i16) -> i16 {
-            -(depth
-                .saturating_mul($malus_scale() as i16)
-                .saturating_sub($malus_offset() as i16)) as i16
+            -history_magnitude(depth, $malus_scale() as i16, $malus_offset() as i16)
         }
     };
 }
@@ -96,9 +99,21 @@ mod tests {
         defs::MAX_DEPTH,
         search::params::{
             capture_history_bonus, capture_history_malus, cont_hist_1_bonus, cont_hist_1_malus,
-            cont_hist_2_bonus, cont_hist_2_malus, quiet_history_bonus, quiet_history_malus,
+            cont_hist_2_bonus, cont_hist_2_malus, history_magnitude, quiet_history_bonus,
+            quiet_history_malus,
         },
     };
+
+    #[test]
+    fn history_magnitude_never_flips_sign() {
+        // Extremes of the tuneable ranges: smallest scale, largest offset.
+        assert_eq!(history_magnitude(1, 50, 500), 1);
+        assert_eq!(history_magnitude(0, 300, 250), 1);
+        // Normal case is unchanged by the floor.
+        assert_eq!(history_magnitude(2, 300, 250), 350);
+        // Saturates instead of overflowing at large depth.
+        assert_eq!(history_magnitude(i16::MAX, 600, 0), i16::MAX);
+    }
 
     #[test]
     fn history_bonus_malus_sign() {
