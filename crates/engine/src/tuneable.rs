@@ -12,11 +12,11 @@ tunable_params!(
     lmp_improvement_min          = -138, -300..=0,       true;
     lmp_improvement_max          = 178, 50..=300,        true;
     lmp_improvement_divisor      = 8, 2..=24,            true;
-    see_value_pawn               = 101, 25..=150,        true;
-    see_value_knight             = 205, 100..=300,       true;
-    see_value_bishop             = 288, 150..=450,       true;
-    see_value_rook               = 517, 250..=750,       true;
-    see_value_queen              = 865, 450..=1350,      true;
+    see_pawn                     = 101, 25..=150,        true;
+    see_knight                   = 205, 100..=300,       true;
+    see_bishop                   = 288, 150..=450,       true;
+    see_rook                     = 517, 250..=750,       true;
+    see_queen                    = 865, 450..=1350,      true;
     qs_see_threshold             = -80, -160..=0,        true;
     qs_delta_margin              = 241, 120..=360,       true;
     see_tacticals_max_depth      = 6, 4..=10,            true;
