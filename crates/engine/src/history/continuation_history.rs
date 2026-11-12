@@ -130,7 +130,7 @@ mod tests {
         let score = cont_hist.get(prev_mv, pc, mv, pc, prev_ply);
         assert!(
             score <= ContinuationHistory::max(),
-            "saturated continuation history entry ({score}) must not exceed MAX ({})",
+            "saturated continuation history entry ({score}) must not exceed cont_hist_max ({})",
             ContinuationHistory::max()
         );
 
@@ -142,7 +142,7 @@ mod tests {
         let score = cont_hist.get(prev_mv, pc, mv, pc, prev_ply);
         assert!(
             score >= -ContinuationHistory::max(),
-            "saturated continuation history entry ({score}) must not exceed -MAX ({})",
+            "saturated continuation history entry ({score}) must not go below -cont_hist_max ({})",
             -ContinuationHistory::max()
         );
     }
