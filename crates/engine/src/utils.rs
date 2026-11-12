@@ -34,7 +34,6 @@ macro_rules! tunable_params {
         #[cfg(feature = "tuning")]
         use std::sync::atomic::Ordering;
 
-
         #[cfg(feature = "tuning")]
         pub fn list_params() {
             $(
