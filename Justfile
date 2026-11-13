@@ -60,7 +60,7 @@ purge-coverage:
 
 [doc('Create HTML report from coverage data')]
 [group('dev')]
-coverage-report:
+coverage-report: purge-coverage coverage
     echo "Generating HTML report..."
     genhtml \
         --branch \
@@ -108,13 +108,13 @@ bench:
 [group('chess')]
 magics:
     echo "Generating magics..."
-    cargo run --release --bin generate-magics
+    cargo run --release -p generate-magics
 
 [doc('Verify that generated Zobrist hashes are unique')]
 [group('chess')]
-verify-zobrist:
+verify-zobrist zst_file:
     echo "Verifying Zobrist hash..."
-    cargo run --release --bin verify-zobrist
+    cargo run --release -p zobrist -- verify --file {{ zst_file }}
 
 [doc('Caches the release binary to bk-main for testing.')]
 [group('dev')]
