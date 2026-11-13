@@ -50,6 +50,7 @@ use crate::{
 
 pub mod limits;
 mod params;
+mod time_params;
 
 /// Result for a search.
 #[derive(Clone, Debug)]

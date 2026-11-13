@@ -8,6 +8,7 @@ use chess::{moves::Move, pieces::Piece};
 use crate::{
     history::{types::PieceToHistory, util::gravity},
     score::LargeScoreType,
+    tuneable::cont_hist_max,
     utils::{self, boxed_and_zeroed},
 };
 
@@ -18,8 +19,14 @@ pub struct ContinuationHistory {
 impl ContinuationHistory {
     pub(crate) const PLY_COUNT: usize = 2;
     pub(crate) const PLIES: [usize; Self::PLY_COUNT] = [1, 2];
-    const MAX: i32 = 16384;
-    const BONUS_MAX: i32 = Self::MAX / 4;
+
+    fn max() -> i32 {
+        cont_hist_max()
+    }
+
+    fn bonus_max() -> i32 {
+        Self::max() / 4
+    }
 
     fn index_from_ply(prev_ply: i16) -> usize {
         let index = Self::PLIES.iter().position(|&p| p as i16 == prev_ply);
@@ -53,10 +60,10 @@ impl ContinuationHistory {
         prev_ply: i16,
     ) {
         let index = Self::index_from_ply(prev_ply);
-        let bonus = bonus.clamp(-Self::BONUS_MAX, Self::BONUS_MAX);
+        let bonus = bonus.clamp(-Self::bonus_max(), Self::bonus_max());
         let entry = &mut self.entries[index][prev_pc.index()][prev_mv.to().index()][pc.index()]
             [mv.to().index()];
-        *entry = gravity(*entry, bonus, Self::MAX);
+        *entry = gravity(*entry, bonus, Self::max());
     }
 
     pub(crate) fn clear(&mut self) {
@@ -122,9 +129,9 @@ mod tests {
 
         let score = cont_hist.get(prev_mv, pc, mv, pc, prev_ply);
         assert!(
-            score <= ContinuationHistory::MAX,
-            "saturated continuation history entry ({score}) must not exceed MAX ({})",
-            ContinuationHistory::MAX
+            score <= ContinuationHistory::max(),
+            "saturated continuation history entry ({score}) must not exceed cont_hist_max ({})",
+            ContinuationHistory::max()
         );
 
         // Same check in the negative direction.
@@ -134,9 +141,9 @@ mod tests {
 
         let score = cont_hist.get(prev_mv, pc, mv, pc, prev_ply);
         assert!(
-            score >= -ContinuationHistory::MAX,
-            "saturated continuation history entry ({score}) must not exceed -MAX ({})",
-            -ContinuationHistory::MAX
+            score >= -ContinuationHistory::max(),
+            "saturated continuation history entry ({score}) must not go below -cont_hist_max ({})",
+            -ContinuationHistory::max()
         );
     }
 }

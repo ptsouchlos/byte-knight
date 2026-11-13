@@ -3,19 +3,9 @@ use std::{fmt::Display, time::Duration};
 use chess::board::Board;
 use uci_parser::UciSearchOptions;
 
-use crate::defs::MAX_DEPTH;
+use crate::{defs::MAX_DEPTH, search::time_params::TimeParams};
 
 pub const UCI_OVERHEAD_MS: u64 = 100;
-const BEST_MOVE_TIME_BASE: f32 = 1.1;
-const BEST_MOVE_TIME_FACTOR: f32 = 0.05;
-const BEST_MOVE_TIME_MIN_SCALE: f32 = 0.5;
-
-const EVAL_STABILITY_BASE: f32 = 1.2664;
-const EVAL_STABILITY_FACTOR: f32 = 0.0416;
-const EVAL_STABILITY_MIN_SCALE: f32 = 0.8642;
-
-const NODE_TM_BASE: f32 = 1.45;
-const NODE_TM_SCALE: f32 = 1.35;
 pub(crate) const NODE_TM_MIN_DEPTH: i32 = 4;
 
 /// Per-iteration signals that scale the soft time limit. A `None` field leaves
@@ -34,6 +24,7 @@ pub struct SearchLimits {
     pub soft_timeout: Duration,
     pub hard_timeout: Duration,
     pub max_nodes: u64,
+    pub time_params: TimeParams,
 }
 
 impl Default for SearchLimits {
@@ -43,6 +34,7 @@ impl Default for SearchLimits {
             soft_timeout: Duration::MAX,
             hard_timeout: Duration::MAX,
             max_nodes: u64::MAX,
+            time_params: TimeParams::default(),
         }
     }
 }
@@ -73,7 +65,8 @@ impl SearchLimits {
             // Calculate our soft/hard limits
             if let Some(time) = time {
                 let inc = increment.unwrap_or(Duration::ZERO);
-                let (hard, soft) = SearchLimits::calculate_time_limits(time, inc);
+                let (hard, soft) =
+                    SearchLimits::calculate_time_limits(time, inc, params.time_params);
                 params.soft_timeout = soft;
                 params.hard_timeout = hard;
             }
@@ -89,17 +82,17 @@ impl SearchLimits {
         }
 
         let best_move_stability_scale = match inputs.best_move_stability {
-            Some(value) => Self::best_move_stability_scale(value),
+            Some(value) => Self::best_move_stability_scale(value, self.time_params),
             None => 1.0,
         };
 
         let eval_stability_scale = match inputs.eval_stability {
-            Some(value) => Self::eval_stability_scale(value),
+            Some(value) => Self::eval_stability_scale(value, self.time_params),
             None => 1.0,
         };
 
         let node_tm_stability_scale = match inputs.best_move_node_fraction {
-            Some(value) => Self::node_stability_scale(value),
+            Some(value) => Self::node_stability_scale(value, self.time_params),
             None => 1.0,
         };
 
@@ -111,27 +104,38 @@ impl SearchLimits {
         Some(Duration::from_secs_f32(scaled))
     }
 
-    fn best_move_stability_scale(best_move_stability: u64) -> f32 {
-        (BEST_MOVE_TIME_BASE - BEST_MOVE_TIME_FACTOR * best_move_stability as f32)
-            .max(BEST_MOVE_TIME_MIN_SCALE)
+    fn best_move_stability_scale(best_move_stability: u64, tp: TimeParams) -> f32 {
+        (tp.best_move_offset - tp.best_move_scale * best_move_stability as f32)
+            .max(tp.best_move_min)
     }
 
-    fn eval_stability_scale(eval_stability: u64) -> f32 {
-        (EVAL_STABILITY_BASE - EVAL_STABILITY_FACTOR * eval_stability as f32)
-            .max(EVAL_STABILITY_MIN_SCALE)
+    fn eval_stability_scale(eval_stability: u64, tp: TimeParams) -> f32 {
+        (tp.eval_stability_offset - tp.eval_stability_scale * eval_stability as f32)
+            .max(tp.eval_stability_min)
     }
 
-    fn node_stability_scale(best_move_fraction: f32) -> f32 {
-        (NODE_TM_BASE - best_move_fraction) * NODE_TM_SCALE
+    fn node_stability_scale(best_move_fraction: f32, tp: TimeParams) -> f32 {
+        (tp.node_stability_offset - best_move_fraction) * tp.node_stability_scale
     }
 
-    fn calculate_time_limits(time: Duration, inc: Duration) -> (Duration, Duration) {
+    fn calculate_time_limits(
+        time: Duration,
+        inc: Duration,
+        tp: TimeParams,
+    ) -> (Duration, Duration) {
         let overhead = Duration::from_millis(UCI_OVERHEAD_MS);
         let budget = time.saturating_sub(overhead);
-        let soft = budget / 20 + inc / 2;
-        let hard = (budget / 5 + inc / 2).min(budget).max(soft);
+        let budget_ms = budget.as_millis() as f32;
+        let inc_ms = inc.as_millis() as f32;
+        let soft = tp.soft_tm_scale * budget_ms + tp.soft_tm_inc_scale * inc_ms;
+        let hard = (tp.hard_tm_scale * budget_ms + tp.hard_tm_inc_scale * inc_ms)
+            .min(budget_ms)
+            .max(soft);
 
-        (hard, soft)
+        (
+            Duration::from_millis(hard as u64),
+            Duration::from_millis(soft as u64),
+        )
     }
 }
 
@@ -162,12 +166,15 @@ mod tests {
         SearchLimits::new(&opts, &board)
     }
 
+    fn calculate_time_limits(time: Duration, increment: Duration) -> (Duration, Duration) {
+        let tp = TimeParams::default();
+        SearchLimits::calculate_time_limits(time, increment, tp)
+    }
+
     #[test]
     fn time_limits_typical() {
-        let (hard, soft) = SearchLimits::calculate_time_limits(
-            Duration::from_millis(100),
-            Duration::from_millis(100),
-        );
+        let (hard, soft) =
+            calculate_time_limits(Duration::from_millis(100), Duration::from_millis(100));
         assert!(soft > Duration::ZERO);
         assert!(hard > Duration::ZERO);
         assert!(hard >= soft);
@@ -175,29 +182,78 @@ mod tests {
 
     #[test]
     fn time_limits_no_increment() {
-        let (hard, soft) =
-            SearchLimits::calculate_time_limits(Duration::from_millis(10), Duration::ZERO);
+        let (hard, soft) = calculate_time_limits(Duration::from_millis(10), Duration::ZERO);
         assert!(hard >= soft);
     }
 
     #[test]
     fn time_limits_zero_time() {
         // Must not panic; both limits may be zero but that is acceptable.
-        let (hard, soft) = SearchLimits::calculate_time_limits(Duration::ZERO, Duration::ZERO);
+        let (hard, soft) = calculate_time_limits(Duration::ZERO, Duration::ZERO);
         let _ = (hard, soft);
     }
 
     #[test]
+    fn time_limits_default_values() {
+        // budget = 1100 - UCI_OVERHEAD_MS = 1000ms
+        // soft = budget * 0.05 = 50ms, hard = budget * 0.2 = 200ms
+        let (hard, soft) = calculate_time_limits(Duration::from_millis(1100), Duration::ZERO);
+        assert_eq!(soft, Duration::from_millis(50));
+        assert_eq!(hard, Duration::from_millis(200));
+
+        // The increment contributes half of itself to both limits.
+        let (hard, soft) =
+            calculate_time_limits(Duration::from_millis(1100), Duration::from_millis(1000));
+        assert_eq!(soft, Duration::from_millis(550));
+        assert_eq!(hard, Duration::from_millis(700));
+    }
+
+    #[test]
+    fn time_limits_match_legacy_integer_formula() {
+        // The limits used to be computed with integer `Duration` math as
+        // soft = budget / 20 + inc / 2 and hard = (budget / 5 + inc / 2).min(budget).max(soft).
+        // This is a sanity check for the float version that used tuned parameters
+        // Here we just check that we're within a 1 ms tolerance
+        let overhead = Duration::from_millis(UCI_OVERHEAD_MS);
+        for time_ms in [0u64, 50, 100, 1_000, 12_345, 60_000, 3_600_000] {
+            for inc_ms in [0u64, 1, 100, 2_345, 30_000] {
+                let time = Duration::from_millis(time_ms);
+                let inc = Duration::from_millis(inc_ms);
+
+                let budget = time.saturating_sub(overhead);
+                let legacy_soft = budget / 20 + inc / 2;
+                let legacy_hard = (budget / 5 + inc / 2).min(budget).max(legacy_soft);
+
+                let (hard, soft) = calculate_time_limits(time, inc);
+                let tolerance = Duration::from_millis(1);
+                assert!(
+                    soft.abs_diff(legacy_soft) <= tolerance,
+                    "soft {soft:?} vs legacy {legacy_soft:?} (time={time_ms}ms, inc={inc_ms}ms)"
+                );
+                assert!(
+                    hard.abs_diff(legacy_hard) <= tolerance,
+                    "hard {hard:?} vs legacy {legacy_hard:?} (time={time_ms}ms, inc={inc_ms}ms)"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn stability_scale_initial() {
+        let tp = TimeParams::default();
         assert!(
-            (SearchLimits::best_move_stability_scale(0) - BEST_MOVE_TIME_BASE).abs() < f32::EPSILON
+            (SearchLimits::best_move_stability_scale(0, tp) - tp.best_move_offset).abs()
+                < f32::EPSILON
         );
     }
 
     #[test]
     fn stability_scale_middle() {
         // stability=5: 1.1 - 0.05*5 = 0.85 (neutral point)
-        assert!((SearchLimits::best_move_stability_scale(5) - 0.85).abs() < f32::EPSILON);
+        assert!(
+            (SearchLimits::best_move_stability_scale(5, TimeParams::default()) - 0.85).abs()
+                < f32::EPSILON
+        );
     }
 
     #[test]
@@ -239,18 +295,22 @@ mod tests {
     #[test]
     fn stability_scale_clamp() {
         // At stability=100 the raw value would be deeply negative; must clamp to floor.
-        assert!(SearchLimits::best_move_stability_scale(100) >= BEST_MOVE_TIME_MIN_SCALE);
+        let tp = TimeParams::default();
+        assert!(SearchLimits::best_move_stability_scale(100, tp) >= tp.best_move_min);
     }
 
     #[test]
     fn eval_stability_scale_values() {
         // stability=0: no stable iterations yet, so the full base scale.
-        assert!((SearchLimits::eval_stability_scale(0) - EVAL_STABILITY_BASE).abs() < 1e-5);
+        let tp = TimeParams::default();
+        assert!(
+            (SearchLimits::eval_stability_scale(0, tp) - tp.eval_stability_offset).abs() < 1e-5
+        );
         // stability=5: 1.2664 - 0.0416*5 = 1.0584
-        assert!((SearchLimits::eval_stability_scale(5) - 1.0584).abs() < 1e-5);
+        assert!((SearchLimits::eval_stability_scale(5, tp) - 1.0584).abs() < 1e-5);
         // stability=100: clamped to the floor.
         assert!(
-            (SearchLimits::eval_stability_scale(100) - EVAL_STABILITY_MIN_SCALE).abs()
+            (SearchLimits::eval_stability_scale(100, tp) - tp.eval_stability_min).abs()
                 < f32::EPSILON
         );
     }
@@ -264,17 +324,23 @@ mod tests {
             ..Default::default()
         });
         let expected = limits.soft_timeout.as_secs_f32()
-            * SearchLimits::best_move_stability_scale(5)
-            * SearchLimits::eval_stability_scale(5);
+            * SearchLimits::best_move_stability_scale(5, TimeParams::default())
+            * SearchLimits::eval_stability_scale(5, TimeParams::default());
         assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
     }
 
     #[test]
     fn node_stability_scale_values() {
         // (1.45 - f) * 1.35
-        assert!((SearchLimits::node_stability_scale(0.0) - 1.9575).abs() < 1e-5);
-        assert!((SearchLimits::node_stability_scale(0.5) - 1.2825).abs() < 1e-5);
-        assert!((SearchLimits::node_stability_scale(1.0) - 0.6075).abs() < 1e-5);
+        assert!(
+            (SearchLimits::node_stability_scale(0.0, TimeParams::default()) - 1.9575).abs() < 1e-5
+        );
+        assert!(
+            (SearchLimits::node_stability_scale(0.5, TimeParams::default()) - 1.2825).abs() < 1e-5
+        );
+        assert!(
+            (SearchLimits::node_stability_scale(1.0, TimeParams::default()) - 0.6075).abs() < 1e-5
+        );
     }
 
     #[test]
@@ -286,9 +352,9 @@ mod tests {
             best_move_node_fraction: Some(0.8),
         });
         let expected = limits.soft_timeout.as_secs_f32()
-            * SearchLimits::best_move_stability_scale(5)
-            * SearchLimits::eval_stability_scale(5)
-            * SearchLimits::node_stability_scale(0.8);
+            * SearchLimits::best_move_stability_scale(5, TimeParams::default())
+            * SearchLimits::eval_stability_scale(5, TimeParams::default())
+            * SearchLimits::node_stability_scale(0.8, TimeParams::default());
         assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
     }
 

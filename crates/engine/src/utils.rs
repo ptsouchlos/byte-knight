@@ -30,7 +30,7 @@ pub(crate) const fn fast_range_64(word: u64, p: u64) -> u64 {
 // Credit to Akimbo author for the implementation
 #[macro_export]
 macro_rules! tunable_params {
-    ($($name:ident = $val:expr, $min:expr, $max:expr, $step:expr, $spsa:expr;)*) => {
+    ($($name:ident = $val:expr, $min:literal ..= $max:literal, $spsa:expr;)*) => {
         #[cfg(feature = "tuning")]
         use std::sync::atomic::Ordering;
 
@@ -61,7 +61,7 @@ macro_rules! tunable_params {
         pub fn print_params_ob() {
             $(
                 if $spsa {
-                    let step = ($max - $min) / 20;
+                    let step = (($max - $min) / 20).max(1);
                     println!(
                         "{}, int, {}.0, {}.0, {}.0, {}, 0.002",
                         stringify!($name),
@@ -84,6 +84,9 @@ macro_rules! tunable_params {
         }
 
         $(
+        // Fail the build if val is outside of [min, max] range
+        const _: () = assert!($min <= $val && $val <= $max);
+
         #[cfg(feature = "tuning")]
         #[inline]
         pub fn $name() -> i32 {

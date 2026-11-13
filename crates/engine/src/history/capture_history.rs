@@ -10,6 +10,7 @@ use chess::{board::Board, moves::Move, pieces::Piece};
 use crate::{
     history::{types::PieceToHistory, util},
     score::LargeScoreType,
+    tuneable::cap_hist_max,
     utils,
 };
 
@@ -19,8 +20,15 @@ pub struct CaptureHistory {
 }
 
 impl CaptureHistory {
-    const MAX: i32 = 16384;
-    const BONUS_MAX: i32 = Self::MAX / 4;
+    /// Entries are stored as `i16`, so the tuneable range of `cap_hist_max` must stay below
+    /// `i16::MAX`.
+    fn max() -> i32 {
+        cap_hist_max()
+    }
+
+    fn bonus_max() -> i32 {
+        Self::max() / 4
+    }
 
     pub(crate) fn get(&self, board: &Board, mv: Move, pc: Piece, captured_piece: Piece) -> i16 {
         self.piece_to_entries[board.side_to_move()][pc][mv.to()][captured_piece]
@@ -34,9 +42,9 @@ impl CaptureHistory {
         captured_piece: Piece,
         bonus: LargeScoreType,
     ) {
-        let bonus = bonus.clamp(-Self::BONUS_MAX, Self::BONUS_MAX);
+        let bonus = bonus.clamp(-Self::bonus_max(), Self::bonus_max());
         let value = &mut self.piece_to_entries[board.side_to_move()][pc][mv.to()][captured_piece];
-        *value = util::gravity(*value as i32, bonus, Self::MAX) as i16;
+        *value = util::gravity(*value as i32, bonus, Self::max()) as i16;
     }
 
     pub(crate) fn clear(&mut self) {

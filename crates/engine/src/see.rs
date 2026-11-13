@@ -8,18 +8,16 @@ use chess::{
     side::Side,
 };
 
-use crate::tuneable::{
-    see_value_bishop, see_value_knight, see_value_pawn, see_value_queen, see_value_rook,
-};
+use crate::tuneable::{see_bishop, see_knight, see_pawn, see_queen, see_rook};
 
 #[inline(always)]
 pub(crate) fn piece_value(piece: Piece) -> i32 {
     match piece {
-        Piece::Pawn => see_value_pawn(),
-        Piece::Bishop => see_value_bishop(),
-        Piece::Knight => see_value_knight(),
-        Piece::Rook => see_value_rook(),
-        Piece::Queen => see_value_queen(),
+        Piece::Pawn => see_pawn(),
+        Piece::Bishop => see_bishop(),
+        Piece::Knight => see_knight(),
+        Piece::Rook => see_rook(),
+        Piece::Queen => see_queen(),
         Piece::King => 0,
     }
 }
