@@ -11,20 +11,14 @@ repository = "https://github.com/ptsouchlos/byte-knight"
 
 [workspace.dependencies]
 # Workspace member crates
-chess = { path = "crates/chess"}
-engine = {path = "crates/engine"}
-byte-knight = { path = "crates/engine-cli"}
-generate-magics = { path = "crates/generate-magics" }
-hce-tuner = { path = "crates/hce-tuner" }
-perft-bench = { path = "crates/perft-bench" }
-zobrist = { path = "crates/zobrist" }
+chess = { path = "crates/chess" }
+engine = { path = "crates/engine" }
 
 # external dependencies
 anyhow = "1.0.102"
 arrayvec = "0.7.6"
 clap = "4.6.1"
 colored = "3.1.1"
-console = "0.16.3"
 criterion = "0.8"
 csv = "1.4.0"
 indicatif = "0.18.4"

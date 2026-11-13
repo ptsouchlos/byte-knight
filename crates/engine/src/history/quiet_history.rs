@@ -105,12 +105,9 @@ mod tests {
         let history_table = QuietHistory::default();
         // loop through all sides, from-squares, and to-squares
         for side in 0..2 {
-            for from in 0..64 {
-                for to in 0..64 {
-                    assert_eq!(
-                        history_table.from_to_entries[side][from][to],
-                        Default::default()
-                    );
+            for from_to_entry in history_table.from_to_entries[side] {
+                for entry in from_to_entry {
+                    assert_eq!(entry, Default::default());
                 }
             }
         }
