@@ -183,11 +183,7 @@ impl ThreadData {
 
         // Stop once the next iteration would exceed max_depth. The current
         // iteration at `depth == max_depth` must still run.
-        if self.depth > self.limits.max_depth as i32 {
-            return true;
-        }
-
-        false
+        self.depth > self.limits.max_depth as i32
     }
 
     /// Check if the hard limit has been reached.
