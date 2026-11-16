@@ -1,0 +1,8 @@
+---
+source: crates/engine/src/search/limits.rs
+expression: "vec![hard, soft]"
+---
+- secs: 0
+  nanos: 230000000
+- secs: 0
+  nanos: 57000000

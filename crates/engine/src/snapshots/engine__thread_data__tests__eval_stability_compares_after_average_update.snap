@@ -1,0 +1,6 @@
+---
+source: crates/engine/src/thread_data.rs
+expression: "feed(&mut td,\n&[0, (threshold * 2 - (threshold % (threshold / 2)) * 2) as ScoreType])"
+---
+- 1
+- 2

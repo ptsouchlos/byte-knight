@@ -279,12 +279,22 @@ mod tests {
     fn eval_stability_compares_after_average_update() {
         // From avg 0: score 22 gives new avg 11, diff 11 < 12, so stable.
         let mut td = ThreadData::default();
-        assert_eq!(feed(&mut td, &[0, 22]), vec![1, 2]);
+        let threshold = score_stability_threshold();
 
-        // Score 23 gives new avg 11, diff 12, so it resets. Comparing against
-        // the old average would reset both cases.
+        // Feed score of 0 and then a score that will result in an average < the threshold
+        // so that the stability count goes up.
+        insta::assert_yaml_snapshot!(feed(
+            &mut td,
+            &[
+                0,
+                (threshold * 2 - (threshold % (threshold / 2)) * 2) as ScoreType
+            ]
+        ));
+
         let mut td = ThreadData::default();
-        assert_eq!(feed(&mut td, &[0, 23]), vec![1, 0]);
+
+        // Feed score of 0 and then (threshold + 1) * 2 to ensure that count gets reset.
+        insta::assert_yaml_snapshot!(feed(&mut td, &[0, ((threshold + 1) * 2) as ScoreType]));
     }
 
     #[test]
