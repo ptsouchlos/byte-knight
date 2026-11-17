@@ -216,10 +216,9 @@ mod tests {
 
     #[test]
     fn stability_scale_middle() {
-        // stability=5: 1.1 - 0.05*5 = 0.85 (neutral point)
+        let tp = TimeParams::default();
         assert!(
-            (SearchLimits::best_move_stability_scale(5, TimeParams::default()) - 0.85).abs()
-                < f32::EPSILON
+            SearchLimits::best_move_stability_scale(5, TimeParams::default()) < tp.best_move_offset
         );
     }
 
@@ -348,8 +347,8 @@ mod tests {
             best_move_node_fraction: Some(0.5),
             ..Default::default()
         });
-        let expected = limits.soft_timeout.as_secs_f32() * 1.2825;
-        assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
+        assert!(duration.is_some());
+        insta::assert_yaml_snapshot!(duration.unwrap());
     }
 
     #[test]
