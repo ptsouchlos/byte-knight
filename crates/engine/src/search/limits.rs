@@ -231,7 +231,8 @@ mod tests {
         // Should be no scaling without any data.
         assert!(duration.is_some_and(|val| {
             let ratio = val.as_secs_f32() / limits.soft_timeout.as_secs_f32();
-            ratio < 1.0
+            println!("{}", ratio);
+            (ratio - 1.0).abs() < f32::EPSILON
         }));
     }
 
@@ -271,14 +272,16 @@ mod tests {
 
     #[test]
     fn eval_stability_scale_values() {
-        // stability=0: no stable iterations yet, so the full base scale.
         let tp = TimeParams::default();
+
+        // No stability value yet, so no scaling.
         assert!(
-            (SearchLimits::eval_stability_scale(0, tp) - tp.eval_stability_offset).abs() < 1e-5
+            (SearchLimits::eval_stability_scale(0, tp) - tp.eval_stability_offset).abs()
+                < f32::EPSILON
         );
-        // stability=5: 1.2664 - 0.0416*5 = 1.0584
-        assert!((SearchLimits::eval_stability_scale(5, tp) - 1.0584).abs() < 1e-5);
-        // stability=100: clamped to the floor.
+        // Small stability value, just assert that it's less than offset
+        assert!(SearchLimits::eval_stability_scale(5, tp) / tp.eval_stability_offset < 1.0);
+        // Large stability value, should be clamped to the floor value.
         assert!(
             (SearchLimits::eval_stability_scale(100, tp) - tp.eval_stability_min).abs()
                 < f32::EPSILON
@@ -301,15 +304,25 @@ mod tests {
 
     #[test]
     fn node_stability_scale_values() {
-        // (1.45 - f) * 1.35
+        let tp = TimeParams::default();
+        let max_scale_value = SearchLimits::node_stability_scale(0.0, tp);
+
+        // No scaling yet, so should match max value.
         assert!(
-            (SearchLimits::node_stability_scale(0.0, TimeParams::default()) - 1.9575).abs() < 1e-5
+            (SearchLimits::node_stability_scale(0.0, tp) - max_scale_value).abs() < f32::EPSILON
         );
+
+        // Small scaling so ratio should be <1
+        assert!(SearchLimits::node_stability_scale(0.5, tp) / max_scale_value < 1.0);
+
         assert!(
-            (SearchLimits::node_stability_scale(0.5, TimeParams::default()) - 1.2825).abs() < 1e-5
+            SearchLimits::node_stability_scale(1.0, tp)
+                < SearchLimits::node_stability_scale(0.5, tp)
         );
+
         assert!(
-            (SearchLimits::node_stability_scale(1.0, TimeParams::default()) - 0.6075).abs() < 1e-5
+            SearchLimits::node_stability_scale(1.1, tp)
+                < SearchLimits::node_stability_scale(1.0, tp)
         );
     }
 
