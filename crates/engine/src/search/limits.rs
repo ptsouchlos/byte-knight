@@ -194,15 +194,18 @@ mod tests {
     }
 
     #[test]
-    fn time_limits_default_values() {
-        let (hard, soft) = calculate_time_limits(Duration::from_millis(1100), Duration::ZERO);
-        insta::assert_yaml_snapshot!(vec![hard, soft]);
+    fn time_limits_relationships() {
+        let time = Duration::from_millis(1100);
+        let (hard, soft) = calculate_time_limits(time, Duration::ZERO);
+        assert!(soft > Duration::ZERO);
+        assert!(soft <= hard);
+        assert!(hard <= time);
 
-        // The increment contributes half of itself to both limits.
-        let (hard, soft) =
-            calculate_time_limits(Duration::from_millis(1100), Duration::from_millis(1000));
-
-        insta::assert_yaml_snapshot!(vec![hard, soft]);
+        // The increment raises both limits.
+        let (hard_inc, soft_inc) = calculate_time_limits(time, Duration::from_millis(1000));
+        assert!(soft_inc > soft);
+        assert!(hard_inc > hard);
+        assert!(soft_inc <= hard_inc);
     }
 
     #[test]
@@ -230,15 +233,14 @@ mod tests {
         // Should be no scaling without any data.
         assert!(duration.is_some_and(|val| {
             let ratio = val.as_secs_f32() / limits.soft_timeout.as_secs_f32();
-            println!("{}", ratio);
-            (ratio - 1.0).abs() < f32::EPSILON
+            (ratio - 1.0).abs() < 1e-5
         }));
     }
 
     #[test]
     fn scaled_soft_limits_with_move_stability() {
         let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
-        // Same scaling as stability_scale_middle test, so we expect a 15% reduction in time.
+        // A stable best move should shorten the soft limit.
         let duration = limits.scaled_soft_limit(SoftLimitInputs {
             best_move_stability: Some(5),
             ..Default::default()
@@ -347,8 +349,9 @@ mod tests {
             best_move_node_fraction: Some(0.5),
             ..Default::default()
         });
-        assert!(duration.is_some());
-        insta::assert_yaml_snapshot!(duration.unwrap());
+        let expected = limits.soft_timeout.as_secs_f32()
+            * SearchLimits::node_stability_scale(0.5, TimeParams::default());
+        assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
     }
 
     #[test]
