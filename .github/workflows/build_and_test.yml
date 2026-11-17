@@ -26,4 +26,6 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v4
       - name: Run tests
+        env:
+          INSTA_UPDATE: "no"
         run: just test ${{ matrix.build-type }}
