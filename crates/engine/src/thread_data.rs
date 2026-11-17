@@ -283,13 +283,7 @@ mod tests {
 
         // Feed score of 0 and then a score that will result in an average < the threshold
         // so that the stability count goes up.
-        insta::assert_yaml_snapshot!(feed(
-            &mut td,
-            &[
-                0,
-                (threshold * 2 - (threshold % (threshold / 2)) * 2) as ScoreType
-            ]
-        ));
+        insta::assert_yaml_snapshot!(feed(&mut td, &[0, (threshold * 2 - 2) as ScoreType]));
 
         let mut td = ThreadData::default();
 
