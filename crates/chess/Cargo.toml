@@ -15,6 +15,7 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true, features = ["html_reports"] }
+insta = { workspace = true, features = ["yaml"] }
 
 [[bench]]
 name = "benchmarks"
