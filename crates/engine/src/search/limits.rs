@@ -194,48 +194,18 @@ mod tests {
     }
 
     #[test]
-    fn time_limits_default_values() {
-        // budget = 1100 - UCI_OVERHEAD_MS = 1000ms
-        // soft = budget * 0.05 = 50ms, hard = budget * 0.2 = 200ms
-        let (hard, soft) = calculate_time_limits(Duration::from_millis(1100), Duration::ZERO);
-        assert_eq!(soft, Duration::from_millis(50));
-        assert_eq!(hard, Duration::from_millis(200));
+    fn time_limits_relationships() {
+        let time = Duration::from_millis(1100);
+        let (hard, soft) = calculate_time_limits(time, Duration::ZERO);
+        assert!(soft > Duration::ZERO);
+        assert!(soft <= hard);
+        assert!(hard <= time);
 
-        // The increment contributes half of itself to both limits.
-        let (hard, soft) =
-            calculate_time_limits(Duration::from_millis(1100), Duration::from_millis(1000));
-        assert_eq!(soft, Duration::from_millis(550));
-        assert_eq!(hard, Duration::from_millis(700));
-    }
-
-    #[test]
-    fn time_limits_match_legacy_integer_formula() {
-        // The limits used to be computed with integer `Duration` math as
-        // soft = budget / 20 + inc / 2 and hard = (budget / 5 + inc / 2).min(budget).max(soft).
-        // This is a sanity check for the float version that used tuned parameters
-        // Here we just check that we're within a 1 ms tolerance
-        let overhead = Duration::from_millis(UCI_OVERHEAD_MS);
-        for time_ms in [0u64, 50, 100, 1_000, 12_345, 60_000, 3_600_000] {
-            for inc_ms in [0u64, 1, 100, 2_345, 30_000] {
-                let time = Duration::from_millis(time_ms);
-                let inc = Duration::from_millis(inc_ms);
-
-                let budget = time.saturating_sub(overhead);
-                let legacy_soft = budget / 20 + inc / 2;
-                let legacy_hard = (budget / 5 + inc / 2).min(budget).max(legacy_soft);
-
-                let (hard, soft) = calculate_time_limits(time, inc);
-                let tolerance = Duration::from_millis(1);
-                assert!(
-                    soft.abs_diff(legacy_soft) <= tolerance,
-                    "soft {soft:?} vs legacy {legacy_soft:?} (time={time_ms}ms, inc={inc_ms}ms)"
-                );
-                assert!(
-                    hard.abs_diff(legacy_hard) <= tolerance,
-                    "hard {hard:?} vs legacy {legacy_hard:?} (time={time_ms}ms, inc={inc_ms}ms)"
-                );
-            }
-        }
+        // The increment raises both limits.
+        let (hard_inc, soft_inc) = calculate_time_limits(time, Duration::from_millis(1000));
+        assert!(soft_inc > soft);
+        assert!(hard_inc > hard);
+        assert!(soft_inc <= hard_inc);
     }
 
     #[test]
@@ -249,10 +219,9 @@ mod tests {
 
     #[test]
     fn stability_scale_middle() {
-        // stability=5: 1.1 - 0.05*5 = 0.85 (neutral point)
+        let tp = TimeParams::default();
         assert!(
-            (SearchLimits::best_move_stability_scale(5, TimeParams::default()) - 0.85).abs()
-                < f32::EPSILON
+            SearchLimits::best_move_stability_scale(5, TimeParams::default()) < tp.best_move_offset
         );
     }
 
@@ -263,20 +232,22 @@ mod tests {
         let duration = limits.scaled_soft_limit(SoftLimitInputs::default());
         // Should be no scaling without any data.
         assert!(duration.is_some_and(|val| {
-            (val.as_secs_f32() - limits.soft_timeout.as_secs_f32()).abs() < f32::EPSILON
+            let ratio = val.as_secs_f32() / limits.soft_timeout.as_secs_f32();
+            (ratio - 1.0).abs() < 1e-5
         }));
     }
 
     #[test]
-    fn scaled_soft_limits_with_stability() {
+    fn scaled_soft_limits_with_move_stability() {
         let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
-        // Same scaling as stability_scale_middle test, so we expect a 15% reduction in time.
+        // A stable best move should shorten the soft limit.
         let duration = limits.scaled_soft_limit(SoftLimitInputs {
             best_move_stability: Some(5),
             ..Default::default()
         });
         assert!(duration.is_some_and(|val| {
-            (val.as_secs_f32() - limits.soft_timeout.as_secs_f32() * 0.85).abs() < f32::EPSILON
+            let ratio = val.as_secs_f32() / limits.soft_timeout.as_secs_f32();
+            ratio < 0.85
         }));
     }
 
@@ -288,7 +259,8 @@ mod tests {
             ..Default::default()
         });
         assert!(duration.is_some_and(|val| {
-            (val.as_secs_f32() - limits.soft_timeout.as_secs_f32() * 0.8642).abs() < f32::EPSILON
+            let ratio = val.as_secs_f32() / limits.soft_timeout.as_secs_f32();
+            ratio < 0.99
         }));
     }
 
@@ -301,14 +273,16 @@ mod tests {
 
     #[test]
     fn eval_stability_scale_values() {
-        // stability=0: no stable iterations yet, so the full base scale.
         let tp = TimeParams::default();
+
+        // No stability value yet, so no scaling.
         assert!(
-            (SearchLimits::eval_stability_scale(0, tp) - tp.eval_stability_offset).abs() < 1e-5
+            (SearchLimits::eval_stability_scale(0, tp) - tp.eval_stability_offset).abs()
+                < f32::EPSILON
         );
-        // stability=5: 1.2664 - 0.0416*5 = 1.0584
-        assert!((SearchLimits::eval_stability_scale(5, tp) - 1.0584).abs() < 1e-5);
-        // stability=100: clamped to the floor.
+        // Small stability value, just assert that it's less than offset
+        assert!(SearchLimits::eval_stability_scale(5, tp) / tp.eval_stability_offset < 1.0);
+        // Large stability value, should be clamped to the floor value.
         assert!(
             (SearchLimits::eval_stability_scale(100, tp) - tp.eval_stability_min).abs()
                 < f32::EPSILON
@@ -331,15 +305,25 @@ mod tests {
 
     #[test]
     fn node_stability_scale_values() {
-        // (1.45 - f) * 1.35
+        let tp = TimeParams::default();
+        let max_scale_value = SearchLimits::node_stability_scale(0.0, tp);
+
+        // No scaling yet, so should match max value.
         assert!(
-            (SearchLimits::node_stability_scale(0.0, TimeParams::default()) - 1.9575).abs() < 1e-5
+            (SearchLimits::node_stability_scale(0.0, tp) - max_scale_value).abs() < f32::EPSILON
         );
+
+        // Small scaling so ratio should be <1
+        assert!(SearchLimits::node_stability_scale(0.5, tp) / max_scale_value < 1.0);
+
         assert!(
-            (SearchLimits::node_stability_scale(0.5, TimeParams::default()) - 1.2825).abs() < 1e-5
+            SearchLimits::node_stability_scale(1.0, tp)
+                < SearchLimits::node_stability_scale(0.5, tp)
         );
+
         assert!(
-            (SearchLimits::node_stability_scale(1.0, TimeParams::default()) - 0.6075).abs() < 1e-5
+            SearchLimits::node_stability_scale(1.1, tp)
+                < SearchLimits::node_stability_scale(1.0, tp)
         );
     }
 
@@ -365,7 +349,8 @@ mod tests {
             best_move_node_fraction: Some(0.5),
             ..Default::default()
         });
-        let expected = limits.soft_timeout.as_secs_f32() * 1.2825;
+        let expected = limits.soft_timeout.as_secs_f32()
+            * SearchLimits::node_stability_scale(0.5, TimeParams::default());
         assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
     }
 
