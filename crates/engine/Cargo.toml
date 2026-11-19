@@ -9,14 +9,19 @@ tuning = []
 [dependencies]
 chess = { workspace = true }
 anyhow = { workspace = true }
-itertools = { workspace = true }
-uci-parser = { workspace = true, features = ["parse-go-perft", "parse-position-kiwipete", "types", "clamp-negatives"] }
-rand = { workspace = true }
+uci-parser = { workspace = true, features = [
+    "parse-go-perft",
+    "parse-position-kiwipete",
+    "types",
+    "clamp-negatives",
+] }
 arrayvec = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true, features = ["html_reports"] }
 insta = { workspace = true, features = ["yaml"] }
+itertools = { workspace = true }
+rand = { workspace = true }
 
 [[bench]]
 name = "eval"
