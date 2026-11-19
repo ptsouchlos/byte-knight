@@ -14,7 +14,7 @@ use crate::{
     board::Board,
     definitions::{CastlingAvailability, DASH, EM_DASH},
     file::File,
-    move_making::ep_capture_is_legal,
+    legal,
     pieces::{PIECE_SHORT_NAMES, Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
@@ -320,7 +320,7 @@ fn ep_square_is_valid(board: &Board, ep_square: Square) -> bool {
     board_cpy.remove_piece_from_square(Piece::Pawn, pushing_side, post_push_sq.try_into().unwrap());
     board_cpy.set_piece_square(Piece::Pawn, pushing_side, pre_push_sq);
 
-    ep_capture_is_legal(&board_cpy, pre_push_sq, ep_square, pushing_side)
+    legal::double_push_creates_legal_ep(&board_cpy, pre_push_sq, ep_square, pushing_side)
 }
 
 /// Parses the en passant target square (if any) part of a FEN string and updates the board accordingly.

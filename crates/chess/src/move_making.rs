@@ -4,16 +4,13 @@
 // https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 use crate::{
-    attacks,
-    bitboard::Bitboard,
     board::Board,
     board_state::MovePieceInfo,
     definitions::CastlingAvailability,
-    move_generation,
+    legal, move_generation,
     moves::{self, Move, MoveFlag},
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
-    rays,
     side::Side,
     square::{self, Square},
 };
@@ -179,8 +176,12 @@ impl Board {
                 } else {
                     to.inner() + 8u8
                 };
-                if ep_capture_is_legal(self, from, Square::from_square_index(en_passant_square), us)
-                {
+                if legal::double_push_creates_legal_ep(
+                    self,
+                    from,
+                    Square::from_square_index(en_passant_square),
+                    us,
+                ) {
                     Some(en_passant_square)
                 } else {
                     None
@@ -478,46 +479,6 @@ impl Board {
     fn switch_side(&mut self) {
         self.set_side_to_move(self.side_to_move().opposite());
     }
-}
-
-/// Decide whether setting the en-passant square after a double pawn push would
-/// produce a legal EP capture for the opponent. The board must still be in the
-/// pre-move state (the pushing pawn at `from`, `ep_square` empty).
-///
-/// Based on the Stockfish optimization in
-/// https://github.com/official-stockfish/Stockfish/commit/2321cf2f77b241d685ee68c9896f6574a6f12d0d
-pub(crate) fn ep_capture_is_legal(
-    board: &Board,
-    from: Square,
-    ep_square: Square,
-    us: Side,
-) -> bool {
-    let them = us.opposite();
-
-    // Any opposing pawns that could attack the EP square?
-    let pawns = attacks::pawn(ep_square, us) & board.piece_bitboard(Piece::Pawn, them);
-    if pawns.is_empty() {
-        return false;
-    }
-
-    let king_sq = board.king_square(them);
-    let king_file = king_sq.file();
-    let from_file = from.file();
-
-    // Blockers for them's king from the pre-move position.
-    let king_blockers = attacks::blockers_for_king(board, them);
-    let not_blockers = !king_blockers;
-
-    // No discovered check if `from` was not a blocker, or if king and `from`
-    // share a file (the discovered ray would still be blocked by the new pawn).
-    let no_discovery = !(Bitboard::from(from) & not_blockers).is_empty() || king_file == from_file;
-    if !no_discovery {
-        return false;
-    }
-
-    // At least one capturing pawn must be unpinned (or pinned along the
-    // king-EP line, which keeps the pin intact after the capture).
-    !(pawns & (not_blockers | rays::line(ep_square, king_sq))).is_empty()
 }
 
 /// Helper function to get what castling rights to remove based on the square the piece moved from.
